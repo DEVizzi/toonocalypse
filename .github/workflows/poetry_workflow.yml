@@ -1,0 +1,23 @@
+
+name: Auto Poetry Reel Bot
+
+on:
+  schedule:
+    - cron: "0 6,18 * * *"
+  workflow_dispatch:
+
+jobs:
+  poetrybot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install deps
+        run: |
+          pip install pillow
+          sudo apt update && sudo apt install -y ffmpeg
+      - name: Run script
+        run: python run_pipeline.py
