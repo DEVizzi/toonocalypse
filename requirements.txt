@@ -5,7 +5,7 @@ googleapis-common-protos
 google-api-python-client
 google-auth
 google-auth-oauthlib
-
+langchain
 langchain-google-genai
 replicate
 python-dotenv
