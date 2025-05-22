@@ -926,8 +926,8 @@ if __name__ == "__main__":
         print(f"✅ Caption: {caption}")
         
         # 2. Publish to Youtube
-        #yt_id = upload_video_to_youtube(video_path=story_video, title=story_title, description=caption, tags=["visual story", "animated tale", "kids", "storytelling", "pixar style", "short film"])
-        #print(f"✅ YouTube Shorts uploaded: https://youtu.be/{yt_id}")
+        yt_id = upload_video_to_youtube(video_path=story_video, title=story_title, description=caption, tags=["visual story", "animated tale", "kids", "storytelling", "pixar style", "short film"])
+        print(f"✅ YouTube Shorts uploaded: https://youtu.be/{yt_id}")
         
         # 3. Post Reel
         print("🎬 Mode selected: Instagram Reel")
