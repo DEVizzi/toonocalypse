@@ -310,10 +310,13 @@ def combine_images_to_story_video(image_paths: list, audio_paths: list, frame_di
         "-i", final_like_img,
         "-t", "5",
         "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-an",  # <-- Disable audio
+        "-r", "30",  # 👈 Force 30fps
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-an",
         final_like_video
     ], check=True)
+
 
     # Step 5: Final concatenation of video + silent outro
     final_concat_list = os.path.join(frame_dir, "final_concat.txt")
