@@ -345,9 +345,9 @@ def generate_caption_from_story(title: str) -> str:
 🎨✨ Step into a universe where imagination paints the skies and every frame tells a tale.
 From heartwarming children’s wonders to breathtaking anime epics, each post is a portal into magic, mischief, and meaning.
 🌈🖌️ Art isn’t just seen—it’s felt, lived, and dreamt.
-Follow @talesinpix and let your inner child take flight, your curiosity run wild, and your heart rediscover wonder. 🚀📖💫
+Follow @toonocalypse and let your inner child take flight, your curiosity run wild, and your heart rediscover wonder. 🚀📖💫
 
-🔖 Step into a world of #StoryArt, #DigitalStorytelling, and #VisualNarratives—where #AnimeStories, #MangaArt, and #AnimeIllustration meet #ImaginativeWorlds and #DreamscapeArt. From #WhimsicalArt to #NarrativeArt, every post is part of a #CreativeJourney and filled with #StorybookMagic and #AnimeInspiration. For dreamers of all ages: #ChildrensIllustration, #KidsStoryTime, and #InstaKids. Sharing #love, #photooftheday, #beautiful, #happy, #cute, and #picoftheday. Join the tale—#followme for more #TalesInPix.'''
+🔖 Step into a world of #StoryArt, #DigitalStorytelling, and #VisualNarratives—where #AnimeStories, #MangaArt, and #AnimeIllustration meet #ImaginativeWorlds and #DreamscapeArt. From #WhimsicalArt to #NarrativeArt, every post is part of a #CreativeJourney and filled with #StorybookMagic and #AnimeInspiration. For dreamers of all ages: #GTA6 #ChildrensIllustration, #KidsStoryTime, and #InstaKids. Sharing #love, #photooftheday, #beautiful, #happy, #cute, and #picoftheday. Join the tale—#followme for more #Toonocalypse.'''
     )
 
 
@@ -936,7 +936,7 @@ if __name__ == "__main__":
         
         # 5. Publish to Twitter (X)
         yt_url = f"https://youtu.be/{yt_id}" if 'yt_id' in locals() else ""
-        insta_url = "https://www.instagram.com/talesinpix/"  # replace with your real profile link
+        insta_url = "https://www.instagram.com/toonocalypse/"  # replace with your real profile link
         tweet_caption = generate_tweet_from_story(story_arc, yt_url, insta_url)
 
         # 3. Post to Twitter (text only)
