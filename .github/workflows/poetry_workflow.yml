@@ -2,12 +2,31 @@ name: Auto Poetry Reel Bot
 
 on:
   schedule:
-    - cron: "0 0,8,16 * * *"   # Every 8 hours (3 times a day)
-  workflow_dispatch:           # Manual trigger
+    # Three optimal times per day (UTC) — 04:30, 11:30, 18:30
+    - cron: "30 4 * * *"
+    - cron: "30 11 * * *"
+    - cron: "30 18 * * *"
+  workflow_dispatch:
 
 jobs:
   poetrybot:
     runs-on: ubuntu-latest
+    env:
+      
+      IG_ACCESS_TOKEN:           ${{ secrets.IG_ACCESS_TOKEN }}
+      IG_USER_ID:                ${{ secrets.IG_USER_ID }}
+      GOOGLE_API_KEY:            ${{ secrets.GOOGLE_API_KEY }}
+      YOUTUBE_CLIENT_ID:         ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET:     ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN:     ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      TWITTER_API_KEY:           ${{ secrets.TWITTER_API_KEY }}
+      TWITTER_API_SECRET:        ${{ secrets.TWITTER_API_SECRET }}
+      TWITTER_BEARER_TOKEN:      ${{ secrets.TWITTER_BEARER_TOKEN }}
+      TWITTER_ACCESS_TOKEN:      ${{ secrets.TWITTER_ACCESS_TOKEN }}
+      TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}     
 
     steps:
       - name: Checkout Repository
@@ -26,12 +45,3 @@ jobs:
 
       - name: Run Poetry Bot
         run: python poetry_bot.py
-
-      - name: Commit updated poem history
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add poem_history.txt
-          git commit -m "🤖 Update poem history [bot]"
-          git push
-        continue-on-error: true

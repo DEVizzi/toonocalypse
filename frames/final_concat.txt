@@ -1,0 +1,2 @@
+file 'C:\Users\IzazUlHaque\OneDrive - Black Duck Software\Desktop\MYpROJ\Crazy_Bot\frames\story_with_bgm.mp4'
+file 'C:\Users\IzazUlHaque\OneDrive - Black Duck Software\Desktop\MYpROJ\Crazy_Bot\frames\finalLike_fade.mp4'
