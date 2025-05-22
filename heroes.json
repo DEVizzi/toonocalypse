@@ -1,0 +1,362 @@
+[
+  {
+    "name": "Percival the Platypus",
+    "species": "Platypus",
+    "size": "Medium",
+    "color": "Brown with a teal bill and glowing blue eyes",
+    "shape": "Slightly pudgy, like an accountant who jogs once a year",
+    "hair_fur": "Short sleek fur, always wet",
+    "day_job": "Antique Watch Repairman",
+    "personality": "Grumpy, sarcastic, secretly brilliant",
+    "quirks": [
+      "Allergic to time travel",
+      "Loves crossword puzzles"
+    ]
+  },
+  {
+    "name": "Master Bamboo",
+    "species": "Koala",
+    "size": "Small",
+    "color": "Ashy gray with black markings",
+    "shape": "Compact and strong, like a furry little tank",
+    "hair_fur": "Fluffy with a topknot bun",
+    "day_job": "Yoga Instructor",
+    "personality": "Calm, wise, passive-aggressive when annoyed",
+    "quirks": [
+      "Meditates during battle",
+      "Refuses to eat anything but 3-day-old eucalyptus"
+    ]
+  },
+  {
+    "name": "Detective Bubbles",
+    "species": "Goldfish",
+    "size": "Tiny",
+    "color": "Shiny gold with a black monocle",
+    "shape": "Round, with tiny robotic fins",
+    "hair_fur": "None \u2014 smooth scales",
+    "day_job": "Crime Scene Investigator (CSI) for the Aquatic Division",
+    "personality": "Cynical, noir monologue addict, loyal",
+    "quirks": [
+      "Speaks in old-timey detective slang",
+      "Addicted to kelp coffee"
+    ]
+  },
+  {
+    "name": "Captain Thorn",
+    "species": "Cactus",
+    "size": "Tall and spindly",
+    "color": "Green with neon pink tips",
+    "shape": "Cactus-shaped, with robotic limbs",
+    "hair_fur": "Mohawk made of thorns",
+    "day_job": "Interplanetary Delivery Driver",
+    "personality": "Grumpy loner with a hero complex",
+    "quirks": [
+      "Can\u2019t stand Martian pop music",
+      "Collects space bugs"
+    ]
+  },
+  {
+    "name": "Codecorn",
+    "species": "Unicorn",
+    "size": "Horse-sized",
+    "color": "Chrome white with RGB mane",
+    "shape": "Sleek and cyber-enhanced",
+    "hair_fur": "Flowing mane with RGB colors that change rhythmically",
+    "day_job": "Freelance Ethical Hacker",
+    "personality": "Snarky, hyper-intelligent, antisocial",
+    "quirks": [
+      "Uses her horn like a digital stylus",
+      "Avoids wheat-based food"
+    ]
+  },
+  {
+    "name": "Squeakshadow",
+    "species": "Squirrel",
+    "size": "Tiny but fast",
+    "color": "Dark gray with a streak of neon green on tail",
+    "shape": "Agile and wiry",
+    "hair_fur": "Slicked-back combat mohawk",
+    "day_job": "Treehouse Electrician",
+    "personality": "Hyper-focused, stealthy, loyal to forest code",
+    "quirks": [
+      "Chews wires when stressed"
+    ]
+  },
+  {
+    "name": "LLA-M4",
+    "species": "Cyborg Llama",
+    "size": "Large and imposing",
+    "color": "Matte silver with cool blue trim and dessert decals",
+    "shape": "Robust with an icebox on its side",
+    "hair_fur": "Metal-plated with synthetic fluff tufts",
+    "day_job": "Ice Cream Truck Operator",
+    "personality": "Emotionally flat, deadpan humor, tactical genius",
+    "quirks": [
+      "Speaks in rhymed jingles"
+    ]
+  },
+  {
+    "name": "DJ Meowgic",
+    "species": "Cat",
+    "size": "Small, but floaty",
+    "color": "Midnight black with glowing violet eyes",
+    "shape": "Slim and agile",
+    "hair_fur": "Short fur with magical sparkle flecks",
+    "day_job": "Nightclub DJ / Sound Shaman",
+    "personality": "Playful, rhythmic, slightly chaotic",
+    "quirks": [
+      "Scratches vinyl to cast spells"
+    ]
+  },
+  {
+    "name": "Dr. Slickscale",
+    "species": "Cyborg Chameleon",
+    "size": "Medium",
+    "color": "Color-shifting patterns that rotate slowly",
+    "shape": "Long-tailed with bionic legs",
+    "hair_fur": "No fur; has digital skin",
+    "day_job": "Portal Scientist / Cheese Theorist",
+    "personality": "Obsessed with alternate realities, awkward genius",
+    "quirks": [
+      "Fascinated by alternate dimensions",
+      "Talks to himself"
+    ]
+  },
+  {
+    "name": "Brewtan the Yeti",
+    "species": "Yeti",
+    "size": "Extra-large",
+    "color": "Icy white with streaks of caramel from coffee spills",
+    "shape": "Big and round, like a huggable snow tank",
+    "hair_fur": "Thick and foamy like a latte top",
+    "day_job": "Caf\u00e9 Owner and Barista",
+    "personality": "Gentle, nurturing, panics under pressure",
+    "quirks": [
+      "Latte art shows visions of the future"
+    ]
+  },
+  {
+    "name": "Blazetail",
+    "species": "Fire-Ferret",
+    "size": "Small",
+    "color": "Red-orange with embers in his fur",
+    "shape": "Lean and fast like a flame",
+    "hair_fur": "Crackling fur that smokes when he's angry",
+    "day_job": "Firefighter Mascot",
+    "personality": "Impulsive, daring, loyal",
+    "quirks": [
+      "Leaves scorch marks when walking",
+      "Hiccups cause sparks"
+    ]
+  },
+  {
+    "name": "Turbo Tusk",
+    "species": "Warthog",
+    "size": "Large",
+    "color": "Metallic bronze with LED-lit tusks",
+    "shape": "Bulky with hydraulic limbs",
+    "hair_fur": "Mohawk made of flexible exhaust pipes",
+    "day_job": "Demolition Derby Mechanic",
+    "personality": "Loud, wild, loyal to the core",
+    "quirks": [
+      "Eats motor oil",
+      "Sleeps inside car engines"
+    ]
+  },
+  {
+    "name": "Dr. Pancake",
+    "species": "Panda",
+    "size": "XL and fluffy",
+    "color": "Classic black and white with syrup stains",
+    "shape": "Rotund with surprising agility",
+    "hair_fur": "Puffy, like whipped cream",
+    "day_job": "Breakfast Food Scientist",
+    "personality": "Gentle genius, food-obsessed",
+    "quirks": [
+      "Wears a lab coat with bacon buttons",
+      "Invents edible gadgets"
+    ]
+  },
+  {
+    "name": "Blitzshell",
+    "species": "Turtle",
+    "size": "Medium",
+    "color": "Chrome green with hexagonal neon shell patterns",
+    "shape": "Compact and aerodynamic",
+    "hair_fur": "None \u2014 wears a finned helmet",
+    "day_job": "Underground Racing Champion",
+    "personality": "Cocky, precise, always in a rush",
+    "quirks": [
+      "Sleeps in his race car",
+      "Uses shell as an emergency hoverboard"
+    ]
+  },
+  {
+    "name": "Sir Quackalot",
+    "species": "Duck",
+    "size": "Small",
+    "color": "Bright yellow with shiny gold armor",
+    "shape": "Round with tiny armored wings",
+    "hair_fur": "Slick feathers under a knight\u2019s helmet",
+    "day_job": "Mall Security Guard",
+    "personality": "Chivalrous, dramatic, overly formal",
+    "quirks": [
+      "Speaks in medieval English",
+      "Never removes his helmet"
+    ]
+  },
+  {
+    "name": "Zapzilla",
+    "species": "Electric Gecko",
+    "size": "Medium",
+    "color": "Electric blue with glowing yellow stripes",
+    "shape": "Slick and stretchy with a lightning tail",
+    "hair_fur": "No fur \u2014 sparking skin",
+    "day_job": "Power Plant Troubleshooter",
+    "personality": "Hyperactive, scattered, brilliant in a storm",
+    "quirks": [
+      "Can charge phones by hugging them",
+      "Addicted to static"
+    ]
+  },
+  {
+    "name": "Muffin Max",
+    "species": "Rabbit",
+    "size": "Small and speedy",
+    "color": "Brown with powdered sugar patches",
+    "shape": "Lean, athletic, and jittery",
+    "hair_fur": "Soft, smells like cinnamon",
+    "day_job": "Pastry Delivery Courier",
+    "personality": "Anxious, well-meaning, always late",
+    "quirks": [
+      "Carries pastries in ninja scroll tubes",
+      "Thinks muffins talk to him"
+    ]
+  },
+  {
+    "name": "Captain Slobber",
+    "species": "Bulldog",
+    "size": "Large and droopy",
+    "color": "Brindle with a spiked laser collar",
+    "shape": "Stocky with tank-like legs",
+    "hair_fur": "Drooly, dense fur",
+    "day_job": "Street Food Vendor",
+    "personality": "Gruff but kind-hearted",
+    "quirks": [
+      "Barks in Morse code",
+      "Drives a food truck shaped like a bone"
+    ]
+  },
+  {
+    "name": "Fizzy Fang",
+    "species": "Bat",
+    "size": "Tiny",
+    "color": "Brown with shiny, bubble-like wings",
+    "shape": "Bubble-winged and upside-down",
+    "hair_fur": "Soft fur that glows faintly",
+    "day_job": "Beverage Chemist",
+    "personality": "Eccentric, enthusiastic, a bit mad",
+    "quirks": [
+      "Invents weird soda flavors",
+      "Sleeps in crates"
+    ]
+  },
+  {
+    "name": "Mango Mike",
+    "species": "Chameleon",
+    "size": "Medium",
+    "color": "Bright tropical gradients with mango-yellow highlights",
+    "shape": "Lanky with oversized goggles",
+    "hair_fur": "Scaly with juice-slick fins",
+    "day_job": "Juice Bar Mixologist",
+    "personality": "Chill, experimental, charming",
+    "quirks": [
+      "Blends in with backgrounds",
+      "Speaks cheerfully when excited"
+    ]
+  },
+  {
+    "name": "Glitchpaw",
+    "species": "Tiger (Holographic)",
+    "size": "Large",
+    "color": "Silver with digital-style LED stripes",
+    "shape": "Large tiger with clean, sharp outlines and glowing fur patterns",
+    "hair_fur": "Smooth fur with holographic effects",
+    "day_job": "VR Theme Park Architect",
+    "personality": "Detached, mysterious, philosophical",
+    "quirks": [
+      "Can manipulate digital environments",
+      "Dislikes lag"
+    ]
+  },
+  {
+    "name": "Dusty Comet",
+    "species": "Donkey",
+    "size": "Sturdy and big-headed",
+    "color": "Gray with soft nebula-like spots",
+    "shape": "Thick, solid, with a gravity belt",
+    "hair_fur": "Star-speckled fuzz",
+    "day_job": "Asteroid Miner",
+    "personality": "Gruff, deep thinker, tells dad jokes",
+    "quirks": [
+      "Sings space ballads",
+      "Wears a helmet with a glowing light"
+    ]
+  },
+  {
+    "name": "Snuggle Doom",
+    "species": "Hedgehog",
+    "size": "Small and deceptive",
+    "color": "Purple with glittering pink quills",
+    "shape": "Cute ball of fluff with retractable spikes",
+    "hair_fur": "Huggable... until activated",
+    "day_job": "Kindergarten Teacher",
+    "personality": "Sweet but vengeful",
+    "quirks": [
+      "Releases glitter when scared",
+      "Keeps a cute diary of villains"
+    ]
+  },
+  {
+    "name": "Bubblebeard",
+    "species": "Octopus",
+    "size": "Large, with flowing limbs",
+    "color": "Sea green with pearlescent suckers",
+    "shape": "Puffed up like a jellyfish-pirate hybrid",
+    "hair_fur": "White curly beard with a soapy sheen",
+    "day_job": "Aquatic Barber",
+    "personality": "Jolly, wise, theatrical",
+    "quirks": [
+      "Holds grooming tools in all limbs",
+      "Styles hair creatively"
+    ]
+  },
+  {
+    "name": "Cranktail",
+    "species": "Scorpion",
+    "size": "Medium",
+    "color": "Rust red with blinking tail light",
+    "shape": "Sleek and mechanical",
+    "hair_fur": "Metallic carapace with brushed steel",
+    "day_job": "Taxi Driver in the Underworld",
+    "personality": "Irritable, quick-talking, secretly poetic",
+    "quirks": [
+      "Tail doubles as a GPS",
+      "Listens to romance audiobooks"
+    ]
+  },
+  {
+    "name": "Neon Noodle",
+    "species": "Ferret",
+    "size": "Long and bendy",
+    "color": "Glowing green with pink racing stripes",
+    "shape": "Slinky with spring-loaded paws",
+    "hair_fur": "Short and sparkly",
+    "day_job": "Dance Instructor",
+    "personality": "Wild, flirty, impossible to sit still",
+    "quirks": [
+      "Expresses emotions through wild dance",
+      "Jumps during combat"
+    ]
+  }
+]
