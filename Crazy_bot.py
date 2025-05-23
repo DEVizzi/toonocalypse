@@ -650,7 +650,7 @@ def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
         f"Story Idea:\n- {story_idea}\n"
         f"Instructions:\n"
         f"- First 3 scenes MUST be highly visual or funny hooks.\n"
-        f"- Use visual, surprising action or comic blunder.\n"
+        f"- Use visual, the story can be understood by a 7yrs old child.\n"
         f"- Each scene: one sentence, max 15 words.\n"
         f"- Plain, punchy, kid-friendly language.\n"
         f"- Hero appears in most scenes.\n"
