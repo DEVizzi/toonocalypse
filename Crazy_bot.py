@@ -163,6 +163,7 @@ def retry_llm_invoke(messages, retries=3, delay=45):
     """
     Retry wrapper for llm.invoke() with exponential backoff on quota exhaustion (429).
     """
+    print(f"🔄 Retrying LLM call with {retries} attempts... Delay of 45s")
     for attempt in range(retries):
         try:
             return llm.invoke(messages).content.strip()
@@ -628,7 +629,7 @@ def generate_character_profile(story_arc: list, hero_profile: str = "Cranktail")
 
 def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
     """
-    Generates a cinematic action-comedy story arc (8–10 scenes) with viral hooks in the first 3 scenes.
+    Generates a cinematic action-comedy story arc (8–15 scenes) with viral hooks in the first 3 scenes.
     Tailored for short-form video platforms (Instagram Reels, YouTube Shorts).
     """
     if not story_idea or not hero_profile:
