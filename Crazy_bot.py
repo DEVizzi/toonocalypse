@@ -642,22 +642,21 @@ def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
 
     hero_profile_str = "\n".join(f"- {k.capitalize()}: {v}" for k, v in hero_profile.items())
 
+    
     instruction = (
+        f"You are a top-tier animated short scriptwriter for Reels and Shorts.\n"
         f"Write a complete animated short story in 8 to 15 cinematic scenes.\n"
         f"Main Character:\n{hero_profile_str}\n"
-        f"Story Idea:\n- {story_idea}\n\n"
+        f"Story Idea:\n- {story_idea}\n"
         f"Instructions:\n"
-        f"- First 3 scenes MUST be highly visual, emotionally intense, or funny — true hooks for Instagram Reels or YouTube Shorts.\n"
-        f"- Examples of hook types: unexpected action, weird behavior, wild character twist, mystery item, or comic blunder.\n"
-        f"- Use visual storytelling. Treat each scene like a movie frame — camera-ready and surprising.\n"
-        f"- Each scene should be a single sentence, no more than 15 words but explain the scene clearly.\n"
-        f"- Use plain, punchy, kid-friendly language. No rhyming or poetic fluff.\n"
-        f"- Hero should appear in most scenes.\n"
-        f"- No numbering, no scene titles, no summaries. Just 1 sentence per line.\n"
-        f"- Style: action-comedy, light-hearted, Pixar-style clarity, viral pacing.\n"
-        f"- Avoid detailed backstories or slow intros. Start in the middle of action.\n"
+        f"- First 3 scenes MUST be highly visual or funny hooks.\n"
+        f"- Use visual, surprising action or comic blunder.\n"
+        f"- Each scene: one sentence, max 15 words.\n"
+        f"- Plain, punchy, kid-friendly language.\n"
+        f"- Hero appears in most scenes.\n"
+        f"- Style: action-comedy, Pixar-like clarity, viral pacing.\n"
+        f"- Start in the middle of action. No slow intros."
     )
-
     msgs = [
         SystemMessage(content="You are a top-tier animated short scriptwriter for Reels and Shorts."),
         HumanMessage(content=instruction)
