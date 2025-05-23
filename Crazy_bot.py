@@ -159,6 +159,21 @@ def write_story_bottom_center(image_path: str, poem: str, output_path: str = Non
 #=========================================================================================================================================
 #                    Image Generators 
 #=========================================================================================================================================
+def retry_llm_invoke(messages, retries=3, delay=45):
+    """
+    Retry wrapper for llm.invoke() with exponential backoff on quota exhaustion (429).
+    """
+    for attempt in range(retries):
+        try:
+            return llm.invoke(messages).content.strip()
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in error_str or "quota" in error_str:
+                print(f"⚠️ Quota exceeded (attempt {attempt+1}/{retries}). Waiting {delay} seconds...")
+                time.sleep(delay)
+            else:
+                raise
+    raise RuntimeError("❌ LLM call failed after retries due to quota limits.")
 
 # IMAGE GENERATOR Google Gemini FREE
 
@@ -181,8 +196,8 @@ def generate_image_from_prompt(prompt: str) -> str:
             )
 
             response = client.models.generate_content(
-                model="gemini-2.0-flash-exp-image-generation",
-                #model="gemini-2.0-flash-preview-image-generation",
+                #model="gemini-2.0-flash-exp-image-generation",
+                model="gemini-2.0-flash-preview-image-generation",
                 contents=enhanced_prompt,
                 config=types.GenerateContentConfig(response_modalities=['TEXT', 'IMAGE'])
             )
@@ -566,7 +581,7 @@ def generate_consistent_background(story_arc):
             "Use no more than 20 words. Do not reference characters or actions."
         ))
     ]
-    bg_description = llm.invoke(bg_prompt_msg).content.strip()
+    bg_description = retry_llm_invoke(bg_prompt_msg)
     print(f"🪷 Consistent Background: {bg_description}")
     return bg_description
 
@@ -600,7 +615,7 @@ def generate_character_profile(story_arc: list, hero_profile: str = "Cranktail")
             HumanMessage(content=prompt)
         ]
 
-        response = llm.invoke(msgs).content.strip()
+        response = retry_llm_invoke(msgs)
         print(f"🎨 Character profile:\n{response}")
         return response
 
@@ -613,7 +628,7 @@ def generate_character_profile(story_arc: list, hero_profile: str = "Cranktail")
 
 def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
     """
-    Generates a cinematic action-comedy story arc (8-10 scenes) with viral hooks in the first 3 scenes.
+    Generates a cinematic action-comedy story arc (8–10 scenes) with viral hooks in the first 3 scenes.
     Tailored for short-form video platforms (Instagram Reels, YouTube Shorts).
     """
     if not story_idea or not hero_profile:
@@ -627,14 +642,14 @@ def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
     hero_profile_str = "\n".join(f"- {k.capitalize()}: {v}" for k, v in hero_profile.items())
 
     instruction = (
-        f"Write a complete animated short story in 8 to 10 cinematic scenes.\n"
+        f"Write a complete animated short story in 8 to 15 cinematic scenes.\n"
         f"Main Character:\n{hero_profile_str}\n"
         f"Story Idea:\n- {story_idea}\n\n"
         f"Instructions:\n"
         f"- First 3 scenes MUST be highly visual, emotionally intense, or funny — true hooks for Instagram Reels or YouTube Shorts.\n"
         f"- Examples of hook types: unexpected action, weird behavior, wild character twist, mystery item, or comic blunder.\n"
         f"- Use visual storytelling. Treat each scene like a movie frame — camera-ready and surprising.\n"
-        f"- Each scene should be a single sentence, no more than 15 words.\n"
+        f"- Each scene should be a single sentence, no more than 15 words but explain the scene clearly.\n"
         f"- Use plain, punchy, kid-friendly language. No rhyming or poetic fluff.\n"
         f"- Hero should appear in most scenes.\n"
         f"- No numbering, no scene titles, no summaries. Just 1 sentence per line.\n"
@@ -648,7 +663,8 @@ def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
     ]
 
     try:
-        response = llm.invoke(msgs).content.strip()
+        #response = llm.invoke(msgs).content.strip()
+        response = retry_llm_invoke(msgs)
         lines = [line.strip("-•* ").strip() for line in response.split("\n") if line.strip()]
         clean_lines = [
             l for l in lines
@@ -689,7 +705,7 @@ def llm_clean_story_arc_labels(story_arc: list) -> list:
         "Each line is a scene. Only do the following:\n"
         "- ❌ Remove visual or structure labels like (Visual:), Opener:, Emotion:, Scene 2:, etc.\n"
         "- ❌ Remove parentheticals like (a mischievous grin), (Final moment), etc.\n"
-        "- ✅ Rename any famous character (e.g., Batman → Flatman, Elsa → Meltza) to a playful, rhyming version\n"
+       # "- ✅ Rename any famous character (e.g., Batman → Flatman, Elsa → Meltza) to a playful, rhyming version\n"
         "- 🛑 Do NOT change any wording or structure of the story\n"
         "- 🛑 Do NOT rewrite or simplify sentences\n"
         "- ✅ Keep one cleaned scene per line, numbered exactly like the input\n"
@@ -705,7 +721,8 @@ def llm_clean_story_arc_labels(story_arc: list) -> list:
     msgs = [SystemMessage(content=system_msg), HumanMessage(content=prompt)]
 
     try:
-        response = llm.invoke(msgs).content.strip()
+        #response = llm.invoke(msgs).content.strip()
+        response = retry_llm_invoke(msgs)
 
         import re
         matches = re.findall(r"\d+\.\s*(.+)", response)
@@ -761,7 +778,8 @@ def generate_scenes_from_story(
                     "Return a short paragraph summarizing their visual role or presence."
                 ))
             ]
-            relevant_characters = llm.invoke(scene_character_msg).content.strip()
+            #relevant_characters = llm.invoke(scene_character_msg).content.strip()
+            relevant_characters = retry_llm_invoke(scene_character_msg)
             print(f"🧍 Characters present in scene {i+1}: {relevant_characters}")
         except Exception as e:
             print(f"⚠️ Character detection failed: {e}")
@@ -783,7 +801,8 @@ def generate_scenes_from_story(
 
 
         try:
-            scenic_prompt = llm.invoke(merged_prompt_msg).content.strip()
+            #scenic_prompt = llm.invoke(merged_prompt_msg).content.strip()
+            scenic_prompt = retry_llm_invoke(merged_prompt_msg)
             if "please provide" in scenic_prompt.lower() or len(scenic_prompt) < 10:
                 raise ValueError("Invalid scenic prompt received from LLM.")
             print(f"🖼️ Prompt: {scenic_prompt}")
@@ -819,6 +838,9 @@ def generate_scenes_from_story(
         except Exception as e:
             print(f"⚠️ Failed to generate scene {i+1}: {e}")
             continue
+
+        # Throttle to avoid 429 errors
+        time.sleep(4)
 
     return image_paths, audio_paths
 
