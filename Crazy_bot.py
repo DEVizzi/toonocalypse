@@ -613,7 +613,7 @@ def generate_character_profile(story_arc: list, hero_profile: str = "Cranktail")
 
 def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
     """
-    Generates a cinematic action-comedy story arc (8–15 scenes) with viral hooks in the first 3 scenes.
+    Generates a cinematic action-comedy story arc (8-10 scenes) with viral hooks in the first 3 scenes.
     Tailored for short-form video platforms (Instagram Reels, YouTube Shorts).
     """
     if not story_idea or not hero_profile:
@@ -627,7 +627,7 @@ def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
     hero_profile_str = "\n".join(f"- {k.capitalize()}: {v}" for k, v in hero_profile.items())
 
     instruction = (
-        f"Write a complete animated short story in 8 to 15 cinematic scenes.\n"
+        f"Write a complete animated short story in 8 to 10 cinematic scenes.\n"
         f"Main Character:\n{hero_profile_str}\n"
         f"Story Idea:\n- {story_idea}\n\n"
         f"Instructions:\n"
