@@ -197,8 +197,8 @@ def generate_image_from_prompt(prompt: str) -> str:
             )
 
             response = client.models.generate_content(
-                #model="gemini-2.0-flash-exp-image-generation",
-                model="gemini-2.0-flash-preview-image-generation",
+                model="gemini-2.0-flash-exp-image-generation",
+                #model="gemini-2.0-flash-preview-image-generation",
                 contents=enhanced_prompt,
                 config=types.GenerateContentConfig(response_modalities=['TEXT', 'IMAGE'])
             )
@@ -603,7 +603,7 @@ def generate_character_profile(story_arc: list, hero_profile: str = "Cranktail")
             f"Main Hero Profile:\n{hero_profile_str}\n\n"
             f"Story Scenes:\n" +
             "\n".join(f"- {scene}" for scene in story_arc) +
-            "\n\nBased on the above, describe all characters in max 150 characters.The characters should be divided into two sections:\n"
+            "\n\nBased on the above, describe all characters in max 250 characters.The characters should be divided into two sections:\n"
             "**1. Main Character(s):**\n"
             "Include the described hero with physical traits, species, clothing, color palette, etc.\n"
             "**2. Side Character(s):**\n"
@@ -642,21 +642,24 @@ def generate_story_arc(hero_profile: dict, story_idea: str) -> list:
 
     hero_profile_str = "\n".join(f"- {k.capitalize()}: {v}" for k, v in hero_profile.items())
 
-    
     instruction = (
-        f"You are a top-tier animated short scriptwriter for Reels and Shorts.\n"
-        f"Write a complete animated short story in 8 to 15 cinematic scenes.\n"
+        f"Write a short animated story using 8 to 15 very simple scenes.\n"
         f"Main Character:\n{hero_profile_str}\n"
-        f"Story Idea:\n- {story_idea}\n"
+        f"Story Idea:\n- {story_idea}\n\n"
         f"Instructions:\n"
-        f"- First 3 scenes MUST be highly visual or funny hooks.\n"
-        f"- Use visual, the story can be understood by a 7yrs old child.\n"
-        f"- Each scene: one sentence, max 15 words.\n"
-        f"- Plain, punchy, kid-friendly language.\n"
-        f"- Hero appears in most scenes.\n"
-        f"- Style: action-comedy, Pixar-like clarity, viral pacing.\n"
-        f"- Start in the middle of action. No slow intros."
+        f"- Start the story with a big surprise, funny moment, or strange problem.\n"
+        f"- The first 3 scenes must be exciting, funny, or weird to grab attention fast.\n"
+        f"- Each scene should be only 1 clear sentence (no more than 15 words).\n"
+        f"- Use easy words. Make it simple enough for a 10-year-old to understand.\n"
+        f"- Focus on what we see — like a cartoon or comic panel.\n"
+        f"- Show the hero in most scenes doing something.\n"
+        f"- Do not add numbers, scene titles, or summaries. Just one sentence per line.\n"
+        f"- Avoid backstory or setup. Jump right into action or fun.\n"
+        f"- Keep the tone fun, light, and full of movement.\n"
+        f"- Do not add any labels like Opener, Visual, Tension, etc.\n"
+        f"- Do not add any parentheticals like (a mischievous grin), (Final moment), etc.\n"
     )
+
     msgs = [
         SystemMessage(content="You are a top-tier animated short scriptwriter for Reels and Shorts."),
         HumanMessage(content=instruction)
@@ -738,6 +741,53 @@ def llm_clean_story_arc_labels(story_arc: list) -> list:
         print(f"⚠️ LLM cleaning failed: {e}")
         return story_arc
 
+def make_instagram_reel_frame(image_path: str) -> str:
+    """
+    Creates a 1080x1920 vertical reel frame from any image.
+    Centers the image and fills background with a blurred version of itself.
+    Foreground is scaled up by 10%.
+    """
+    output_size = (1080, 1920)
+    image = Image.open(image_path).convert("RGB")
+
+    # Step 1: Resize background to fill full 1080x1920
+    bg = image.copy()
+    bg = bg.resize(output_size, Image.LANCZOS)
+    bg = bg.filter(ImageFilter.GaussianBlur(radius=18))  # Soft background
+
+    # Step 2: Resize foreground to fit safely within frame (e.g. max height 1600)
+    fg_max_height = 1600
+    fg_max_width = 1080
+
+    img_ratio = image.width / image.height
+    if image.height > fg_max_height or image.width > fg_max_width:
+        if img_ratio > (fg_max_width / fg_max_height):
+            new_width = fg_max_width
+            new_height = int(fg_max_width / img_ratio)
+        else:
+            new_height = fg_max_height
+            new_width = int(fg_max_height * img_ratio)
+        image = image.resize((new_width, new_height), Image.LANCZOS)
+
+    # Step 2.5: Scale foreground image up by 10%
+    scale_factor = 1.4
+    new_width = int(image.width * scale_factor)
+    new_height = int(image.height * scale_factor)
+    image = image.resize((new_width, new_height), Image.LANCZOS)
+
+    # Step 3: Composite foreground over blurred background
+    final_image = bg.copy()
+    paste_x = (output_size[0] - image.width) // 2
+    vertical_shift = output_size[1] // 12  # Slight upward shift (~160px)
+    paste_y = max((output_size[1] - image.height) // 2 - vertical_shift, 0)
+    final_image.paste(image, (paste_x, paste_y))
+
+    # Step 4: Save
+    output_path = os.path.splitext(image_path)[0] + "_reel_1080x1920.jpg"
+    final_image.save(output_path, quality=95)
+    print(f"🎬 Instagram Reel-ready image saved: {output_path}")
+    
+    return output_path
 
 def generate_scenes_from_story(
     story_arc,
@@ -823,11 +873,11 @@ def generate_scenes_from_story(
             base_image_path = generate_image_from_prompt(animated_prompt)
 
             # Step 4: Vertical frame conversion
-            #reel_frame_path = make_instagram_reel_frame(base_image_path)
+            reel_frame_path = make_instagram_reel_frame(base_image_path)
 
             # Step 5: Add narration text to image
             final_image_path = os.path.join(frame_dir, f"frame{i:03d}.png")
-            write_story_bottom_center(base_image_path, poem=narration_line, output_path=final_image_path)
+            write_story_bottom_center(reel_frame_path, poem=narration_line, output_path=final_image_path)
             image_paths.append(final_image_path)
 
             # Step 6: Voiceover
@@ -936,7 +986,7 @@ if __name__ == "__main__":
 
         bg_description = generate_consistent_background(story_arc)
         character_description = generate_character_profile(story_arc,selected_hero)
-
+        
         image_paths, audio_paths = generate_scenes_from_story(
             story_arc, bg_description, character_description, mode=mode, frame_dir=FRAME_DIR
         )
@@ -966,6 +1016,6 @@ if __name__ == "__main__":
 
         # 3. Post to Twitter (text only)
         tweet_url = post_to_twitter_text_only(tweet_caption)
-                
+        
     except Exception as e:
         print(f"⚠️ Failed to generate visual story: {e}")
