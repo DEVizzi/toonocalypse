@@ -9,6 +9,10 @@ on:
     - cron: "30 14 * * *"  # 08:00 PM local
   workflow_dispatch:
 
+# 🔒 Required: Give write access to GITHUB_TOKEN
+permissions:
+  contents: write
+
 jobs:
   crazybot:
     runs-on: ubuntu-latest
