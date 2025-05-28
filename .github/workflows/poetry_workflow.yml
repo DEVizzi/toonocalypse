@@ -43,3 +43,15 @@ jobs:
 
       - name: Run Crazy Bot
         run: python Crazy_bot.py
+
+      - name: Commit updated history_story.txt
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git pull origin main
+          git add history_story.txt
+          git diff --cached --quiet || git commit -m "🤖 Update story history [bot]"
+          git push
+        env:
+          # This is required to push from a GitHub Action
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
