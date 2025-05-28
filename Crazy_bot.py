@@ -60,6 +60,17 @@ llm = ChatGoogleGenerativeAI(
 
 # Define Story styles and prompts (max 4–5 lines output expected)
 
+def list_available_voices():
+    from google.cloud import texttospeech
+
+    client = texttospeech.TextToSpeechClient()
+    voices = client.list_voices()
+
+    print("📢 Available English Voices:\n")
+    for v in voices.voices:
+        if any(code.startswith("en-") for code in v.language_codes):
+            print(f"{v.name} | {v.language_codes} | {v.ssml_gender.name}")
+
 def synthesize_text(text, output_path="output.mp3"):
     client = texttospeech.TextToSpeechClient()
 
@@ -160,24 +171,43 @@ def write_story_bottom_center(image_path: str, poem: str, output_path: str = Non
 #                    Image Generators 
 #=========================================================================================================================================
 def retry_llm_invoke(messages, retries=3, delay=45):
-    """
-    Retry wrapper for llm.invoke() with exponential backoff on quota exhaustion (429).
-    """
-    print(f"🔄 Retrying LLM call with {retries} attempts... Delay of 45s")
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
+    keys = [
+        ("", os.getenv("GOOGLE_API_KEY")),
+        ("1", os.getenv("GOOGLE_API_KEY1")),
+        ("2", os.getenv("GOOGLE_API_KEY2"))
+    ]
+
     for attempt in range(retries):
-        try:
-            return llm.invoke(messages).content.strip()
-        except Exception as e:
-            error_str = str(e).lower()
-            if "429" in error_str or "quota" in error_str:
-                print(f"⚠️ Quota exceeded (attempt {attempt+1}/{retries}). Waiting {delay} seconds...")
-                time.sleep(delay)
-            else:
-                raise
-    raise RuntimeError("❌ LLM call failed after retries due to quota limits.")
+        for suffix, key in keys:
+            if not key:
+                continue
+
+            try:
+                print(f"🔑 Using GOOGLE_API_KEY{suffix} (Attempt {attempt + 1})")
+                llm = ChatGoogleGenerativeAI(
+                    model="models/gemini-1.5-flash",
+                    temperature=0.7,
+                    api_key=key
+                )
+                return llm.invoke(messages).content.strip()
+
+            except Exception as e:
+                print(f"⚠️ Error with GOOGLE_API_KEY{suffix}: {e}")
+                if "429" in str(e).lower() or "quota" in str(e).lower():
+                    continue  # Try next key
+                else:
+                    raise  # Raise non-quota errors immediately
+
+        print(f"⏳ All keys failed for attempt {attempt + 1}/{retries}. Retrying in {delay} seconds...")
+        time.sleep(delay)
+
+    raise RuntimeError("❌ LLM call failed after trying all keys and multiple retries.")
+
+
 
 # IMAGE GENERATOR Google Gemini FREE
-
 def generate_image_from_prompt(prompt: str) -> str:
     """
     Generate an ultra-HD, clean image with no embedded text using Gemini API.
@@ -920,8 +950,34 @@ def generate_title_from_story(story: list[str]) -> str:
         title = re.sub(r'[^\w\s\-:]', '', title)  # Clean for safe display
         return title
     except Exception as e:
-        print(f"⚠️ Title generation failed: {e}")
+        print(f"⚠️ Title generation failed: {e}")()
         return "A Magical Story"
+
+
+def get_unique_action_story(action_stories, history_path="history_story.txt"):
+    """
+    Select a random story from action_stories not in history_story.txt.
+    If all stories are exhausted, raises an exception.
+    """
+    used_stories = set()
+    if os.path.exists(history_path):
+        with open(history_path, "r", encoding="utf-8") as f:
+            used_stories = set(line.strip() for line in f if line.strip())
+
+    available_stories = [s for s in action_stories if json.dumps(s, sort_keys=True) not in used_stories]
+
+    if not available_stories:
+        raise RuntimeError("⚠️ All available stories have already been used.")
+
+    selected_story = random.choice(available_stories)
+
+    with open(history_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(selected_story, sort_keys=True) + "\n")
+
+    return selected_story
+
+
+
 
 
 if __name__ == "__main__":
@@ -930,6 +986,7 @@ if __name__ == "__main__":
         FRAME_DIR = "frames"
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         os.makedirs(FRAME_DIR, exist_ok=True)
+           
         
         # Remove FRAME_DIR if it exists, then recreate
         if os.path.exists(FRAME_DIR):
@@ -939,10 +996,11 @@ if __name__ == "__main__":
         mode = "cinematic" #viral_simple cinematic
 
         selected_hero = random.choice(heroes)
-        selected_story = random.choice(action_story)
+        #selected_story = random.choice(action_story)
+        selected_story = get_unique_action_story(action_story)
         print(f"🦸 Hero: {selected_hero['name']}")
         print(f"🎬 Selected Story: {selected_story}")
-
+        '''
         # Use action-based random story + hero system
         story_arc = generate_story_arc(selected_hero, selected_story)
         story_title = generate_title_from_story(story_arc)
@@ -956,7 +1014,8 @@ if __name__ == "__main__":
 
             while (not story_arc or len(story_arc) < 3) and retry_count < max_retries:
                 selected_hero = random.choice(heroes)
-                selected_story = random.choice(action_story)
+                #selected_story = random.choice(action_story)
+                selected_story = get_unique_action_story(action_story)
                 print(f"🦸 Hero: {selected_hero['name']}")
                 print(f"🎬 Selected Story: {selected_story}")
 
@@ -1016,6 +1075,6 @@ if __name__ == "__main__":
 
         # 3. Post to Twitter (text only)
         tweet_url = post_to_twitter_text_only(tweet_caption)
-        
+        '''
     except Exception as e:
         print(f"⚠️ Failed to generate visual story: {e}")
