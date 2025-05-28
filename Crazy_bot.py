@@ -1000,7 +1000,7 @@ if __name__ == "__main__":
         selected_story = get_unique_action_story(action_story)
         print(f"🦸 Hero: {selected_hero['name']}")
         print(f"🎬 Selected Story: {selected_story}")
-        '''
+        
         # Use action-based random story + hero system
         story_arc = generate_story_arc(selected_hero, selected_story)
         story_title = generate_title_from_story(story_arc)
@@ -1075,6 +1075,6 @@ if __name__ == "__main__":
 
         # 3. Post to Twitter (text only)
         tweet_url = post_to_twitter_text_only(tweet_caption)
-        '''
+        
     except Exception as e:
         print(f"⚠️ Failed to generate visual story: {e}")
