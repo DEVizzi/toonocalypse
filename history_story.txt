@@ -3,3 +3,4 @@
 {"story_idea": "A penguin with a portable freezer cannon blasts sunbathers and fire hydrants, freezing everything in his campaign for eternal winter."}
 {"story_idea": "A bubble tea shop is actually a front for a foam dart arena. The barista shouts 'Double shot!'\u2014and chaos begins."}
 {"story_idea": "A cyber-squid hides inside office printers. Every time someone prints, he injects tentacle-written threats and ransom demands\u2014spelled in bad Comic Sans."}
+{"story_idea": "A jet-boar crashes into school assemblies, replacing principals and yelling about 'discipline through donuts.' He force-feeds pastries with microchip trackers."}
