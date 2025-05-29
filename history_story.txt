@@ -2,3 +2,4 @@
 {"story_idea": "A banana peel becomes sentient and won't stop until it trains the hero in slapstick kung fu. The final battle? A pie throwing showdown."}
 {"story_idea": "A penguin with a portable freezer cannon blasts sunbathers and fire hydrants, freezing everything in his campaign for eternal winter."}
 {"story_idea": "A bubble tea shop is actually a front for a foam dart arena. The barista shouts 'Double shot!'\u2014and chaos begins."}
+{"story_idea": "A cyber-squid hides inside office printers. Every time someone prints, he injects tentacle-written threats and ransom demands\u2014spelled in bad Comic Sans."}
