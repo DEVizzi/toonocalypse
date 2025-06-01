@@ -6,3 +6,4 @@
 {"story_idea": "A jet-boar crashes into school assemblies, replacing principals and yelling about 'discipline through donuts.' He force-feeds pastries with microchip trackers."}
 {"story_idea": "A cyber-camel with data humps stores embarrassing selfies and blackmails social media users from rooftop cafes."}
 {"story_idea": "A swarm of robo-bees paints murals on walls at night, depicting their queen as a neon pop star."}
+{"story_idea": "A hyper-intelligent jellyfish takes over a car wash, transforming it into a glitter cannon that coats everything in sparkly goo."}
