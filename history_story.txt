@@ -8,3 +8,4 @@
 {"story_idea": "A swarm of robo-bees paints murals on walls at night, depicting their queen as a neon pop star."}
 {"story_idea": "A hyper-intelligent jellyfish takes over a car wash, transforming it into a glitter cannon that coats everything in sparkly goo."}
 {"story_idea": "A militant squirrel controls a fleet of acorn-shaped drones. He targets phone towers and only accepts ransom in bulk trail mix."}
+{"story_idea": "A robotic badger with hydraulic claws digs under banks, replacing all money with fake coupons for hugs."}
