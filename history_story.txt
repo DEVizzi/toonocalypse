@@ -10,3 +10,4 @@
 {"story_idea": "A militant squirrel controls a fleet of acorn-shaped drones. He targets phone towers and only accepts ransom in bulk trail mix."}
 {"story_idea": "A robotic badger with hydraulic claws digs under banks, replacing all money with fake coupons for hugs."}
 {"story_idea": "A mechanical duckling army marches across fountains, quacking in sync and flooding parks with bubble foam."}
+{"story_idea": "A giant robotic crab emerges from the sewer and starts manually adjusting cars with his claws\u2014creating perfectly symmetrical traffic jams that spell out 'OBEY.'"}
