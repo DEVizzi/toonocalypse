@@ -15,3 +15,4 @@
 {"story_idea": "An AI-powered jellyfish floats over rooftops, zapping antennas and broadcasting lullabies that put the entire neighborhood to sleep."}
 {"story_idea": "A pigeon with mechanical talons soars over the city, stealing blueprints and wiring landmarks with remote-controlled stink bombs."}
 {"story_idea": "A power outage hits a shopping mall. In the dark, mannequins begin moving, only to freeze when the lights flicker. They're searching for one missing part."}
+{"story_idea": "A robotic frog hops through skyscraper windows, using its extendable grapple tongue to yoink coffee mugs. Turns out, caffeine is fuel for his hyper-leap cannon."}
