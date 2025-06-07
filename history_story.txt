@@ -24,3 +24,4 @@
 {"story_idea": "A mechanical goat with titanium horns launches surprise mountain assaults, headbutting climbers off cliffs to claim 'Peak Alpha Status.'"}
 {"story_idea": "At a car wash, the foam suddenly turns into bubbles that carry the cars away like balloons."}
 {"story_idea": "A mechanical bat hijacks movie theaters, replacing trailers with shadow puppet operas starring itself."}
+{"story_idea": "A moose with extendable antlers climbs buildings and spells giant graffiti messages like 'FEED ME MOSS' using window washers as paint rollers."}
