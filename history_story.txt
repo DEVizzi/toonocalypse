@@ -25,3 +25,4 @@
 {"story_idea": "At a car wash, the foam suddenly turns into bubbles that carry the cars away like balloons."}
 {"story_idea": "A mechanical bat hijacks movie theaters, replacing trailers with shadow puppet operas starring itself."}
 {"story_idea": "A moose with extendable antlers climbs buildings and spells giant graffiti messages like 'FEED ME MOSS' using window washers as paint rollers."}
+{"story_idea": "A museum tour is interrupted when a dinosaur skeleton roars to life and chases tourists\u2014only to reveal it's a prank robot for a hidden camera show."}
