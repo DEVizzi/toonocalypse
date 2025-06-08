@@ -20,3 +20,4 @@
 {"story_idea": "A cybernetic flamingo with laser eyes hypnotizes tourists to build a colossal sandcastle fortress that becomes his desert base."}
 {"story_idea": "A flying toaster drone delivers burnt bread with aggressive motivational quotes to everyone on balconies."}
 {"story_idea": "A robotic owl with a laser pointer controls cats citywide, leading a feline revolution from the rooftops."}
+{"story_idea": "A robotic gorilla with extendable arms hijacks a zoo tram and declares himself the new ruler of all mammals\u2014starting with the parking lot."}
