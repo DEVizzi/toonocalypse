@@ -28,3 +28,4 @@
 {"story_idea": "A museum tour is interrupted when a dinosaur skeleton roars to life and chases tourists\u2014only to reveal it's a prank robot for a hidden camera show."}
 {"story_idea": "A telekinetic hamster in a floating wheel hovers above city parks, demanding sunflower seeds to maintain its orbit."}
 {"story_idea": "A cyber-cat burglar in a trench coat hacks into smart homes and replaces every digital photo with glam shots of itself."}
+{"story_idea": "A pizza delivery goes wrong when the pizza box turns into a robot with a countdown timer. The hero has 60 seconds to find the real customer\u2014or boom."}
