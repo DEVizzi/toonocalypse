@@ -20,12 +20,3 @@
 {"story_idea": "A cybernetic flamingo with laser eyes hypnotizes tourists to build a colossal sandcastle fortress that becomes his desert base."}
 {"story_idea": "A flying toaster drone delivers burnt bread with aggressive motivational quotes to everyone on balconies."}
 {"story_idea": "A robotic owl with a laser pointer controls cats citywide, leading a feline revolution from the rooftops."}
-{"story_idea": "A school juice box explodes and gives the hero temporary rocket powers\u2014but only for 90 seconds. Can they save the runaway hotdog stand?"}
-{"story_idea": "A mechanical goat with titanium horns launches surprise mountain assaults, headbutting climbers off cliffs to claim 'Peak Alpha Status.'"}
-{"story_idea": "At a car wash, the foam suddenly turns into bubbles that carry the cars away like balloons."}
-{"story_idea": "A mechanical bat hijacks movie theaters, replacing trailers with shadow puppet operas starring itself."}
-{"story_idea": "A moose with extendable antlers climbs buildings and spells giant graffiti messages like 'FEED ME MOSS' using window washers as paint rollers."}
-{"story_idea": "A museum tour is interrupted when a dinosaur skeleton roars to life and chases tourists\u2014only to reveal it's a prank robot for a hidden camera show."}
-{"story_idea": "A telekinetic hamster in a floating wheel hovers above city parks, demanding sunflower seeds to maintain its orbit."}
-{"story_idea": "A cyber-cat burglar in a trench coat hacks into smart homes and replaces every digital photo with glam shots of itself."}
-{"story_idea": "A pizza delivery goes wrong when the pizza box turns into a robot with a countdown timer. The hero has 60 seconds to find the real customer\u2014or boom."}
