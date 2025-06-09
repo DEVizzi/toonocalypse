@@ -333,7 +333,7 @@ def combine_images_to_story_video(image_paths: list, audio_paths: list, frame_di
         "-i", bgm_path,
         "-filter_complex",
         f"[0:a]volume=1.2[main];"
-        f"[1:a]volume=0.65[bgm];"
+        f"[1:a]volume=0.5[bgm];"
         f"[main][bgm]amix=inputs=2:duration=first:dropout_transition=2[aout];"
         f"[aout]afade=t=out:st={duration - fade_duration}:d={fade_duration}[finala];"
         f"[0:v]fade=t=out:st={duration - fade_duration}:d={fade_duration}[finalv]",
@@ -389,14 +389,11 @@ def combine_images_to_story_video(image_paths: list, audio_paths: list, frame_di
 def generate_caption_from_story(title: str) -> str:
      return (
         f"📖 *{title}*\n\n"
-        
-        '''
-🎨✨ Step into a universe where imagination paints the skies and every frame tells a tale.
-From heartwarming children’s wonders to breathtaking anime epics, each post is a portal into magic, mischief, and meaning.
-🌈🖌️ Art isn’t just seen—it’s felt, lived, and dreamt.
-Follow @toonocalypse and let your inner child take flight, your curiosity run wild, and your heart rediscover wonder. 🚀📖💫
-
-🔖 Step into a world of #StoryArt, #DigitalStorytelling, and #VisualNarratives—where #AnimeStories, #MangaArt, and #AnimeIllustration meet #ImaginativeWorlds and #DreamscapeArt. From #WhimsicalArt to #NarrativeArt, every post is part of a #CreativeJourney and filled with #StorybookMagic and #AnimeInspiration. For dreamers of all ages: #GTA6 #ChildrensIllustration, #KidsStoryTime, and #InstaKids. Sharing #love, #photooftheday, #beautiful, #happy, #cute, and #picoftheday. Join the tale—#followme for more #Toonocalypse.'''
+        "🌀 Welcome to Toonocalypse — where stories come alive in magical motion!\n"
+        "✨ Funny, surreal, and full of heart — from wild animal antics to brave little heroes.\n"
+        "🎨 Every reel is a burst of art, emotion, and imagination!\n\n"
+        "#Toonocalypse #ReelMagic #AnimatedShorts #InstagramReels #KidsAnimation #PixarVibes #StorytimeReels "
+        "#WholesomeContent #DreamscapeArt #FantasyReels #MiniCartoon #ParentingReels #CuteReels #AIAnimation #MemeCartoon\n"
     )
 
 
@@ -411,7 +408,7 @@ def generate_tweet_from_story(story_arc: list, youtube_url: str = "", insta_url:
 
     # CTA + links
     cta_line = '✨ Experience this story in cinematic art:\n'
-    base_links = f"🎬 {youtube_url}\n📸 {insta_url}"
+    base_links = f"🎬 {youtube_url}\n📸 {insta_url}\n#ReelMagic #AnimatedShorts #CuteReels"
     reserved_length = len(cta_line + base_links)
 
     # Max characters available for the story part
@@ -498,7 +495,15 @@ def upload_video_to_youtube(video_path: str, title: str, description: str, tags:
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"Video not found: {video_path}")
     
-    title = title.strip().replace("\n", " ")[:100] or "Cinematic Poem"
+    title = f"{title.strip()} | Animated Shorts for Kids | Wholesome Funny Viral Stories"
+    description = (
+        f"{description}\n\n"
+        "🎬 Dive into animated magic with Toonocalypse!\n"
+        "💥 Perfect for fans of Pixar, DreamWorks, and Studio Ghibli.\n"
+        "👦👧 For kids, families, and dreamers of all ages.\n\n"
+        "📌 Tags: #AnimatedShorts #KidsStories #PixarStyle #YouTubeShorts #AnimeKids #Dreamscape\n"
+        "👉 Subscribe for daily animated wonders!"
+    )
 
     youtube = authenticate_youtube()
     
@@ -953,6 +958,17 @@ def generate_title_from_story(story: list[str]) -> str:
         print(f"⚠️ Title generation failed: {e}")()
         return "A Magical Story"
 
+def extract_tags_from_story(story: list[str]) -> list:
+    keywords = set()
+    for line in story:
+        words = re.findall(r'\b\w+\b', line.lower())
+        keywords.update(word for word in words if word not in {"the", "a", "and", "is", "to", "on", "in"})
+    popular_tags = [
+        "funny", "cute", "cartoon", "animal", "robot", "baby", "magic", "dream", "kids", "monster",
+        "AI", "animation", "short", "reel", "viral", "story", "child", "family", "epic", "silly"
+    ]
+    return sorted(set(f"#{word}" for word in keywords if word in popular_tags))
+
 
 def get_unique_action_story(action_stories, history_path="history_story.txt"):
     """
@@ -1060,7 +1076,12 @@ if __name__ == "__main__":
         print(f"✅ Caption: {caption}")
         
         # 2. Publish to Youtube
-        yt_id = upload_video_to_youtube(video_path=story_video, title=story_title, description=caption, tags=["visual story", "animated tale", "kids", "storytelling", "pixar style", "short film"])
+        tags = extract_tags_from_story(story_arc) + [
+            "Animated Shorts", "Pixar Style", "Storytelling", "Kids Animation",
+            "YouTube Shorts", "Inspiring Reels", "Funny Cartoons", "DreamWorks Style"
+        ]
+
+        yt_id = upload_video_to_youtube(video_path=story_video, title=story_title, description=caption, tags=tags)
         print(f"✅ YouTube Shorts uploaded: https://youtu.be/{yt_id}")
         
         # 3. Post Reel
