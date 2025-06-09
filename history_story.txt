@@ -24,3 +24,4 @@
 {"story_idea": "A metal-plated cow starts walking through car lots, attracting vehicles with her hooves until she's a rolling fortress of sedans. She calls it 'The Herdening.'"}
 {"story_idea": "A mecha flamingo disguised as a statue comes to life during golden hour and forces Instagrammers into posing for chaotic album covers."}
 {"story_idea": "A mech pigeon leads air raids of breadcrumbs across plazas, drawing flocks into perfect geometric formations."}
+{"story_idea": "A museum tour is interrupted when a dinosaur skeleton roars to life and chases tourists\u2014only to reveal it's a prank robot for a hidden camera show."}
