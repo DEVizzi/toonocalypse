@@ -27,3 +27,4 @@
 {"story_idea": "A museum tour is interrupted when a dinosaur skeleton roars to life and chases tourists\u2014only to reveal it's a prank robot for a hidden camera show."}
 {"story_idea": "A cybernetic goat with jet horns launches itself through rooftops, headbutting satellite dishes to spread a meme virus."}
 {"story_idea": "A robotic piggy bank on skates rolls through banks, absorbing coins and credit cards into its armored shell. When full, it launches itself like a cannonball at vault doors."}
+{"story_idea": "A lobster in cyber armor clacks Morse-code threats into beach umbrellas, summoning tidal waves of jellyfish drones from offshore."}
