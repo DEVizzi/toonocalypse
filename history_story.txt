@@ -34,3 +34,4 @@
 {"story_idea": "A mechanical bat hijacks movie theaters, replacing trailers with shadow puppet operas starring itself."}
 {"story_idea": "A grocery cart goes rogue, zooming through the store like a bumper car. The hero must ride it to catch a thief."}
 {"story_idea": "At a car wash, the foam suddenly turns into bubbles that carry the cars away like balloons."}
+{"story_idea": "A venomous snake with cyber-fangs slithers through vending machines, reprogramming them to dispense exploding snacks to sow chaos."}
