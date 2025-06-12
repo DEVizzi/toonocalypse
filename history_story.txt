@@ -32,3 +32,4 @@
 {"story_idea": "A mechanical armadillo rolls through libraries, scanning books and yelling spoilers before escape-rolling into the shadows."}
 {"story_idea": "A fast food worker drops a fry into the deep fryer. A spark flashes, and suddenly the fryer starts chanting in Latin. It wants a sacrifice\u2014of ketchup."}
 {"story_idea": "A mechanical bat hijacks movie theaters, replacing trailers with shadow puppet operas starring itself."}
+{"story_idea": "A grocery cart goes rogue, zooming through the store like a bumper car. The hero must ride it to catch a thief."}
