@@ -41,3 +41,4 @@
 {"story_idea": "A mechanical goat with titanium horns launches surprise mountain assaults, headbutting climbers off cliffs to claim 'Peak Alpha Status.'"}
 {"story_idea": "A digital goldfish appears on every smart screen, issuing odd quests like 'Bring me 47 paperclips or face the consequences.'"}
 {"story_idea": "A snail with turbo armor slides through city streets leaving trails of instant cement. The only way to stop him? Out-snail him."}
+{"story_idea": "A man's sandwich starts fighting him back when he tries to eat it, karate chopping his hand."}
