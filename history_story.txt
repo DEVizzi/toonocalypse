@@ -44,3 +44,4 @@
 {"story_idea": "A man's sandwich starts fighting him back when he tries to eat it, karate chopping his hand."}
 {"story_idea": "A robotic octopus with rollerblades zooms through subways and streets, grabbing phones and wallets while announcing world domination trivia."}
 {"story_idea": "A robotic squirrel with a chainsaw tail begins cutting down every metal pole in the city to build his nut-powered doomsday machine."}
+{"story_idea": "A toaster-sized robot dog sniffs out shoes and replaces one from every pair with a squeaky decoy."}
