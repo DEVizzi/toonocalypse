@@ -47,3 +47,4 @@
 {"story_idea": "A toaster-sized robot dog sniffs out shoes and replaces one from every pair with a squeaky decoy."}
 {"story_idea": "A crocodile with rocket legs launches from rivers onto boats, shouting 'I AM THE NAVY NOW!' while sinking inflatable swans."}
 {"story_idea": "A robotic ostrich with roller-legs outruns police cars while dropping smoke eggs that hatch holographic decoys of itself."}
+{"story_idea": "A cyborg sloth in hoverboots patrols elevators, slowing time and offering unsolicited wisdom with every floor."}
