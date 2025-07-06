@@ -54,3 +54,4 @@
 {"story_idea": "A moose with extendable antlers climbs buildings and spells giant graffiti messages like 'FEED ME MOSS' using window washers as paint rollers."}
 {"story_idea": "A turtle in mech armor patrols crosswalks at 300 mph, yelling 'WALK OR PERISH!' and flipping cars that roll through red lights."}
 {"story_idea": "A robotic hedgehog rolls through office buildings, triggering 'nap bombs' that force employees into mandatory dreamscape adventures."}
+{"story_idea": "A flamethrower-wielding goldfish in a hoverbowl escapes from a pet store and begins vaporizing every drop of tap water it finds. 'Only distilled shall remain!'"}
