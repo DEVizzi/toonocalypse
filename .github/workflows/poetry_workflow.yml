@@ -3,26 +3,7 @@ name: Toonocalyse workflow
 on:
   schedule:
     # Monday to Sunday — 9:40 AM IST and 7:10 PM IST
-    - cron: "10 4 * * 1"  # 9:40 AM IST Monday
-    - cron: "40 13 * * 1" # 7:10 PM IST Monday
 
-    - cron: "10 4 * * 2"  # 9:40 AM IST Tuesday
-    - cron: "40 13 * * 2" # 7:10 PM IST Tuesday
-
-    - cron: "10 4 * * 3"  # 9:40 AM IST Wednesday
-    - cron: "40 13 * * 3" # 7:10 PM IST Wednesday
-
-    - cron: "10 4 * * 4"  # 9:40 AM IST Thursday
-    - cron: "40 13 * * 4" # 7:10 PM IST Thursday
-
-    - cron: "10 4 * * 5"  # 9:40 AM IST Friday
-    - cron: "40 13 * * 5" # 7:10 PM IST Friday
-
-    - cron: "10 4 * * 6"  # 9:40 AM IST Saturday
-    - cron: "40 13 * * 6" # 7:10 PM IST Saturday
-
-    - cron: "10 4 * * 0"  # 9:40 AM IST Sunday
-    - cron: "40 13 * * 0" # 7:10 PM IST Sunday
 
   workflow_dispatch:
 
