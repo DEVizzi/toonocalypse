@@ -52,7 +52,7 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "myvoiceoverbot-a0da14b71e20.json
 
 # Setup Gemini LLM
 llm = ChatGoogleGenerativeAI(
-    model="models/gemini-1.5-flash",
+    model="models/gemini-2.5-flash",
     temperature=0.7,
     api_key=GENAI_KEY
 )
@@ -170,40 +170,59 @@ def write_story_bottom_center(image_path: str, poem: str, output_path: str = Non
 #=========================================================================================================================================
 #                    Image Generators 
 #=========================================================================================================================================
-def retry_llm_invoke(messages, retries=3, delay=45):
+import os
+import time
+
+# Global counter to track function calls
+LLM_INVOKE_CALL_COUNT = 0
+
+def retry_llm_invoke(messages, retries=3, delay=30):
+    global LLM_INVOKE_CALL_COUNT
+    LLM_INVOKE_CALL_COUNT += 1
+    print(f"\n📞 LLM Invocation Count: {LLM_INVOKE_CALL_COUNT}")
+
     from langchain_google_genai import ChatGoogleGenerativeAI
 
-    keys = [
+    all_keys = [
         ("", os.getenv("GOOGLE_API_KEY")),
         ("1", os.getenv("GOOGLE_API_KEY1")),
         ("2", os.getenv("GOOGLE_API_KEY2"))
     ]
 
-    for attempt in range(retries):
-        for suffix, key in keys:
-            if not key:
-                continue
+    all_keys = [(suffix, key) for suffix, key in all_keys if key]
+    failed_keys = set()
 
+    for attempt in range(retries):
+        print(f"\n🔁 Retry attempt {attempt + 1}/{retries}")
+        available_keys = [k for k in all_keys if k not in failed_keys]
+
+        if not available_keys:
+            raise RuntimeError("❌ All API keys hit quota limits. Aborting early.")
+
+        for suffix, key in available_keys:
+            print(f"🔑 Using GOOGLE_API_KEY{suffix} (Attempt {attempt + 1})")
             try:
-                print(f"🔑 Using GOOGLE_API_KEY{suffix} (Attempt {attempt + 1})")
                 llm = ChatGoogleGenerativeAI(
-                    model="models/gemini-1.5-flash",
+                    model="models/gemini-2.5-flash",
                     temperature=0.7,
                     api_key=key
                 )
-                return llm.invoke(messages).content.strip()
+                result = llm.invoke(messages).content.strip()
+                return result
 
             except Exception as e:
+                error_str = str(e).lower()
                 print(f"⚠️ Error with GOOGLE_API_KEY{suffix}: {e}")
-                if "429" in str(e).lower() or "quota" in str(e).lower():
-                    continue  # Try next key
+                if "429" in error_str or "quota" in error_str:
+                    failed_keys.add((suffix, key))
                 else:
-                    raise  # Raise non-quota errors immediately
+                    raise  # Re-raise if it's not a quota issue
 
-        print(f"⏳ All keys failed for attempt {attempt + 1}/{retries}. Retrying in {delay} seconds...")
+        print(f"⏳ Retrying in {delay} seconds...\n")
         time.sleep(delay)
 
-    raise RuntimeError("❌ LLM call failed after trying all keys and multiple retries.")
+    raise RuntimeError("❌ LLM call failed after exhausting all working keys and retry attempts.")
+
 
 
 
