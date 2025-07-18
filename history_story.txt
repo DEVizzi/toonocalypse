@@ -62,3 +62,4 @@
 {"story_idea": "A hoverboard-riding weasel zooms through crosswalks, tossing stink bombs shaped like peanuts."}
 {"story_idea": "A titanium kangaroo punches through parking meters to redistribute coins through random vending machines."}
 {"story_idea": "A school juice box explodes and gives the hero temporary rocket powers\u2014but only for 90 seconds. Can they save the runaway hotdog stand?"}
+{"story_idea": "A hawk with drone wings performs aerial heists of topknots and wigs, creating a floating hair monument above the city skyline."}
