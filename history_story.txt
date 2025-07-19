@@ -63,3 +63,4 @@
 {"story_idea": "A titanium kangaroo punches through parking meters to redistribute coins through random vending machines."}
 {"story_idea": "A school juice box explodes and gives the hero temporary rocket powers\u2014but only for 90 seconds. Can they save the runaway hotdog stand?"}
 {"story_idea": "A hawk with drone wings performs aerial heists of topknots and wigs, creating a floating hair monument above the city skyline."}
+{"story_idea": "A robotic dolphin with hover boosters surfs through city streets, flooding intersections to claim them as part of his aquatic empire."}
