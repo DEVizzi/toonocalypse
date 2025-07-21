@@ -65,3 +65,4 @@
 {"story_idea": "A hawk with drone wings performs aerial heists of topknots and wigs, creating a floating hair monument above the city skyline."}
 {"story_idea": "A robotic dolphin with hover boosters surfs through city streets, flooding intersections to claim them as part of his aquatic empire."}
 {"story_idea": "A trio of robotic ferrets infiltrate vending machines, replacing snacks with scrolls that launch mini RPG quests in real life."}
+{"story_idea": "A glittery parrot with a cosmic turntable descends from orbit and starts remixing city sounds into a beat that causes short-term memory loss. He wants to make the world 'dance and forget.'"}
