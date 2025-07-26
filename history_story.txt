@@ -70,3 +70,4 @@
 {"story_idea": "A massive robotic python hijacks the city's plumbing, rising from toilets and sinks to deliver motivational speeches that slowly turn hypnotic."}
 {"story_idea": "A robotic porpoise rides storm drains, launching out of fountains to recite monologues about ocean injustice."}
 {"story_idea": "A mechanical owl projects fake moonlight and loops time in alleyways. Trapped citizens relive the same awkward conversation until someone solves his 'Riddle of the Neon Nest.'"}
+{"story_idea": "A hoodie-wearing cyber-rabbit plugs into arcade machines, turning them into combat drones. He\u2019s building a 'Carrot Cloud' network to hijack the city\u2019s snack delivery apps."}
