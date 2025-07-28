@@ -72,3 +72,4 @@
 {"story_idea": "A mechanical owl projects fake moonlight and loops time in alleyways. Trapped citizens relive the same awkward conversation until someone solves his 'Riddle of the Neon Nest.'"}
 {"story_idea": "A hoodie-wearing cyber-rabbit plugs into arcade machines, turning them into combat drones. He\u2019s building a 'Carrot Cloud' network to hijack the city\u2019s snack delivery apps."}
 {"story_idea": "A quantum raccoon exists in multiple dumpsters at once, stealing leftovers before they even arrive."}
+{"story_idea": "A mecha T-Rex rampages across downtown\u2014but he thinks he's playing a peaceful farming simulator. Anyone who interrupts gets tail-swiped into oblivion."}
