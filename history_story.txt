@@ -73,3 +73,4 @@
 {"story_idea": "A hoodie-wearing cyber-rabbit plugs into arcade machines, turning them into combat drones. He\u2019s building a 'Carrot Cloud' network to hijack the city\u2019s snack delivery apps."}
 {"story_idea": "A quantum raccoon exists in multiple dumpsters at once, stealing leftovers before they even arrive."}
 {"story_idea": "A mecha T-Rex rampages across downtown\u2014but he thinks he's playing a peaceful farming simulator. Anyone who interrupts gets tail-swiped into oblivion."}
+{"story_idea": "A kangaroo with spring-loaded legs bounces across rooftops, delivering cryptic rhymes and stealing satellite dishes to build his 'Sky Poem Projector.'"}
