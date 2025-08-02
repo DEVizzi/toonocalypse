@@ -77,3 +77,4 @@
 {"story_idea": "A robot kangaroo court holds fake trials in parking garages, complete with AI lawyers and foam hammers."}
 {"story_idea": "A robotic pufferfish floats in mall fountains, expanding rapidly to trap selfie-takers inside a water cage."}
 {"story_idea": "A robotic mole drills under sidewalks, installing trampoline mines that bounce people into inflatable obstacle courses for his game show network."}
+{"story_idea": "A bee with AI-enhanced hive mind power hypnotizes florists and gardeners to build a pollen-powered mech suit called 'The Swarm Lord.'"}
