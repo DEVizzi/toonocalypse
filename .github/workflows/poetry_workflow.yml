@@ -6,10 +6,10 @@ on:
     #- cron: '30 3 * * 1-5'    # Mon–Fri at 9:00 AM IST
 
     # Weekday Evening (6:00 PM IST)
-    - cron: '30 12 * * 1-5'   # Mon–Fri at 6:00 PM IST
+    #- cron: '30 12 * * 1-5'   # Mon–Fri at 6:00 PM IST
 
     # Weekend Late Morning (11:00 AM IST)
-    - cron: '30 5 * * 6,0'    # Sat & Sun at 11:00 AM IST
+    #- cron: '30 5 * * 6,0'    # Sat & Sun at 11:00 AM IST
 
     # Weekend Evening (5:00 PM IST)
     #- cron: '30 11 * * 6,0'   # Sat & Sun at 5:00 PM IST
