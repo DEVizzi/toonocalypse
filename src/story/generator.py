@@ -150,7 +150,7 @@ def generate_part_script(
 
         if not offline and has_gemini_keys() and qt.can_spend("text", 1):
             try:
-                model = load_models().get("text_models", ["gemini-2.5-flash"])[0]
+                text_models = load_models().get("text_models", ["gemini-3.1-flash-lite-preview"])
                 cast_desc = "\n".join(
                     f"- slug={s}, name={chars[s]['name']}, catchphrase={chars[s]['catchphrase']}"
                     for s in heroes + [villain]
@@ -167,10 +167,18 @@ def generate_part_script(
                     "- on_screen_hook <=6 words.\n"
                     "Return ONLY valid JSON with keys: on_screen_hook, hook_panel_id, panels (list of {panel_id, camera, impact, sfx, characters, action, narrator, dialogue:[{speaker, line}]})."
                 )
-                resp = call_with_key_failover(
-                    lambda client: client.models.generate_content(model=model, contents=prompt)
-                )
-                qt.spend("text", 1)
+                resp = None
+                for model in text_models:
+                    try:
+                        resp = call_with_key_failover(
+                            lambda client, m=model: client.models.generate_content(model=m, contents=prompt)
+                        )
+                        qt.spend("text", 1)
+                        break
+                    except Exception:
+                        continue
+                if resp is None:
+                    raise RuntimeError("All text models failed")
                 m = re.search(r"\{[\s\S]*\}", resp.text or "")
                 if m:
                     parsed = json.loads(m.group(0))
