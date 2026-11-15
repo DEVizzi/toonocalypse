@@ -76,7 +76,7 @@ def generate_episode_bundle(
     cliff = cliffhangers[min(part_num - 1, len(cliffhangers) - 1)]
 
     story_id = story_id_override or f"ep-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6]}"
-    title = title_override or f"{idea['title_hint']}"
+    title = title_override or " ".join(idea.split()[:6]).rstrip(".,!?")
     episode_id = f"{story_id}-pt{part_num}of{part_count}"
 
     script = generate_part_script(
@@ -177,8 +177,8 @@ def generate_episode_bundle(
 
     if not draft_release:
         used = set(bible.get("used_ideas", []))
-        if idea.get("id"):
-            used.add(idea["id"])
+        if idea:
+            used.add(idea)
         bible["used_ideas"] = sorted(used)
         save_state("story_bible.json", bible)
 

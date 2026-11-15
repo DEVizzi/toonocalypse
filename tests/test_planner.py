@@ -32,4 +32,4 @@ def test_sanitize_and_pick_unused_idea() -> None:
     assert "mind-control" not in cleaned.lower()
     assert "confetti-camera drone" in cleaned
     idea = pick_unused_seed_idea({"used_ideas": []}, rng=random.Random(1))
-    assert "id" in idea and "premise" in idea
+    assert isinstance(idea, str) and len(idea) > 10
