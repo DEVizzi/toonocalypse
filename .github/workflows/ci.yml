@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run_format:
+        description: "Optional dry-run format (Mini-Arc or One-Shot)"
+        required: false
+        default: "Mini-Arc"
+      dry_run_heroes:
+        description: "Comma-separated hero slugs"
+        required: false
+        default: "brewtan-the-yeti,detective-bubbles"
+      offline:
+        description: "Use offline deterministic stubs (no API spend)"
+        type: boolean
+        default: true
+      draft_release:
+        description: "Upload dry-run bundle as a draft GitHub Release"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  secrets-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Validate character bible
+        run: python3 scripts/check_bible.py
+      - name: Run pytest suite
+        run: pytest -q
+      - name: Run offline dry-run proof (Mini-Arc & One-Shot)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            OFFLINE_FLAG=""
+            if [ "${{ inputs.offline }}" = "true" ]; then OFFLINE_FLAG="--offline"; fi
+            DRAFT_FLAG=""
+            if [ "${{ inputs.draft_release }}" = "true" ]; then DRAFT_FLAG="--draft-release"; fi
+            python3 scripts/dry_run.py --format "${{ inputs.dry_run_format }}" --heroes "${{ inputs.dry_run_heroes }}" $OFFLINE_FLAG $DRAFT_FLAG
+          else
+            python3 scripts/dry_run.py --format Mini-Arc --heroes brewtan-the-yeti,detective-bubbles --offline
+            python3 scripts/dry_run.py --format One-Shot --offline
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dry-run-outputs
+          path: dry_run_output/
+          retention-days: 7

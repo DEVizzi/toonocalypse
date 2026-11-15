@@ -1,0 +1,58 @@
+{
+  "slug": "master-bamboo",
+  "name": "Master Bamboo",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Koala",
+  "pronouns": "he/him",
+  "age_group": "elder",
+  "size_class": "S",
+  "height_units": 0.8,
+  "palette": {
+    "primary": "#9B9CC4",
+    "secondary": "#FFFFFF",
+    "accent": "#3FA34D"
+  },
+  "silhouette": "Small compact koala with huge round fluffy white-tufted ears, big black oval nose, topknot bun, and jade sash.",
+  "visual_prompt": "Master Bamboo, small compact ashy-grey koala (#9AA3A8) with fluffy fur, topknot bun, huge round ears with white tufts (#FFFFFF), big black oval nose, emerald jade sash (#3FA34D), holding a smooth bamboo staff.",
+  "anchors": [
+    "huge round ears with white tufts",
+    "big black oval nose",
+    "ashy-grey fluffy fur with topknot bun",
+    "jade green sash (#3FA34D)"
+  ],
+  "forbidden": [
+    "black eye patches",
+    "panda markings",
+    "weapons"
+  ],
+  "outfit": "Jade martial-arts sash",
+  "prop": "bamboo staff",
+  "day_job": "Yoga Instructor",
+  "personality": "Calm, wise, passive-aggressive when annoyed",
+  "speech_style": "Calm, deliberate, politely deadpan (often corrects people: 'I'm a KOALA.')",
+  "catchphrase": "Patience grows like bamboo.",
+  "quirks": [
+    "Meditates during battle",
+    "Refuses to eat anything but 3-day-old eucalyptus"
+  ],
+  "covering": {
+    "covering_description": "Fluffy with a topknot bun"
+  },
+  "original_size_note": "Small",
+  "original_shape_note": "Compact and strong, like a furry little tank",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 12,
+    "length_scale": 1.25,
+    "pitch_semitones": -2,
+    "fx": "none"
+  },
+  "theme_motif": "Gentle bamboo flute pentatonic chime",
+  "relationships": {
+    "dr-pancake": "friend",
+    "percival-the-platypus": "mentor"
+  },
+  "reference_sheet": "characters/refs/master-bamboo/sheet_v1.png"
+}

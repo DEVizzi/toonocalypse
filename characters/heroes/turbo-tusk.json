@@ -1,0 +1,58 @@
+{
+  "slug": "turbo-tusk",
+  "name": "Turbo Tusk",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Warthog",
+  "pronouns": "he/him",
+  "age_group": "adult",
+  "size_class": "M",
+  "height_units": 1.1,
+  "palette": {
+    "primary": "#9B6500",
+    "secondary": "#F5F5F5",
+    "accent": "#212121"
+  },
+  "silhouette": "Stocky rust-brown warthog with curved white tusks, racing helmet, checkered mechanic jacket, and giant wrench.",
+  "visual_prompt": "Turbo Tusk, sturdy rust-brown warthog (#8C4A2F) with bright curved white tusks (#F5F5F5), vintage racing helmet, black-and-white checkered mechanic jacket (#212121), holding a big silver wrench.",
+  "anchors": [
+    "curved white tusks (#F5F5F5)",
+    "black-and-white checkered jacket",
+    "racing helmet",
+    "rust-brown sturdy warthog build"
+  ],
+  "forbidden": [
+    "drinking motor oil",
+    "lab coat",
+    "panda patches"
+  ],
+  "outfit": "Racing helmet and checkered mechanic jacket",
+  "prop": "wrench",
+  "day_job": "Demolition Derby Mechanic",
+  "personality": "Loud, wild, loyal to the core",
+  "speech_style": "Loud, boisterous, revving car sound effects",
+  "catchphrase": "Full throttle!",
+  "quirks": [
+    "Eats gear-shaped cookies",
+    "Sleeps inside cozy car garages"
+  ],
+  "covering": {
+    "covering_description": "Mohawk made of flexible exhaust pipes"
+  },
+  "original_size_note": "Large",
+  "original_shape_note": "Bulky with hydraulic limbs",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 115,
+    "length_scale": 0.9,
+    "pitch_semitones": -2,
+    "fx": "none"
+  },
+  "theme_motif": "Upbeat garage-rock guitar riff with cowbell",
+  "relationships": {
+    "blitzshell": "rival",
+    "blazetail": "friend"
+  },
+  "reference_sheet": "characters/refs/turbo-tusk/sheet_v1.png"
+}

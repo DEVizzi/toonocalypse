@@ -1,0 +1,62 @@
+{
+  "slug": "percival-the-platypus",
+  "name": "Percival the Platypus",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Platypus",
+  "pronouns": "he/him",
+  "age_group": "adult",
+  "size_class": "M",
+  "height_units": 1.0,
+  "palette": {
+    "primary": "#67310F",
+    "secondary": "#5B6770",
+    "accent": "#C8102E"
+  },
+  "silhouette": "Medium slightly pudgy platypus with a wide flat slate-grey bill, broad paddle tail, and fluttering red explorer scarf.",
+  "visual_prompt": "Percival the Platypus, medium slightly pudgy brown platypus (#8B5A2B) with short sleek wet fur, wide flat slate-grey bill (#5B6770), paddle tail, bright red explorer scarf (#C8102E), brass compass clipped to belt, rounded friendly comic outlines.",
+  "anchors": [
+    "wide flat slate-grey bill (#5B6770)",
+    "warm brown sleek wet fur (#8B5A2B)",
+    "bright red explorer scarf (#C8102E)",
+    "brass compass on belt"
+  ],
+  "forbidden": [
+    "teal fur",
+    "teal bill",
+    "fedora",
+    "any hat",
+    "spy suit",
+    "trench coat"
+  ],
+  "outfit": "Red explorer scarf and utility belt with brass compass",
+  "prop": "brass compass",
+  "day_job": "Antique Watch Repairman",
+  "personality": "Grumpy, sarcastic, secretly brilliant",
+  "speech_style": "Dry, witty, secretly enthusiastic when solving puzzles",
+  "catchphrase": "Bills and thrills!",
+  "quirks": [
+    "Allergic to time travel",
+    "Loves crossword puzzles"
+  ],
+  "covering": {
+    "covering_description": "Short sleek fur, always wet"
+  },
+  "original_size_note": "Medium",
+  "original_shape_note": "Slightly pudgy, like an accountant who jogs once a year",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 0,
+    "length_scale": 1.0,
+    "pitch_semitones": 0,
+    "fx": "none"
+  },
+  "theme_motif": "Jaunty brasshorn and pizzicato explorer march",
+  "relationships": {
+    "master-bamboo": "friend",
+    "detective-bubbles": "friend",
+    "professor-gearbill": "rival"
+  },
+  "reference_sheet": "characters/refs/percival-the-platypus/sheet_v1.png"
+}

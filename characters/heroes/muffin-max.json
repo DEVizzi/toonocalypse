@@ -1,0 +1,58 @@
+{
+  "slug": "muffin-max",
+  "name": "Muffin Max",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Rabbit",
+  "pronouns": "he/him",
+  "age_group": "teen",
+  "size_class": "XS",
+  "height_units": 0.35,
+  "palette": {
+    "primary": "#EFF300",
+    "secondary": "#E8B04A",
+    "accent": "#FFFFFF"
+  },
+  "silhouette": "Tiny golden-tan rabbit with soft flopped ears, puffy powdered-sugar cheeks, tiny white baker hat, and wooden rolling pin.",
+  "visual_prompt": "Muffin Max, tiny golden-caramel rabbit (#E8B04A) with cream belly (#FFF8E1), powdered-sugar patches, floppy rabbit ears peeking beside a crisp white chef baker hat (#FFFFFF), carrying pastry scroll tubes and a wooden rolling pin.",
+  "anchors": [
+    "tiny white baker hat (#FFFFFF)",
+    "golden-caramel rabbit fur with cream belly",
+    "floppy rabbit ears",
+    "wooden rolling pin"
+  ],
+  "forbidden": [
+    "fishbowl",
+    "space bubble helmet",
+    "hamster round tail"
+  ],
+  "outfit": "White baker hat and pastry courier strap",
+  "prop": "rolling pin",
+  "day_job": "Pastry Delivery Courier",
+  "personality": "Anxious, well-meaning, always late",
+  "speech_style": "Cheerful, jittery, always checking the time",
+  "catchphrase": "Rise and shine!",
+  "quirks": [
+    "Carries pastries in ninja scroll tubes",
+    "Thinks muffins talk to him"
+  ],
+  "covering": {
+    "covering_description": "Soft, smells like cinnamon"
+  },
+  "original_size_note": "Small and speedy",
+  "original_shape_note": "Lean, athletic, and jittery",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 170,
+    "length_scale": 0.9,
+    "pitch_semitones": 6,
+    "fx": "none"
+  },
+  "theme_motif": "Lighthearted bakery waltz on pizzicato strings",
+  "relationships": {
+    "dr-pancake": "friend",
+    "zapzilla": "friend"
+  },
+  "reference_sheet": "characters/refs/muffin-max/sheet_v1.png"
+}

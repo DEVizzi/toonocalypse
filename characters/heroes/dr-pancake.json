@@ -1,0 +1,58 @@
+{
+  "slug": "dr-pancake",
+  "name": "Dr. Pancake",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Panda",
+  "pronouns": "he/him",
+  "age_group": "adult",
+  "size_class": "L",
+  "height_units": 1.3,
+  "palette": {
+    "primary": "#2A2808",
+    "secondary": "#1A1A1A",
+    "accent": "#FFFFFF"
+  },
+  "silhouette": "Large round barrel-bodied panda with black eye patches, syrup-stained lab coat, and golden spatula.",
+  "visual_prompt": "Dr. Pancake, large round fluffy black-and-white panda (#FFFFFF / #1A1A1A) with classic black eye patches, wearing a white lab coat with golden maple-syrup stains (#F4B400) and holding a shiny breakfast spatula.",
+  "anchors": [
+    "round barrel panda body (#FFFFFF / #1A1A1A)",
+    "black eye patches",
+    "golden syrup-stained lab coat (#F4B400)",
+    "breakfast spatula"
+  ],
+  "forbidden": [
+    "koala ears",
+    "grey fur",
+    "bamboo staff"
+  ],
+  "outfit": "Syrup-stained breakfast scientist lab coat",
+  "prop": "spatula",
+  "day_job": "Breakfast Food Scientist",
+  "personality": "Gentle genius, food-obsessed",
+  "speech_style": "Jolly, warm, relates every problem to breakfast",
+  "catchphrase": "Science is best served stacked.",
+  "quirks": [
+    "Wears a lab coat with bacon buttons",
+    "Invents edible gadgets"
+  ],
+  "covering": {
+    "covering_description": "Puffy, like whipped cream"
+  },
+  "original_size_note": "XL and fluffy",
+  "original_shape_note": "Rotund with surprising agility",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 130,
+    "length_scale": 1.05,
+    "pitch_semitones": -1,
+    "fx": "none"
+  },
+  "theme_motif": "Bouncy accordion and cheerful kitchen-pot rhythm",
+  "relationships": {
+    "master-bamboo": "friend",
+    "brewtan-the-yeti": "friend"
+  },
+  "reference_sheet": "characters/refs/dr-pancake/sheet_v1.png"
+}

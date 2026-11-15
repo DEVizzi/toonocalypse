@@ -1,0 +1,60 @@
+{
+  "slug": "snuggle-doom",
+  "name": "Snuggle Doom",
+  "bible_version": 1,
+  "role": "anti-hero",
+  "species": "Hedgehog",
+  "pronouns": "she/her",
+  "age_group": "kid",
+  "size_class": "S",
+  "height_units": 0.6,
+  "palette": {
+    "primary": "#B307F1",
+    "secondary": "#F8BBD0",
+    "accent": "#6A1B9A"
+  },
+  "silhouette": "Small fluffy violet hedgehog with glittering pink quills, permanent tiny comic scowl, purple cape, and glitter-trap kit.",
+  "visual_prompt": "Snuggle Doom, small deceptive fluffy violet hedgehog (#7E57C2) with soft pastel-pink glittering quills (#F8BBD0), permanent cute tiny scowl, royal-purple mini cape (#6A1B9A), holding a sparkly glitter-trap prank kit.",
+  "anchors": [
+    "violet-and-pink glittering hedgehog quills",
+    "permanent cute tiny scowl",
+    "royal-purple mini cape (#6A1B9A)",
+    "glitter-trap prank kit"
+  ],
+  "forbidden": [
+    "blue fur",
+    "red sneakers",
+    "lamb wool",
+    "real weapons",
+    "mean cruelty"
+  ],
+  "outfit": "Royal-purple mini cape",
+  "prop": "glitter-trap kit",
+  "day_job": "Kindergarten Teacher",
+  "personality": "Sweet on the outside, dramatic prankster at heart",
+  "speech_style": "Sweet-then-grumpy comic melodrama",
+  "catchphrase": "Revenge\u2026 with sprinkles.",
+  "quirks": [
+    "Releases harmless glitter puffs when startled",
+    "Keeps a cute diary of silly pranks"
+  ],
+  "covering": {
+    "covering_description": "Huggable... until activated"
+  },
+  "original_size_note": "Small and deceptive",
+  "original_shape_note": "Cute ball of fluff with retractable spikes",
+  "voice": {
+    "engine": "piper",
+    "model": "en_GB-alba-medium",
+    "speaker_id": 0,
+    "length_scale": 1.0,
+    "pitch_semitones": 3,
+    "fx": "none"
+  },
+  "theme_motif": "Cute music-box melody interrupted by a comic tuba",
+  "relationships": {
+    "captain-thorn": "friend",
+    "muffin-max": "friend"
+  },
+  "reference_sheet": "characters/refs/snuggle-doom/sheet_v1.png"
+}

@@ -1,0 +1,49 @@
+format_weights:
+  One-Shot: 0.30
+  Mini-Arc: 0.35
+  Arc: 0.25
+  Epic: 0.10
+
+durations:
+  one_shot_min_sec: 20
+  one_shot_max_sec: 45
+  part_min_sec: 30
+  part_max_sec: 55
+  hard_cap_sec: 59
+
+narration:
+  max_narrator_word_share: 0.25
+  narration_length_scale_multiplier: 0.92
+  max_static_frame_sec: 3.0
+  max_dead_air_sec: 0.4
+
+gates:
+  hook_retention:
+    min_avg_score: 7.5
+    min_safety_score: 10.0
+    min_hook_score: 8.0
+    max_rewrites: 3
+  art_qa:
+    min_anchor_score: 0.70
+    max_palette_delta_e: 15.0
+    max_scale_error_pct: 20.0
+    max_retries: 3
+  render_qa:
+    target_lufs: -14.0
+    lufs_tolerance: 1.0
+    max_loop_join_diff: 28.0
+
+cliffhanger_weights:
+  reveal_twist: 1.0
+  ticking_clock: 1.0
+  open_question: 1.0
+  mild_cartoon_peril: 1.0
+  emotional_turn: 1.0
+  freeze_frame: 1.0
+
+lead_weights: {}
+
+learning_bounds:
+  max_format_shift: 0.10
+  max_duration_shift_sec: 10
+  min_weeks_for_time_shift: 3

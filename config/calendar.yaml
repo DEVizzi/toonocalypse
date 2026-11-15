@@ -1,0 +1,46 @@
+holidays:
+  - name: "New Year's Day"
+    month: 1
+    day: 1
+    lead_days: 4
+    theme: "fresh starts, silly resolutions, countdown clocks"
+  - name: "Holi"
+    month: 3
+    day: 14
+    lead_days: 4
+    theme: "colour powder festival, rainbow prank gadgets, teamwork"
+  - name: "Earth Day"
+    month: 4
+    day: 22
+    lead_days: 4
+    theme: "planting trees, recycling bots, solar-powered fun"
+  - name: "Friendship Day"
+    month: 8
+    day: 3
+    lead_days: 4
+    theme: "unlikely hero pairings, helping friends, shared snacks"
+  - name: "Back to School"
+    month: 9
+    day: 1
+    lead_days: 4
+    theme: "homework mix-ups, science fair inventions, lockers"
+  - name: "World Animal Day"
+    month: 10
+    day: 4
+    lead_days: 4
+    theme: "celebrating every critter's unique talent"
+  - name: "Halloween"
+    month: 10
+    day: 31
+    lead_days: 5
+    theme: "silly costumes, friendly spooky decorations, trick-or-treat candy"
+  - name: "Diwali"
+    month: 10
+    day: 20
+    lead_days: 4
+    theme: "lanterns, rangoli art, warm sweets, festival of lights"
+  - name: "Christmas"
+    month: 12
+    day: 25
+    lead_days: 5
+    theme: "gift wrapping chaos, snow forts, warm cocoa"

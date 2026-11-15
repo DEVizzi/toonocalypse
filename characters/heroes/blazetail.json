@@ -1,0 +1,58 @@
+{
+  "slug": "blazetail",
+  "name": "Blazetail",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Fire-Ferret",
+  "pronouns": "he/him",
+  "age_group": "young_adult",
+  "size_class": "S",
+  "height_units": 0.55,
+  "palette": {
+    "primary": "#C70427",
+    "secondary": "#FFC23D",
+    "accent": "#212121"
+  },
+  "silhouette": "Short compact red-orange ferret with golden ember-tipped tail, black forehead goggles, and bright flame scarf.",
+  "visual_prompt": "Blazetail, short compact red-orange fire-ferret (#E2531F) with golden-yellow ember tail tips (#FFC23D), dark charcoal goggles (#212121) pushed up on forehead, flame-patterned scarf, expressive bold eyes.",
+  "anchors": [
+    "short compact red-orange ferret body (#E2531F)",
+    "golden ember-tipped tail (#FFC23D)",
+    "goggles on forehead",
+    "flame-patterned scarf"
+  ],
+  "forbidden": [
+    "long neon-green body",
+    "pink stripes",
+    "real dangerous fire harm"
+  ],
+  "outfit": "Forehead goggles and firefighter flame scarf",
+  "prop": "flame scarf",
+  "day_job": "Firefighter Mascot",
+  "personality": "Impulsive, daring, loyal",
+  "speech_style": "Energetic, raspy, impulsive optimist",
+  "catchphrase": "Hot on the trail!",
+  "quirks": [
+    "Leaves scorch marks when walking",
+    "Hiccups cause sparks"
+  ],
+  "covering": {
+    "covering_description": "Crackling fur that smokes when he's angry"
+  },
+  "original_size_note": "Small",
+  "original_shape_note": "Lean and fast like a flame",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 102,
+    "length_scale": 0.9,
+    "pitch_semitones": 1,
+    "fx": "none"
+  },
+  "theme_motif": "Fast upbeat percussion and bright brass riff",
+  "relationships": {
+    "neon-noodle": "friend",
+    "turbo-tusk": "friend"
+  },
+  "reference_sheet": "characters/refs/blazetail/sheet_v1.png"
+}

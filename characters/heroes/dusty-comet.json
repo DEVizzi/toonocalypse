@@ -1,0 +1,58 @@
+{
+  "slug": "dusty-comet",
+  "name": "Dusty Comet",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Donkey",
+  "pronouns": "he/him",
+  "age_group": "adult",
+  "size_class": "M",
+  "height_units": 0.9,
+  "palette": {
+    "primary": "#CBBF8F",
+    "secondary": "#FFF8E1",
+    "accent": "#5C6BC0"
+  },
+  "silhouette": "Sturdy big-headed tan-grey donkey with tall ears poking through a clear bubble space helmet, indigo courier jacket, and delivery satchel.",
+  "visual_prompt": "Dusty Comet, sturdy big-headed warm tan-grey space donkey (#C68E5A) with cream muzzle (#FFF8E1), subtle star-speckled fuzz, tall ears poking cleanly through a glowing-light bubble space helmet, indigo courier jacket (#5C6BC0) and delivery satchel.",
+  "anchors": [
+    "sturdy big-headed donkey silhouette (#C68E5A)",
+    "tall donkey ears through bubble space helmet",
+    "indigo courier jacket (#5C6BC0)",
+    "delivery satchel"
+  ],
+  "forbidden": [
+    "rabbit cotton tail",
+    "baker hat",
+    "cloud sheep wool"
+  ],
+  "outfit": "Indigo space-courier jacket and glowing bubble helmet",
+  "prop": "delivery satchel",
+  "day_job": "Asteroid Miner",
+  "personality": "Gruff, deep thinker, tells dad jokes",
+  "speech_style": "Warm southern drawl, dad jokes and space ballads",
+  "catchphrase": "Yeehaw to the stars!",
+  "quirks": [
+    "Sings space ballads",
+    "Wears a helmet with a glowing light"
+  ],
+  "covering": {
+    "covering_description": "Star-speckled fuzz"
+  },
+  "original_size_note": "Sturdy and big-headed",
+  "original_shape_note": "Thick, solid, with a gravity belt",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 225,
+    "length_scale": 1.0,
+    "pitch_semitones": 0,
+    "fx": "none"
+  },
+  "theme_motif": "Space-country pedal steel and gentle star chimes",
+  "relationships": {
+    "captain-thorn": "rival",
+    "brewtan-the-yeti": "friend"
+  },
+  "reference_sheet": "characters/refs/dusty-comet/sheet_v1.png"
+}

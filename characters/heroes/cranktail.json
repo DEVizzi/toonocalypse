@@ -1,0 +1,58 @@
+{
+  "slug": "cranktail",
+  "name": "Cranktail",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Scorpion",
+  "pronouns": "he/him",
+  "age_group": "adult",
+  "size_class": "S",
+  "height_units": 0.6,
+  "palette": {
+    "primary": "#8C696B",
+    "secondary": "#FFE0B2",
+    "accent": "#FFC107"
+  },
+  "silhouette": "Small sleek mechanical rust-crimson scorpion with rounded friendly claws, a blinking amber tail-light, brass wind-up key on back, and tool belt.",
+  "visual_prompt": "Cranktail, small friendly mechanical rust-crimson scorpion (#B71C1C) with warm cream belly plates (#FFE0B2), curved tail ending in a blinking amber GPS beacon (#FFC107), brass wind-up key on back, wearing a mechanic tool belt with wrench.",
+  "anchors": [
+    "rust-crimson mechanical scorpion carapace (#B71C1C)",
+    "blinking amber tail beacon (#FFC107)",
+    "brass wind-up key on back",
+    "mechanic tool belt"
+  ],
+  "forbidden": [
+    "squirrel bushy tail",
+    "sharp menacing stinger",
+    "dark scary eyes"
+  ],
+  "outfit": "Mechanic tool belt with mini GPS",
+  "prop": "wrench",
+  "day_job": "Taxi Driver in the Underworld",
+  "personality": "Irritable, quick-talking, secretly poetic",
+  "speech_style": "Quick, nerdy, surprisingly poetic",
+  "catchphrase": "Give it a crank!",
+  "quirks": [
+    "Tail doubles as a GPS",
+    "Listens to romance audiobooks"
+  ],
+  "covering": {
+    "covering_description": "Metallic carapace with brushed steel"
+  },
+  "original_size_note": "Medium",
+  "original_shape_note": "Sleek and mechanical",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 240,
+    "length_scale": 0.9,
+    "pitch_semitones": 2,
+    "fx": "none"
+  },
+  "theme_motif": "Ticking clockwork synth with upbeat snare",
+  "relationships": {
+    "squeakshadow": "friend",
+    "turbo-tusk": "friend"
+  },
+  "reference_sheet": "characters/refs/cranktail/sheet_v1.png"
+}

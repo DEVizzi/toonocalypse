@@ -1,0 +1,56 @@
+{
+  "slug": "dj-meowgic",
+  "name": "DJ Meowgic",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Cat",
+  "pronouns": "they/them",
+  "age_group": "young_adult",
+  "size_class": "M",
+  "height_units": 0.9,
+  "palette": {
+    "primary": "#2A0007",
+    "secondary": "#FFFFFF",
+    "accent": "#E0218A"
+  },
+  "silhouette": "Slim tuxedo cat wearing oversized magenta headphones, star-shaped sunglasses, and a portable turntable backpack.",
+  "visual_prompt": "DJ Meowgic, slim midnight-black tuxedo cat (#262626) with crisp white chest (#FFFFFF), glowing violet eyes behind star sunglasses, oversized magenta headphones (#E0218A), swishy tail, and turntable backpack.",
+  "anchors": [
+    "oversized magenta headphones (#E0218A)",
+    "star-shaped sunglasses",
+    "black tuxedo fur with white chest",
+    "turntable backpack"
+  ],
+  "forbidden": [
+    "grim dark aura",
+    "nightclub alcohol props"
+  ],
+  "outfit": "Magenta headphones, star shades, turntable backpack",
+  "prop": "turntable backpack",
+  "day_job": "Nightclub DJ / Sound Shaman",
+  "personality": "Playful, rhythmic, slightly chaotic",
+  "speech_style": "Upbeat, rhythmic, sprinkles in music metaphors",
+  "catchphrase": "Drop the beat, not the ball.",
+  "quirks": [
+    "Scratches vinyl to cast spells"
+  ],
+  "covering": {
+    "covering_description": "Short fur with magical sparkle flecks"
+  },
+  "original_size_note": "Small, but floaty",
+  "original_shape_note": "Slim and agile",
+  "voice": {
+    "engine": "piper",
+    "model": "en_GB-alba-medium",
+    "speaker_id": 0,
+    "length_scale": 0.95,
+    "pitch_semitones": -1,
+    "fx": "none"
+  },
+  "theme_motif": "Funky bassline with playful vinyl scratch",
+  "relationships": {
+    "neon-noodle": "friend",
+    "glitchpaw": "friend"
+  },
+  "reference_sheet": "characters/refs/dj-meowgic/sheet_v1.png"
+}

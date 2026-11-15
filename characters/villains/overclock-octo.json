@@ -1,0 +1,51 @@
+{
+  "slug": "overclock-octo",
+  "name": "Overclock Octo",
+  "bible_version": 1,
+  "role": "villain",
+  "species": "Robo-Octopus",
+  "pronouns": "he/him",
+  "age_group": "ageless",
+  "size_class": "L",
+  "height_units": 1.3,
+  "palette": {
+    "primary": "#C0C4C8",
+    "secondary": "#37474F",
+    "accent": "#B2FF00"
+  },
+  "silhouette": "Large angular chrome robot octopus on turbo rollerblades with eight articulated piston arms and acid-lime LED eyes.",
+  "visual_prompt": "Overclock Octo, large angular chrome robotic octopus (#C0C4C8) on neon rollerblades, eight hinged piston tentacles, glowing acid-lime LED eyes (#B2FF00), carrying a giant megaphonic trivia horn.",
+  "anchors": [
+    "eight hinged chrome piston tentacles (#C0C4C8)",
+    "acid-lime LED eyes (#B2FF00)",
+    "turbo rollerblades",
+    "trivia megaphone"
+  ],
+  "forbidden": [
+    "coral-red skin",
+    "bubble beard",
+    "pirate hat"
+  ],
+  "outfit": "Chrome rollerblade chassis",
+  "prop": "trivia megaphone",
+  "personality": "Boastful trivia nerd who announces every step of his plan",
+  "speech_style": "Fast quiz-show host meets comic supervillain",
+  "catchphrase": "Fun fact: I am unstoppable!",
+  "quirks": [
+    "Always pauses to ask trivia questions",
+    "Trips on his own tentacles"
+  ],
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 30,
+    "length_scale": 0.9,
+    "pitch_semitones": -2,
+    "fx": "light_robot"
+  },
+  "theme_motif": "Bouncy synth-pop game-show stinger",
+  "relationships": {
+    "bubblebeard": "rival"
+  },
+  "reference_sheet": "characters/refs/overclock-octo/sheet_v1.png"
+}

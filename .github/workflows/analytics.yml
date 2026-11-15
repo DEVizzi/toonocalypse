@@ -1,0 +1,46 @@
+name: Analytics Learning Loop
+
+on:
+  schedule:
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+    inputs:
+      offline:
+        type: boolean
+        default: false
+
+concurrency:
+  group: analytics
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  analytics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - name: Run analytics learning loop
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: |
+          FLAG=""
+          if [ "${{ inputs.offline }}" = "true" ]; then FLAG="--offline"; fi
+          python3 -m src.cli analytics $FLAG
+      - name: Commit performance & playbook updates
+        run: |
+          git config user.name "toonocalypse-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/performance.json config/playbook.yaml
+          git diff --cached --quiet || git commit -m "chore: update analytics performance weights"
+          git push

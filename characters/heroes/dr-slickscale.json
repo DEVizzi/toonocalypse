@@ -1,0 +1,58 @@
+{
+  "slug": "dr-slickscale",
+  "name": "Dr. Slickscale",
+  "bible_version": 1,
+  "role": "hero",
+  "species": "Cyborg Chameleon",
+  "pronouns": "he/him",
+  "age_group": "adult",
+  "size_class": "M",
+  "height_units": 0.9,
+  "palette": {
+    "primary": "#00897B",
+    "secondary": "#B8C0C8",
+    "accent": "#7B3FBF"
+  },
+  "silhouette": "Medium cyborg chameleon in a white lab coat with silver cyber plates, fixed teal-to-violet diagonal stripes, and one optical lens eye.",
+  "visual_prompt": "Dr. Slickscale, medium silver-plated cyborg chameleon (#B8C0C8) with FIXED teal (#1FB5A8) and violet (#7B3FBF) diagonal digital stripes that never change color, one mechanical lens eye, curled tail, crisp white lab coat and wrist gauntlet.",
+  "anchors": [
+    "silver cyber plates (#B8C0C8)",
+    "fixed teal-to-violet diagonal stripes",
+    "one optical lens eye",
+    "crisp white lab coat"
+  ],
+  "forbidden": [
+    "changing body color",
+    "Hawaiian shirt",
+    "surfboard"
+  ],
+  "outfit": "White scientist lab coat and wrist gauntlet",
+  "prop": "wrist gauntlet",
+  "day_job": "Portal Scientist / Cheese Theorist",
+  "personality": "Obsessed with alternate realities, awkward genius",
+  "speech_style": "Precise, slightly nasal, loves science hypotheses",
+  "catchphrase": "Hypothesis: we win.",
+  "quirks": [
+    "Fascinated by alternate dimensions",
+    "Talks to himself"
+  ],
+  "covering": {
+    "covering_description": "No fur; has digital skin"
+  },
+  "original_size_note": "Medium",
+  "original_shape_note": "Long-tailed with bionic legs",
+  "voice": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker_id": 70,
+    "length_scale": 1.0,
+    "pitch_semitones": 1,
+    "fx": "none"
+  },
+  "theme_motif": "Curious marimba and quirky synth blip",
+  "relationships": {
+    "mango-mike": "rival",
+    "dr-pancake": "friend"
+  },
+  "reference_sheet": "characters/refs/dr-slickscale/sheet_v1.png"
+}

@@ -1,0 +1,34 @@
+text_models:
+  - "gemini-2.5-flash"
+  - "gemini-2.5-flash-lite"
+  - "gemini-2.0-flash"
+
+image_models:
+  - "gemini-2.5-flash-image"
+  - "gemini-2.0-flash-exp-image-generation"
+  - "imagen-3.0-generate-002"
+
+vision_models:
+  - "gemini-2.5-flash"
+  - "gemini-2.0-flash"
+
+tts:
+  primary: "piper"
+  fallback: "espeak"
+  piper_models:
+    us_libritts: "en_US-libritts_r-medium"
+    us_lessac: "en_US-lessac-medium"
+    gb_alan: "en_GB-alan-medium"
+    gb_alba: "en_GB-alba-medium"
+  narrator:
+    engine: "piper"
+    model: "en_US-lessac-medium"
+    speaker_id: 0
+    length_scale: 1.0
+    pitch_semitones: 0
+
+quota:
+  daily_text_limit: 1000
+  daily_image_limit: 40
+  daily_vision_limit: 200
+  min_delay_between_images_sec: 5

@@ -1,0 +1,19 @@
+series_name: "Toonocalypse"
+instagram_handle: "toonocalypse"
+instagram_url: "https://www.instagram.com/toonocalypse/"
+youtube_channel_url: "" # Optional: auto-detected from OAuth token if empty
+youtube_category_id: "1" # 1 = Film & Animation
+youtube_privacy: "private" # "private" until YouTube API audit passes, then "public"
+self_declared_made_for_kids: false # General family-friendly all-ages audience; see README for COPPA tradeoff
+
+post_time_local: "18:30"
+audience_timezone: "Asia/Kolkata"
+buffer_target: 2
+release_retention_days: 30
+monthly_best_of_enabled: true
+
+instagram_api_version: "v21.0"
+use_single_google_api_key: true # Single key + quota tracker + resume-later (no multi-key circumvention)
+
+display_names:
+  percival-the-platypus: "Percival the Platypus"

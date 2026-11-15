@@ -1,0 +1,67 @@
+name: Generate Episode Buffer
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      format:
+        description: "Optional format override (One-Shot, Mini-Arc, Epic-Arc)"
+        required: false
+        default: ""
+      heroes:
+        description: "Optional comma-separated hero slugs"
+        required: false
+        default: ""
+      offline:
+        description: "Run offline without API spend"
+        type: boolean
+        default: false
+      draft:
+        description: "Upload as draft release"
+        type: boolean
+        default: false
+      force:
+        description: "Generate even if buffer >= 3 days"
+        type: boolean
+        default: false
+
+concurrency:
+  group: generate
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -r requirements.txt
+      - name: Generate buffered episode
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.format }}" ]; then ARGS="$ARGS --format ${{ inputs.format }}"; fi
+          if [ -n "${{ inputs.heroes }}" ]; then ARGS="$ARGS --heroes ${{ inputs.heroes }}"; fi
+          if [ "${{ inputs.offline }}" = "true" ]; then ARGS="$ARGS --offline"; fi
+          if [ "${{ inputs.draft }}" = "true" ]; then ARGS="$ARGS --draft"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          python3 -m src.cli generate $ARGS
+      - name: Commit state updates
+        run: |
+          git config user.name "toonocalypse-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/
+          git diff --cached --quiet || git commit -m "chore: update episode buffer state"
+          git push
