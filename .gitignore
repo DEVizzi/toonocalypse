@@ -6,7 +6,8 @@
 *credentials*.json
 *client_secret*.json
 myvoiceoverbot*.json
-token*.json
+/token*.json
+!state/tokens.json
 
 # Python
 .venv/
