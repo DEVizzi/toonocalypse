@@ -96,7 +96,8 @@ def render_episode_formats(
     for idx, (pdata, ap, dur) in enumerate(zip(script["panels"][:6], annotated_panels, panel_durations), start=1):
         vc = v_dir / f"v_{idx}.mp4"
         wc = w_dir / f"w_{idx}.mp4"
-        render_panel_clip(ap, vc, dur, 1080, 1920, camera=pdata.get("camera", "zoom_in"), impact=bool(pdata.get("impact")))
+        cam = "zoom_in" if idx == 1 else pdata.get("camera", "zoom_in")
+        render_panel_clip(ap, vc, dur, 1080, 1920, camera=cam, impact=bool(pdata.get("impact")))
         render_panel_clip(ap, wc, dur, 1920, 1080, camera=pdata.get("camera", "zoom_in"), impact=bool(pdata.get("impact")))
         v_clips.append(vc)
         w_clips.append(wc)
