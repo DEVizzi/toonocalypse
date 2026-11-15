@@ -73,7 +73,7 @@ def call_with_key_failover(fn: Callable[[object], T]) -> T:
             msg = str(exc).lower()
             if any(tok in msg for tok in ("429", "quota", "resource_exhausted", "rate", "limit", "403", "401", "expired", "invalid")):
                 _EXHAUSTED_KEYS.add(key)
-            print(f"[gemini] key #{idx}/{len(active)} failed ({type(exc).__name__}); failing over...")
+            print(f"[gemini] key #{idx}/{len(active)} ({key[:6]}...) failed ({type(exc).__name__}: {str(exc)[:140]}); failing over...")
             continue
 
     assert last_exc is not None
