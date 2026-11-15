@@ -43,7 +43,7 @@ def mix_with_bgm(voice_wav: Path, out_audio: Path, duration_sec: float) -> Path:
     out_audio.parent.mkdir(parents=True, exist_ok=True)
     # Duck BGM using sidechaincompress when voice is active, then loudnorm to -14 LUFS
     filter_complex = (
-        "[0:a]aformat=sample_rates=44100:channel_layouts=stereo,asplit=2[v_main][v_sc];"
+        f"[0:a]aformat=sample_rates=44100:channel_layouts=stereo,apad=whole_dur={duration_sec:.3f},asplit=2[v_main][v_sc];"
         "[1:a]aformat=sample_rates=44100:channel_layouts=stereo,volume=0.28[bgm_low];"
         "[bgm_low][v_sc]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=250[bgm_ducked];"
         "[v_main][bgm_ducked]amix=inputs=2:duration=first:dropout_transition=2,"
