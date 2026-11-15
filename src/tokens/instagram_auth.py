@@ -45,17 +45,36 @@ def refresh_instagram_token(force: bool = False) -> dict[str, Any]:
         params={"grant_type": "ig_refresh_token", "access_token": token},
         timeout=20,
     )
-    if not resp.ok:
-        # Fallback to Facebook Graph long-lived refresh endpoint if using Page-linked token
-        resp = requests.get(
-            f"https://graph.facebook.com/{ver}/oauth/access_token",
-            params={"grant_type": "ig_refresh_token", "access_token": token},
-            timeout=20,
-        )
-    resp.raise_for_status()
-    payload = resp.json()
-    new_token = payload.get("access_token") or token
-    expires_in = int(payload.get("expires_in", 60 * 86400))
+    new_token = token
+    expires_in = 60 * 86400
+    if resp.ok:
+        payload = resp.json()
+        new_token = payload.get("access_token") or token
+        expires_in = int(payload.get("expires_in", 60 * 86400))
+    else:
+        fb_id = os.environ.get("FB_APP_ID", "").strip()
+        fb_sec = os.environ.get("FB_APP_SECRET", "").strip()
+        if fb_id and fb_sec:
+            fb_resp = requests.get(
+                f"https://graph.facebook.com/{ver}/oauth/access_token",
+                params={
+                    "grant_type": "fb_exchange_token",
+                    "client_id": fb_id,
+                    "client_secret": fb_sec,
+                    "fb_exchange_token": token,
+                },
+                timeout=20,
+            )
+            fb_resp.raise_for_status()
+            payload = fb_resp.json()
+            new_token = payload.get("access_token") or token
+            expires_in = int(payload.get("expires_in", 60 * 86400))
+        else:
+            # Verify Facebook Page/Graph token is still valid (Page tokens from long-lived user tokens do not expire)
+            checked = check_instagram_token()
+            if checked.get("status") != "valid":
+                resp.raise_for_status()
+            return checked
 
     if os.environ.get("GH_PAT_SECRETS") and os.environ.get("GITHUB_REPOSITORY"):
         update_github_secret("IG_ACCESS_TOKEN", new_token)
