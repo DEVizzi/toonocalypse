@@ -59,7 +59,7 @@ jobs:
       - name: Validate character bible
         run: python3 scripts/check_bible.py
       - name: Run pytest suite
-        run: pytest -q
+        run: python3 -m pytest -q
       - name: Run offline dry-run proof (Mini-Arc & One-Shot)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
