@@ -43,7 +43,7 @@ def render_panel_clip(
         x_expr = "iw/2-(iw/zoom/2)"
         y_expr = "ih/2-(ih/zoom/2)"
 
-    shake = ",crop=iw-16:ih-16:8+8*sin(n*1.9)*lt(n\\,6):8+8*cos(n*2.3)*lt(n\\,6)" if impact else ""
+    shake = f",crop=iw-16:ih-16:8+8*sin(n*1.9)*lt(n\\,6):8+8*cos(n*2.3)*lt(n\\,6),scale={width}:{height}" if impact else ""
     vf = (
         f"scale={width}:{height}:force_original_aspect_ratio=increase,"
         f"crop={width}:{height},"

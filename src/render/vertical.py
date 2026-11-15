@@ -88,7 +88,7 @@ def render_episode_formats(
         total_dur = sum(panel_durations)
 
     voice_wav = concat_wavs(all_wavs, work_dir / "voice_all.wav", gap_sec=0.18)
-    mixed_audio = mix_with_bgm(voice_wav, work_dir / "audio_mixed.m4a", duration_sec=total_dur)
+    mixed_audio = mix_with_bgm(voice_wav, work_dir / "audio_mixed.m4a", duration_sec=total_dur + 0.6)
 
     # Render vertical 9:16 clips + 0.8s loop-tail matching panel 1 for seamless loop (§10.F)
     v_clips: list[Path] = []
