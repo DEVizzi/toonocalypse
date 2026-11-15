@@ -25,7 +25,7 @@ def test_check_render_qa_validates_vertical_mp4(tmp_path: Path) -> None:
     subprocess.run(
         [
             "ffmpeg", "-y",
-            "-f", "lavfi", "-i", "color=c=blue:s=1080x1920:d=2.0:r=30",
+            "-f", "lavfi", "-i", "testsrc2=s=1080x1920:d=2.0:r=30",
             "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
             "-t", "2.0", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
             str(mp4),

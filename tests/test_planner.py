@@ -27,8 +27,9 @@ def test_rotate_cliffhangers_no_adjacent_repeats() -> None:
 
 
 def test_sanitize_and_pick_unused_idea() -> None:
-    cleaned = sanitize_legacy_idea("A bloody Pixar battle in the kitchen")
-    assert "Pixar" not in cleaned
-    assert "bloody" not in cleaned.lower()
+    cleaned = sanitize_legacy_idea("A hidden sniper with a mind-control ray")
+    assert "sniper" not in cleaned.lower()
+    assert "mind-control" not in cleaned.lower()
+    assert "confetti-camera drone" in cleaned
     idea = pick_unused_seed_idea({"used_ideas": []}, rng=random.Random(1))
     assert "id" in idea and "premise" in idea

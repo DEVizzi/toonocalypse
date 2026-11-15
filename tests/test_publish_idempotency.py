@@ -14,10 +14,9 @@ def test_one_episode_per_day_and_same_episode_retry() -> None:
 
 def test_format_youtube_title_length_and_shorts_tag() -> None:
     t1 = format_youtube_title("The Runaway Espresso Machine", 1, 3)
-    assert "#Shorts" in t1
     assert "Pt 1/3" in t1
-    assert len(t1) <= 100
+    assert len(t1) <= 60
 
     t2 = format_youtube_title("A" * 120, 2, 4)
-    assert len(t2) <= 100
-    assert "#Shorts" in t2
+    assert len(t2) <= 60
+    assert "Pt 2/4" in t2
