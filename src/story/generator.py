@@ -146,11 +146,10 @@ def generate_part_script(
 
     for attempt in range(3):
         script: dict[str, Any] | None = None
-        if not offline and os.environ.get("GOOGLE_API_KEY") and qt.can_spend("text", 1):
-            try:
-                from google import genai
+        from src.common.gemini import call_with_key_failover, has_gemini_keys
 
-                client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        if not offline and has_gemini_keys() and qt.can_spend("text", 1):
+            try:
                 model = load_models().get("text_models", ["gemini-2.5-flash"])[0]
                 cast_desc = "\n".join(
                     f"- slug={s}, name={chars[s]['name']}, catchphrase={chars[s]['catchphrase']}"
@@ -168,7 +167,9 @@ def generate_part_script(
                     "- on_screen_hook <=6 words.\n"
                     "Return ONLY valid JSON with keys: on_screen_hook, hook_panel_id, panels (list of {panel_id, camera, impact, sfx, characters, action, narrator, dialogue:[{speaker, line}]})."
                 )
-                resp = client.models.generate_content(model=model, contents=prompt)
+                resp = call_with_key_failover(
+                    lambda client: client.models.generate_content(model=model, contents=prompt)
+                )
                 qt.spend("text", 1)
                 m = re.search(r"\{[\s\S]*\}", resp.text or "")
                 if m:

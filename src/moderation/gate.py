@@ -37,22 +37,23 @@ def check_text(text: str, use_llm: bool = False, quota: QuotaTracker | None = No
     if reasons:
         return ModerationResult(passed=False, reasons=sorted(set(reasons)))
 
-    if use_llm and os.environ.get("GOOGLE_API_KEY"):
+    from src.common.gemini import call_with_key_failover, has_gemini_keys
+
+    if use_llm and has_gemini_keys():
         qt = quota or QuotaTracker()
         if qt.can_spend("text", 1):
             try:
-                from google import genai
-
-                client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
                 models = load_models().get("text_models", ["gemini-2.5-flash"])
-                resp = client.models.generate_content(
-                    model=models[0],
-                    contents=(
-                        "Reply ONLY 'PASS' or 'FAIL: <reason>'. Is this 100% safe, wholesome, "
-                        "all-ages family-friendly cartoon content with no scary imagery, real brands, "
-                        "romance, weapons aimed at characters, or unsafe imitable behaviour?\n\n"
-                        f"{text[:4000]}"
-                    ),
+                resp = call_with_key_failover(
+                    lambda client: client.models.generate_content(
+                        model=models[0],
+                        contents=(
+                            "Reply ONLY 'PASS' or 'FAIL: <reason>'. Is this 100% safe, wholesome, "
+                            "all-ages family-friendly cartoon content with no scary imagery, real brands, "
+                            "romance, weapons aimed at characters, or unsafe imitable behaviour?\n\n"
+                            f"{text[:4000]}"
+                        ),
+                    )
                 )
                 qt.spend("text", 1)
                 ans = (resp.text or "").strip()

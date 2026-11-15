@@ -42,21 +42,22 @@ def check_page_qa(
 
     anchor_score = 0.90
     has_text = False
-    if not offline and os.environ.get("GOOGLE_API_KEY"):
+    from src.common.gemini import call_with_key_failover, has_gemini_keys
+
+    if not offline and has_gemini_keys():
         qt = quota or QuotaTracker()
         if qt.can_spend("vision", 1):
             try:
-                from google import genai
-
-                client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
                 model = load_models().get("vision_models", ["gemini-2.5-flash"])[0]
-                resp = client.models.generate_content(
-                    model=model,
-                    contents=[
-                        "Check this 2x3 comic page. Return ONLY JSON: "
-                        '{"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}',
-                        img,
-                    ],
+                resp = call_with_key_failover(
+                    lambda client: client.models.generate_content(
+                        model=model,
+                        contents=[
+                            "Check this 2x3 comic page. Return ONLY JSON: "
+                            '{"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}',
+                            img,
+                        ],
+                    )
                 )
                 qt.spend("vision", 1)
                 m = re.search(r"\{[\s\S]*\}", resp.text or "")

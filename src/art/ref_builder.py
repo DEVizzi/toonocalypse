@@ -52,7 +52,9 @@ def build_ref_sheet(slug: str, offline: bool = False, quota: QuotaTracker | None
     out_path = ROOT / char["reference_sheet"]
     if out_path.exists():
         return out_path
-    if offline or not os.environ.get("GOOGLE_API_KEY"):
+    from src.common.gemini import call_with_key_failover, has_gemini_keys
+
+    if offline or not has_gemini_keys():
         return render_placeholder_ref_sheet(char, out_path)
 
     qt = quota or QuotaTracker()
@@ -69,14 +71,14 @@ def build_ref_sheet(slug: str, offline: bool = False, quota: QuotaTracker | None
     )
     if qt.can_spend("image", 1):
         try:
-            from google import genai
             from google.genai import types
 
-            client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
-            resp = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+            resp = call_with_key_failover(
+                lambda client: client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+                )
             )
             qt.spend("image", 1)
             for cand in getattr(resp, "candidates", []) or []:

@@ -57,19 +57,20 @@ def evaluate_scores(scores: dict[str, float], feedback: str = "") -> HookGateRes
 
 def judge_script(script: dict[str, Any], offline: bool = False, quota: QuotaTracker | None = None) -> HookGateResult:
     """Score a script using Gemini (or deterministic heuristic in offline/dry-run mode)."""
-    if not offline and os.environ.get("GOOGLE_API_KEY"):
+    from src.common.gemini import call_with_key_failover, has_gemini_keys
+
+    if not offline and has_gemini_keys():
         qt = quota or QuotaTracker()
         if qt.can_spend("text", 1):
             try:
-                from google import genai
-
-                client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
                 model = load_models().get("text_models", ["gemini-2.5-flash"])[0]
                 prompt = (
                     "Score this family-friendly motion-comic script 1-10 on each key and return ONLY JSON "
                     f"with keys {list(SCORE_KEYS)} and 'feedback':\n\n{json.dumps(script, ensure_ascii=False)}"
                 )
-                resp = client.models.generate_content(model=model, contents=prompt)
+                resp = call_with_key_failover(
+                    lambda client: client.models.generate_content(model=model, contents=prompt)
+                )
                 qt.spend("text", 1)
                 parsed = parse_judge_json(resp.text or "")
                 return evaluate_scores(parsed["scores"], parsed["feedback"])

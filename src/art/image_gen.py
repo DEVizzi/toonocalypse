@@ -64,7 +64,9 @@ def generate_comic_page(
     """Generate a 2x3 comic page using Gemini image models with fallback, or offline renderer."""
     if out_path.exists():
         return out_path
-    if offline or not os.environ.get("GOOGLE_API_KEY"):
+    from src.common.gemini import call_with_key_failover, has_gemini_keys
+
+    if offline or not has_gemini_keys():
         return render_offline_comic_page(script, out_path)
 
     qt = quota or QuotaTracker()
@@ -73,10 +75,8 @@ def generate_comic_page(
     delay = float(models_cfg.get("quota", {}).get("min_delay_between_images_sec", 5))
     prompt, ref_paths = build_page_prompt(script)
 
-    from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
     contents: list[Any] = [prompt]
     for rp in ref_paths[:4]:
         contents.append(Image.open(rp))
@@ -86,10 +86,12 @@ def generate_comic_page(
         if not qt.can_spend("image", 1):
             break
         try:
-            resp = client.models.generate_content(
-                model=model_name,
-                contents=contents,
-                config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+            resp = call_with_key_failover(
+                lambda client, m=model_name: client.models.generate_content(
+                    model=m,
+                    contents=contents,
+                    config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+                )
             )
             qt.spend("image", 1)
             for cand in getattr(resp, "candidates", []) or []:
