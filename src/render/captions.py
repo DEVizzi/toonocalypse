@@ -49,7 +49,7 @@ def build_ass_captions(
     events: list[str] = []
     if hook_text:
         words = " ".join(hook_text.strip().split()[:6]).upper()
-        events.append(f"Dialogue: 1,{_fmt_ass_time(0.0)},{_fmt_ass_time(2.2)},Hook,,0,0,0,,{words}")
+        events.append(f"Dialogue: 1,{_fmt_ass_time(0.15)},{_fmt_ass_time(2.35)},Hook,,0,0,0,,{words}")
 
     for group in chunks:
         if not group:
