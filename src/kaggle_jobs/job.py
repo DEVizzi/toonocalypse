@@ -59,10 +59,11 @@ def portrait_items(story: dict[str, Any], names: list[str] | None = None, salt: 
         negative = (f"{sg['negative']}, photo, photograph, photorealistic, realistic skin, 3d render, cgi, "
                     f"character sheet, turnaround, multiple views, collage, grid, duplicate person, two people, crowd, "
                     f"split screen, monochrome")
+        anchors = list(dict.fromkeys(f"a cartoon person with {x}" for x in [c.get("hair"), c.get("accessory"), *c.get("anchors", [])] if x))
         items.append(_base_item(id=portrait_id(c["name"]), kind="portrait", prompt=prompt, negative=negative,
                                 seed=char_seed(story["story_id"], c["name"], salt), n=im["candidates"]["portrait"],
                                 keep=im["candidates"]["portrait_keep"], clip_text=c["visual_prompt"][:300],
-                                upscale=False, refs=[]))
+                                anchors=anchors, upscale=False, refs=[]))
     return items
 
 

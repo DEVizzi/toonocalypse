@@ -30,6 +30,7 @@ panel_qa:                       # Gemini vision QA (§7.3/§7.4)
   min_avg: 8
   safety: 10
   max_repair_rounds: 2
+  max_portrait_repairs: 2
 
 buffer:
   target_ready_episodes: 5

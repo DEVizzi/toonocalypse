@@ -178,6 +178,8 @@ def prefilter_and_upscale():
         for r in rec["raw"]:
             img = Image.open(r["path"]).convert("RGB")
             entry = {"seed": r["seed"], "clip": round(clip_score(img, it["clip_text"]), 4), "dino": None, "text": has_text(img)}
+            if it.get("anchors"):
+                entry["anchor_min"] = round(min(clip_score(img, a) for a in it["anchors"]), 4)
             sims = []
             for ref in it.get("refs", []):
                 box = {"left": (0, 0, 0.6, 1), "right": (0.4, 0, 1, 1), "center": (0.2, 0, 0.8, 1), "full": (0, 0, 1, 1)}[ref["where"]]
@@ -193,7 +195,8 @@ def prefilter_and_upscale():
             entry["reasons"] = reasons
             (rec["rejected"] if reasons else scored).append(entry)
             entry["_img"] = img
-        scored.sort(key=lambda e: e["clip"] + (e["dino"] or 0), reverse=True)
+        # the weakest anchor dominates: a missing accessory / bled colour sinks the candidate
+        scored.sort(key=lambda e: e["clip"] + (e["dino"] or 0) + 3 * e.get("anchor_min", 0), reverse=True)
         for e in scored[: it["keep"]]:
             img = e.pop("_img")
             final = upscale(img) if it["upscale"] else img

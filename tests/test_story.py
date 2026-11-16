@@ -56,6 +56,17 @@ def test_plan_requires_payoffs_and_lock_fields():
     assert any("payoff" in e for e in errs) and any("accessory" in e for e in errs)
 
 
+def test_plan_rejects_coloured_or_head_accessories():
+    bad = copy.deepcopy(PLAN)
+    bad["cast"][0]["accessory"] = "yellow cotton headband"
+    errs = validate_plan(bad)
+    assert any("neutral/metallic" in e for e in errs) and any("head" in e for e in errs)
+    ok = copy.deepcopy(PLAN)
+    ok["cast"][0]["accessory"] = "big brass pocket watch"
+    assert validate_plan(ok) == []
+
+
+
 def test_part_valid():
     names = {"Raju", "Mira"}
     for n in (1, 2, 3):

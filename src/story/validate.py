@@ -10,6 +10,10 @@ CONNECTORS = {"a", "an", "and", "as", "at", "but", "by", "for", "from", "in", "o
 POSITIONS = {"left", "center", "right"}
 LOCK_FIELDS = ["name", "age", "gender", "region", "build", "face_shape", "eyes", "eyebrows", "hair",
                "skin_tone", "outfit", "accessory", "signature_color", "anchors", "visual_prompt"]
+# SDXL bleeds a second strong colour into the outfit, and head accessories fight the hair: keep accessories neutral/metallic.
+STRONG_COLOURS = {"red", "yellow", "orange", "green", "blue", "purple", "violet", "pink", "magenta", "teal", "cyan",
+                  "maroon", "crimson", "scarlet", "emerald", "turquoise", "navy", "indigo", "lime", "saffron"}
+HEAD_ITEMS = {"headband", "cap", "hat", "turban", "bandana", "helmet", "crown", "tiara", "hood", "headscarf"}
 
 
 def words(text: str) -> int:
@@ -56,6 +60,11 @@ def validate_plan(plan: dict[str, Any]) -> list[str]:
             errs.append(f"{c.get('name')} visual_prompt > {s['visual_prompt_max_chars']} chars")
         if len(c.get("anchors", [])) != 3:
             errs.append(f"{c.get('name')} needs exactly 3 anchors")
+        acc = set(re.findall(r"[a-z]+", str(c.get("accessory", "")).lower()))
+        if acc & STRONG_COLOURS:
+            errs.append(f"{c.get('name')} accessory must be neutral/metallic, not {sorted(acc & STRONG_COLOURS)}")
+        if acc & HEAD_ITEMS:
+            errs.append(f"{c.get('name')} accessory must not be worn on the head")
     for key in ["signature_color", "hair"]:
         vals = [str(c.get(key, "")).lower() for c in cast]
         if len(set(vals)) != len(vals):

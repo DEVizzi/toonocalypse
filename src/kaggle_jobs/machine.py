@@ -177,7 +177,7 @@ def collect(story: dict[str, Any], tools, qa, quota: Quota) -> str:
             return "QA_PENDING"
         failed = [n for n, p in ps.items() if p["failed"]]
         if failed:
-            if art["portrait_repair"] >= 1:
+            if art["portrait_repair"] >= settings()["panel_qa"].get("max_portrait_repairs", 1):
                 raise Abort(f"Cast portraits failed QA after repair: {failed}")
             art["portrait_repair"] += 1
             for n in failed:

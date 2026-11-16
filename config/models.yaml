@@ -32,8 +32,8 @@ image:
   est_gpu_seconds_per_image: 40       # used for the weekly-quota check before every push
   kernel_time_budget_hours: 9         # stop generating early inside Kaggle's 12h session limit
   candidates:
-    portrait: 8
-    portrait_keep: 3
+    portrait: 16
+    portrait_keep: 4
     panel: 3
     panel_keep: 2
   prefilter:
