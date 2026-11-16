@@ -8,7 +8,7 @@ from src.common.config import settings
 from src.common.gemini import generate_json
 from src.common.quota import Quota
 
-PORTRAIT_CRITERIA = ["hair", "outfit_colors", "accessory", "skin_tone", "age", "anatomy", "no_text", "safety"]
+PORTRAIT_CRITERIA = ["single_character", "hair", "outfit_colors", "accessory", "skin_tone", "age", "anatomy", "no_text", "safety"]
 PANEL_CRITERIA = ["matches_description", "character_consistency", "anatomy", "no_text", "empty_top", "composition", "safety"]
 
 
@@ -33,6 +33,7 @@ def portrait_qa(char: dict[str, Any], candidates: list[Path], quota: Quota | Non
                                      "accessory", "signature_color", "anchors"]}
     prompt = (f"You check character design candidates for a comic. Lock card: {lock}. "
               f"There are {len(candidates)} candidate images in order. For EACH score 1-10: {PORTRAIT_CRITERIA}. "
+              "single_character=10 only if exactly ONE person/creature is shown once (no character sheets, turnarounds or duplicates); "
               "hair/outfit_colors/accessory/skin_tone/age must match the lock card exactly; anatomy = correct human (or creature) anatomy, "
               "right number of fingers and limbs; no_text=10 only if there are no letters/watermarks; safety=10 if suitable for ages 10+. "
               'Return JSON: {"candidates":[{"index":0,"scores":{...},"note":""}]}')

@@ -53,9 +53,11 @@ def portrait_items(story: dict[str, Any], names: list[str] | None = None, salt: 
     for c in story["cast"]:
         if names and c["name"] not in names:
             continue
-        prompt = (f"character reference sheet, single character, full body front view, standing, neutral pose, "
-                  f"plain light grey background, {c['visual_prompt']}, {sg['positive']}")
-        items.append(_base_item(id=portrait_id(c["name"]), kind="portrait", prompt=prompt, negative=sg["negative"],
+        prompt = (f"solo portrait of ONE person only, {c['visual_prompt']}, full body, front view, standing, "
+                  f"centered, plain light grey studio background, {sg['positive']}")
+        negative = (f"{sg['negative']}, character sheet, turnaround, multiple views, collage, grid, duplicate person, "
+                    f"two people, crowd, split screen, monochrome")
+        items.append(_base_item(id=portrait_id(c["name"]), kind="portrait", prompt=prompt, negative=negative,
                                 seed=char_seed(story["story_id"], c["name"], salt), n=im["candidates"]["portrait"],
                                 keep=im["candidates"]["portrait_keep"], clip_text=c["visual_prompt"][:300],
                                 upscale=False, refs=[]))
