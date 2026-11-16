@@ -79,7 +79,11 @@ def compose_panel_layers(
         if not pose_entry or not (ROOT / pose_entry["path"]).exists():
             raise FileNotFoundError(f"Missing library sprite for '{slug}' pose '{pose_name}'")
 
-        sprite = Image.open(ROOT / pose_entry["path"]).convert("RGBA")
+        raw_sprite = Image.open(ROOT / pose_entry["path"]).convert("RGBA")
+        raw_alpha = raw_sprite.getchannel("A")
+        bbox = raw_alpha.getbbox()
+        bottom_cropped = bool(bbox and bbox[3] >= raw_sprite.height - 12)
+        sprite = raw_sprite.crop(bbox) if bbox else raw_sprite
         cdata = chars_bible.get(slug, {"height_units": 1.0})
         target_h = int(h * _scale_factor(cdata))
         target_w = max(64, int(sprite.width * (target_h / max(1, sprite.height))))
@@ -88,12 +92,19 @@ def compose_panel_layers(
             target_h = max(64, int(target_h * (max_w / target_w)))
             target_w = max_w
         sprite = sprite.resize((target_w, target_h), Image.Resampling.LANCZOS)
+        # Subtle alpha-edge smoothing to eliminate any background-removal halo
+        a_chan = sprite.getchannel("A").filter(ImageFilter.GaussianBlur(radius=0.6))
+        sprite.putalpha(a_chan)
         sprite = _apply_lighting_match(sprite, bg_img)
 
         cx = int(w * (idx + 1) / (count + 1))
-        x = max(20, min(w - target_w - 20, cx - target_w // 2))
-        y = int(h * 0.84) - target_h
-        _paste_with_contact_shadow(fg_canvas, sprite, x, max(24, y))
+        x = max(16, min(w - target_w - 16, cx - target_w // 2))
+        if bottom_cropped:
+            y = max(24, h - target_h)
+            fg_canvas.alpha_composite(sprite, (x, y))
+        else:
+            y = max(24, int(h * 0.86) - target_h)
+            _paste_with_contact_shadow(fg_canvas, sprite, x, y)
 
     fg_path = out_dir / f"panel_{pid}_fg.png"
     fg_canvas.save(fg_path)

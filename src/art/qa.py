@@ -54,8 +54,9 @@ def check_page_qa(
                 resp = None
                 cast_slugs = sorted({c for p in script.get("panels", []) for c in p.get("characters", [])})
                 prompt = (
-                    f"Inspect this 2x3 comic page featuring characters {cast_slugs} in setting '{script.get('setting', '')}'. "
-                    "Rate overall panel composition, clean sprite-over-background layering, and visual consistency as anchor_score (0.0-1.0; >=0.80 if panels are clean, legible, and free of glitches). "
+                    f"Inspect this 2x3 motion-comic storyboard page featuring characters {cast_slugs} in setting '{script.get('setting', '')}'. "
+                    "Characters are pre-approved 2D comic cutouts layered over painted backgrounds (medium-shot framing at panel bottom borders is normal). "
+                    "Rate overall panel composition, legibility, and absence of glitches as anchor_score (0.0-1.0; >=0.75 if characters are cleanly separated, readable, and free of severe artifacts). "
                     'Return ONLY JSON: {"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}'
                 )
                 for model in models:
