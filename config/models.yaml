@@ -28,6 +28,9 @@ image:
     scale: 0.65
     repair_scale: 0.75
   upscaler: "RealESRGAN_x2plus"
+  upscaler_url: "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth"
+  est_gpu_seconds_per_image: 40       # used for the weekly-quota check before every push
+  kernel_time_budget_hours: 9         # stop generating early inside Kaggle's 12h session limit
   candidates:
     portrait: 8
     portrait_keep: 3

@@ -40,6 +40,21 @@ jobs:
           name: story-sample
           path: story_sample.json
           if-no-files-found: ignore
+      - name: Push Kaggle PORTRAITS job for a scripted story
+        env:
+          PYTHONUNBUFFERED: "1"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: |
+          pip install -q "kaggle>=1.7"
+          mkdir -p ~/.kaggle
+          python3 -c 'import json,os; json.dump({"username":os.environ["KAGGLE_USERNAME"],"key":os.environ["KAGGLE_API_TOKEN"]}, open(os.path.expanduser("~/.kaggle/kaggle.json"),"w"))'
+          chmod 600 ~/.kaggle/kaggle.json
+          python -m src.kaggle_jobs start
+      - name: Remove Kaggle credentials
+        if: always()
+        run: rm -rf ~/.kaggle
       - name: Commit state
         run: |
           git config user.name "toonocalypse-bot"

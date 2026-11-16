@@ -1,0 +1,5 @@
+diffusers==0.31.0
+compel==2.0.3
+spandrel==0.4.0
+easyocr==1.7.2
+accelerate>=0.34
