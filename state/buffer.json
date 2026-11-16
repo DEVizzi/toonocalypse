@@ -1,0 +1,36 @@
+{
+  "episodes": [
+    {
+      "episode_id": "ep-20261116-ae29ec-pt1of6",
+      "release_tag": "ep-20261116-ae29ec-pt1of6",
+      "story_id": "ep-20261116-ae29ec",
+      "format": "Epic",
+      "title": "Escape The Neon Menace",
+      "part_num": 1,
+      "part_count": 6,
+      "heroes": [
+        "blazetail",
+        "blitzshell"
+      ],
+      "villain": "baron-byte-bat",
+      "setting": "autumn-park-bridge",
+      "cliffhanger_type": "emotional_turn",
+      "description": "Escape The Neon Menace - Toonocalypse motion comic!",
+      "caption": "Escape The Neon Menace #Toonocalypse #MotionComic #Shorts",
+      "tags": [
+        "Toonocalypse",
+        "MotionComic",
+        "Animation",
+        "FamilyFriendly"
+      ],
+      "hook_score": 8.33,
+      "model_used": "gemini-3.5-flash-lite",
+      "art_anchor_score": 0.85,
+      "youtube_duration": 50.502993,
+      "instagram_duration": 50.502993,
+      "wide_duration": 49.933333,
+      "publishable": true,
+      "publishable_reasons": []
+    }
+  ]
+}

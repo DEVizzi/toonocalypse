@@ -54,6 +54,14 @@
         "anchor_score 0.35 < 0.7"
       ],
       "notes": "Severe image cutout artifacts present, including visible unblended rectangular bounding boxes around characters in panel 5 and panel 6, as well as head artifacts in panel 1."
+    },
+    {
+      "type": "art_qa",
+      "episode": "ep-20261116-ae29ec_pt1",
+      "passed": true,
+      "anchor_score": 0.85,
+      "reasons": [],
+      "notes": "Good layout with expected character placements and distinct panels across the 2x3 grid depicting the autumn-park-bridge setting."
     }
   ]
 }

@@ -1,22 +1,22 @@
 {
   "date": "2026-11-16",
-  "text_calls": 32,
+  "text_calls": 35,
   "image_calls": 0,
-  "vision_calls": 5,
+  "vision_calls": 6,
   "pending_jobs": [],
-  "tts_calls": 0,
+  "tts_calls": 11,
   "paused_until": null,
-  "consecutive_aborts": 1,
-  "last_abort_reason": "Panel QA failed: ['anchor_score 0.35 < 0.7']",
+  "consecutive_aborts": 0,
+  "last_abort_reason": null,
   "last_abort_at": "2026-11-16T18:40:36.118352+00:00",
   "model_retry_after": {
     "gemini-3.8-flash": {
-      "retry_delay_sec": 48043.929045166,
-      "until": "2026-11-17T08:00:00.006346+00:00"
+      "retry_delay_sec": 47835.452762207,
+      "until": "2026-11-17T08:00:00.009855+00:00"
     },
     "gemini-3.6-flash": {
-      "retry_delay_sec": 48043.868635572,
-      "until": "2026-11-17T08:00:00.005420+00:00"
+      "retry_delay_sec": 47835.36039714,
+      "until": "2026-11-17T08:00:00.010051+00:00"
     }
   }
 }
