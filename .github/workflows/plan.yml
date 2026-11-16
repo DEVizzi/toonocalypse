@@ -1,0 +1,49 @@
+name: Plan Story
+
+# Manual only until the dry run is approved; the 6h schedule is added in Phase 6.
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Seed story title (blank = next unused seed / new story)"
+        required: false
+        default: ""
+
+concurrency:
+  group: plan
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - name: Plan + script + judge
+        env:
+          PYTHONUNBUFFERED: "1"
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          SEED: ${{ inputs.seed }}
+        run: |
+          if [ -n "$SEED" ]; then python -m src.story plan --seed "$SEED"; else python -m src.story plan; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: story-sample
+          path: story_sample.json
+          if-no-files-found: ignore
+      - name: Commit state
+        run: |
+          git config user.name "toonocalypse-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/story_bible.json state/quota.json
+          git diff --cached --quiet || git commit -m "chore(state): story plan update"
+          git pull --rebase -q && git push -q
