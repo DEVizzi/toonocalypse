@@ -48,19 +48,27 @@ def check_page_qa(
         qt = quota or QuotaTracker()
         if qt.can_spend("vision", 1):
             try:
-                model = load_models().get("vision_models", ["gemini-2.5-flash"])[0]
-                resp = call_with_key_failover(
-                    lambda client: client.models.generate_content(
-                        model=model,
-                        contents=[
-                            "Check this 2x3 comic page. Return ONLY JSON: "
-                            '{"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}',
-                            img,
-                        ],
-                    )
-                )
-                qt.spend("vision", 1)
-                m = re.search(r"\{[\s\S]*\}", resp.text or "")
+                models = load_models().get("vision_models", ["gemini-3.1-flash-lite-preview"])
+                resp = None
+                for model in models:
+                    try:
+                        resp = call_with_key_failover(
+                            lambda client, m=model: client.models.generate_content(
+                                model=m,
+                                contents=[
+                                    "Check this 2x3 comic page. Return ONLY JSON: "
+                                    '{"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}',
+                                    img,
+                                ],
+                            )
+                        )
+                        qt.spend("vision", 1)
+                        break
+                    except Exception:
+                        continue
+                m = None
+                if resp is not None:
+                    m = re.search(r"\{[\s\S]*\}", resp.text or "")
                 if m:
                     data = json.loads(m.group(0))
                     anchor_score = float(data.get("anchor_score", 0.9))

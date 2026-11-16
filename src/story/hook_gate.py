@@ -63,17 +63,21 @@ def judge_script(script: dict[str, Any], offline: bool = False, quota: QuotaTrac
         qt = quota or QuotaTracker()
         if qt.can_spend("text", 1):
             try:
-                model = load_models().get("text_models", ["gemini-2.5-flash"])[0]
+                models = load_models().get("text_models", ["gemini-3.1-flash-lite-preview"])
                 prompt = (
                     "Score this family-friendly motion-comic script 1-10 on each key and return ONLY JSON "
                     f"with keys {list(SCORE_KEYS)} and 'feedback':\n\n{json.dumps(script, ensure_ascii=False)}"
                 )
-                resp = call_with_key_failover(
-                    lambda client: client.models.generate_content(model=model, contents=prompt)
-                )
-                qt.spend("text", 1)
-                parsed = parse_judge_json(resp.text or "")
-                return evaluate_scores(parsed["scores"], parsed["feedback"])
+                for model in models:
+                    try:
+                        resp = call_with_key_failover(
+                            lambda client, m=model: client.models.generate_content(model=m, contents=prompt)
+                        )
+                        qt.spend("text", 1)
+                        parsed = parse_judge_json(resp.text or "")
+                        return evaluate_scores(parsed["scores"], parsed["feedback"])
+                    except Exception:
+                        continue
             except Exception:
                 pass
 

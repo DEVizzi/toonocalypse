@@ -43,22 +43,25 @@ def check_text(text: str, use_llm: bool = False, quota: QuotaTracker | None = No
         qt = quota or QuotaTracker()
         if qt.can_spend("text", 1):
             try:
-                models = load_models().get("text_models", ["gemini-2.5-flash"])
-                resp = call_with_key_failover(
-                    lambda client: client.models.generate_content(
-                        model=models[0],
-                        contents=(
-                            "Reply ONLY 'PASS' or 'FAIL: <reason>'. Is this 100% safe, wholesome, "
-                            "all-ages family-friendly cartoon content with no scary imagery, real brands, "
-                            "romance, weapons aimed at characters, or unsafe imitable behaviour?\n\n"
-                            f"{text[:4000]}"
-                        ),
-                    )
+                models = load_models().get("text_models", ["gemini-3.1-flash-lite-preview"])
+                prompt = (
+                    "Reply ONLY 'PASS' or 'FAIL: <reason>'. Is this 100% safe, wholesome, "
+                    "all-ages family-friendly cartoon content with no scary imagery, real brands, "
+                    "romance, weapons aimed at characters, or unsafe imitable behaviour?\n\n"
+                    f"{text[:4000]}"
                 )
-                qt.spend("text", 1)
-                ans = (resp.text or "").strip()
-                if ans.upper().startswith("FAIL"):
-                    return ModerationResult(passed=False, reasons=[ans])
+                for model in models:
+                    try:
+                        resp = call_with_key_failover(
+                            lambda client, m=model: client.models.generate_content(model=m, contents=prompt)
+                        )
+                        qt.spend("text", 1)
+                        ans = (resp.text or "").strip()
+                        if ans.upper().startswith("FAIL"):
+                            return ModerationResult(passed=False, reasons=[ans])
+                        break
+                    except Exception:
+                        continue
             except Exception:
                 pass
     return ModerationResult(passed=True, reasons=[])
