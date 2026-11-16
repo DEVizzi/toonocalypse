@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-      - run: pip install -r requirements.txt kaggle
+      - run: pip install -r requirements.txt kaggle six
       - name: Configure Kaggle credentials
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
