@@ -33,18 +33,18 @@ OUT_DIR = Path("/kaggle/working/art_output")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 POSES = {
-    "idle": "standing relaxed, friendly neutral pose, looking slightly toward camera",
-    "walk": "mid-stride cheerful walking pose, arms swinging naturally",
-    "run": "energetic dynamic running pose, leaning forward in motion",
-    "jump": "mid-air joyful jump pose, arms raised high",
-    "point": "pointing excitedly forward with one hand, expressive face",
-    "surprised": "wide-eyed shocked gasp expression, hands raised near cheeks",
-    "laughing": "belly-laughing expression, huge open smile, eyes crinkled",
-    "comic-angry": "goofy cartoonishly grumpy scowl, puffed cheeks, crossed arms",
-    "sad": "droopy puppy-dog eyes, slumped shoulders, sympathetic pout",
-    "thinking": "hand on chin in thoughtful detective pose, raised eyebrow",
-    "cheering": "celebratory fist-pump victory pose, big triumphant grin",
-    "talking": "animated mid-sentence speaking pose, open mouth, expressive hand gesture",
+    "idle": "confident comic stance, slight smirk, expressive eyes, looking toward camera",
+    "walk": "jaunty mid-stride comic walk, swinging arms, lively expression",
+    "run": "dramatic high-speed dash leaning forward, intense determined face",
+    "jump": "dynamic mid-air comic leap, arms thrown up, wide thrilled grin",
+    "point": "dramatic comic pointing forward, raised eyebrow, bold attitude",
+    "surprised": "extreme jaw-dropped comic shock, bulging wide eyes, hands on cheeks",
+    "laughing": "boisterous head-back belly laugh, huge open grin, crinkled eyes",
+    "comic-angry": "exaggerated comic rage scowl, furrowed brows, puffed cheeks, clenched fists",
+    "sad": "dramatic droopy puppy eyes, slumped shoulders, exaggerated pout",
+    "thinking": "classic comic detective chin-scratch, narrowed skeptical eyes, raised brow",
+    "cheering": "triumphant two-fist victory pump, huge beaming comic grin",
+    "talking": "animated mid-debate comic gesture, expressive brows, open speaking mouth",
 }
 
 BACKGROUNDS = [
@@ -166,16 +166,16 @@ def main() -> None:
         for p_idx, (pose_name, pose_desc) in enumerate(POSES.items()):
             out_png = char_dir / f"{pose_name}.png"
             prompt = (
-                f"{vis_prompt}, {pose_desc}, solo single character, full body head-to-toe centered, "
-                f"plain solid #F0F0F0 studio background, vibrant 2D Saturday-morning cartoon cel-shaded illustration, "
-                f"clean ink outlines, no text, no watermark"
+                f"2D comic book character art, bold thick black ink outlines, flat cel-shaded colors, "
+                f"{vis_prompt}, {pose_desc}, solo single character, full body centered, "
+                f"plain white background, expressive comic face, no 3D render, no photorealism, no text"
             )
             passed, score, reasons, fg_img = False, 0.0, [], None
             gen_size = 512 if "turbo" in model_id else 1024
             for attempt in range(2):
                 gen = torch.Generator(device=device).manual_seed(seed_base + p_idx + attempt * 1000)
                 raw_img = pipe(prompt=prompt, num_inference_steps=steps, guidance_scale=guidance, width=gen_size, height=gen_size, generator=gen).images[0]
-                fg_img = remove(raw_img).resize((1024, 1024), Image.Resampling.LANCZOS)
+                fg_img = remove(raw_img).resize((768, 768), Image.Resampling.LANCZOS)
                 passed, score, reasons = _qa_sprite(fg_img, c)
                 if passed:
                     break
