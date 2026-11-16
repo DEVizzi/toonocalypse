@@ -1,7 +1,13 @@
 {
-  "date": "",
+  "date": "2026-11-16",
   "text_calls": 0,
   "image_calls": 0,
   "vision_calls": 0,
-  "pending_jobs": []
+  "pending_jobs": [],
+  "tts_calls": 0,
+  "paused_until": null,
+  "consecutive_aborts": 1,
+  "last_abort_reason": "Deliberate preflight failure check",
+  "last_abort_at": "2026-11-16T09:54:38.638973+00:00",
+  "model_retry_after": {}
 }
