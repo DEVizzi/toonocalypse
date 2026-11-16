@@ -209,9 +209,11 @@ def generate_episode_bundle(
     if offline:
         render_offline_comic_page(script, page_path)
     else:
+        print(f"[pipeline] Composing comic page for {episode_id}...", flush=True)
         _, panel_layers = compose_comic_page(script, lib_idx, work_dir, page_path)
         used_library_art = True
 
+    print(f"[pipeline] Running panel QA for {episode_id}...", flush=True)
     art_qa = check_page_qa(page_path, script, offline=offline, quota=quota)
     if not art_qa.passed and not offline:
         raise AbortPipeline(f"Panel QA failed: {art_qa.reasons}")
@@ -231,7 +233,9 @@ def generate_episode_bundle(
     )
 
     is_one_shot = part_count <= 1
+    print(f"[pipeline] Rendering video formats for {episode_id}...", flush=True)
     videos = render_episode_formats(script, panel_paths, work_dir / "render", panel_layers=panel_layers, offline=offline)
+    print(f"[pipeline] Running render QA for {episode_id}...", flush=True)
     yt_qa = check_render_qa(videos["youtube"], is_vertical=True, is_one_shot=is_one_shot)
     ig_qa = check_render_qa(videos["instagram"], is_vertical=True, is_one_shot=is_one_shot)
     wide_qa = check_render_qa(videos["wide"], is_vertical=False, is_one_shot=is_one_shot)
