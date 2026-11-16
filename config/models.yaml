@@ -45,3 +45,16 @@ image:
 tts:
   primary: "kokoro"
   fallback: "piper"
+  piper_voice: null              # set only to a voice whose model card permits commercial use (LICENSES.md)
+  voices:                        # Kokoro-82M voice ids; 'a' = American, 'b' = British English
+    narrator: "bm_george"
+    male_child: "am_puck"
+    male_young: "am_adam"
+    male_adult: "am_michael"
+    male_elder: "bm_lewis"
+    female_child: "af_sky"
+    female_young: "af_bella"
+    female_adult: "af_heart"
+    female_elder: "bf_emma"
+    female_alt: "af_nicole"
+    male_alt: "am_eric"

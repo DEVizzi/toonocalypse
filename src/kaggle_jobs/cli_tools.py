@@ -30,8 +30,9 @@ def kernel_ref() -> str:
 def preflight() -> None:
     res = _run(["kaggle", "kernels", "list", "--mine", "--page-size", "1"], check=False, timeout=120)
     if res.returncode != 0:
-        raise Abort("Kaggle auth failed. Rotate the token: kaggle.com -> Settings -> API -> Create New Token, "
-                    "then update the KAGGLE_API_TOKEN secret.")
+        detail = (res.stderr or res.stdout).strip()[-400:]
+        raise Abort("Kaggle preflight failed. If this is an auth error, rotate the token: kaggle.com -> Settings -> API -> "
+                    f"Create New Token, then update the KAGGLE_API_TOKEN secret. CLI said: {detail}")
 
 
 def push(kernel_dir: Path) -> str:
