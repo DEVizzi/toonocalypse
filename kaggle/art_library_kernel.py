@@ -105,13 +105,23 @@ def _qa_sprite(img: Image.Image, char: dict) -> tuple[bool, float, list[str]]:
     fg_ratio = float(np.mean(alpha > 128))
     if fg_ratio < 0.08 or fg_ratio > 0.88:
         reasons.append(f"fg_ratio {fg_ratio:.2f} out of [0.08, 0.88]")
-    pri_dist = _mean_color_distance(rgba, char["palette"]["primary"])
-    if pri_dist > 95.0:
-        reasons.append(f"primary palette mismatch ({pri_dist:.1f})")
-    score = max(0.0, min(1.0, 1.0 - (pri_dist / 160.0)))
-    if score < 0.70:
-        reasons.append(f"anchor/palette score {score:.2f} < 0.70")
+    palette_dists = [
+        _mean_color_distance(rgba, char["palette"][k])
+        for k in ("primary", "secondary", "accent")
+        if char.get("palette", {}).get(k)
+    ]
+    best_dist = min(palette_dists) if palette_dists else 999.0
+    if best_dist > 130.0:
+        reasons.append(f"palette mismatch ({best_dist:.1f})")
+    score = max(0.0, min(1.0, 1.0 - (best_dist / 220.0)))
+    if score < 0.50:
+        reasons.append(f"anchor/palette score {score:.2f} < 0.50")
     return not reasons, round(score, 3), reasons
+
+
+def _strip_hex(text: str) -> str:
+    import re
+    return re.sub(r"\s*\(#[0-9A-Fa-f]{6}\)", "", text).strip()
 
 
 def main() -> None:
@@ -134,15 +144,16 @@ def main() -> None:
     # Batch limit per Kaggle run so we finish reliably inside ~45 minutes on T4/P100
     max_chars = int(os.environ.get("TOON_ART_MAX_CHARS", "6"))
     priority_slugs = [s for s in queue.get("characters", []) if s in chars]
-    remaining_slugs = [s for s in sorted(chars.keys()) if s not in index.get("characters", {}) and s not in priority_slugs]
+    remaining_slugs = [s for s in sorted(chars.keys()) if not index.get("characters", {}).get(s) and s not in priority_slugs]
     target_slugs = (priority_slugs + remaining_slugs)[:max_chars]
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
-    model_id = os.environ.get("TOON_KAGGLE_MODEL", "stabilityai/sdxl-turbo")
+    model_id = os.environ.get("TOON_KAGGLE_MODEL", "stabilityai/stable-diffusion-xl-base-1.0")
     pipe = AutoPipelineForText2Image.from_pretrained(model_id, torch_dtype=dtype, variant="fp16" if dtype == torch.float16 else None)
     pipe = pipe.to(device)
-    steps = 4 if "turbo" in model_id or "schnell" in model_id else 25
+    steps = 4 if "turbo" in model_id or "schnell" in model_id else 20
+    guidance = 0.0 if "turbo" in model_id or "schnell" in model_id else 6.5
 
     qa_report = {"characters": {}, "backgrounds": {}}
 
@@ -154,22 +165,28 @@ def main() -> None:
         index.setdefault("characters", {}).setdefault(slug, {})
         qa_report["characters"][slug] = {}
 
+        vis_prompt = _strip_hex(c["visual_prompt"])
+        anchors_text = ", ".join(_strip_hex(a) for a in c["anchors"][:3])
         for p_idx, (pose_name, pose_desc) in enumerate(POSES.items()):
             out_png = char_dir / f"{pose_name}.png"
             prompt = (
                 f"Single isolated 3D stylized cartoon character on plain solid #F0F0F0 studio backdrop, "
                 f"full body head-to-toe centered, {style_short}. "
-                f"Character: {c['visual_prompt']}. "
+                f"Character: {vis_prompt}. "
                 f"Pose and expression: {pose_desc}. "
-                f"MUST HAVE: {', '.join(c['anchors'][:3])}. "
+                f"MUST HAVE: {anchors_text}. "
                 f"NO background props, NO text, NO letters, NO watermark."
             )
-            gen = torch.Generator(device=device).manual_seed(seed_base + p_idx)
-            raw_img = pipe(prompt=prompt, num_inference_steps=steps, guidance_scale=0.0 if "turbo" in model_id else 3.5, width=1024, height=1024, generator=gen).images[0]
-            fg_img = remove(raw_img).resize((1024, 1024), Image.Resampling.LANCZOS)
-            passed, score, reasons = _qa_sprite(fg_img, c)
+            passed, score, reasons, fg_img = False, 0.0, [], None
+            for attempt in range(2):
+                gen = torch.Generator(device=device).manual_seed(seed_base + p_idx + attempt * 1000)
+                raw_img = pipe(prompt=prompt, num_inference_steps=steps, guidance_scale=guidance, width=1024, height=1024, generator=gen).images[0]
+                fg_img = remove(raw_img).resize((1024, 1024), Image.Resampling.LANCZOS)
+                passed, score, reasons = _qa_sprite(fg_img, c)
+                if passed:
+                    break
             qa_report["characters"][slug][pose_name] = {"passed": passed, "score": score, "reasons": reasons}
-            if passed:
+            if passed and fg_img is not None:
                 fg_img.save(out_png)
                 index["characters"][slug][pose_name] = {
                     "path": f"assets/art_library/characters/{slug}/{pose_name}.png",

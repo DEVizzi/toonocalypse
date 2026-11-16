@@ -161,7 +161,7 @@ def generate_episode_bundle(
         ok, poses, bgs = available_assets_for_cast(heroes + [villain], lib_idx)
         if not ok:
             # Try selecting a cast that IS in the library
-            lib_chars = sorted(lib_idx.get("characters", {}).keys())
+            lib_chars = sorted(s for s, poses in lib_idx.get("characters", {}).items() if poses)
             all_chars = load_all_characters()
             lib_heroes = [s for s in lib_chars if s in all_chars and all_chars[s]["role"] == "hero"]
             lib_villains = [s for s in lib_chars if s in all_chars and all_chars[s]["role"] == "villain"]
@@ -436,19 +436,19 @@ def cmd_import_art_library(args: argparse.Namespace) -> int:
         raise FileNotFoundError(f"Missing {idx_file}")
     index = json.loads(idx_file.read_text(encoding="utf-8"))
     dest_root = ROOT / "assets" / "art_library"
-    if dest_root.exists():
-        shutil.rmtree(dest_root)
-    shutil.copytree(src_dir, dest_root)
+    dest_root.mkdir(parents=True, exist_ok=True)
+    ensure_art_library_downloaded(dest_root)
+    shutil.copytree(src_dir, dest_root, dirs_exist_ok=True)
     save_library_index(index)
 
     # Clear fulfilled items from art_queue.json
     q = load_state("art_queue.json", {"characters": [], "backgrounds": []})
-    q["characters"] = [c for c in q.get("characters", []) if c not in index.get("characters", {})]
+    q["characters"] = [c for c in q.get("characters", []) if not index.get("characters", {}).get(c)]
     q["backgrounds"] = [b for b in q.get("backgrounds", []) if b not in index.get("backgrounds", {})]
     save_state("art_queue.json", q)
 
     tag = f"art-library-v{index.get('version', 1)}"
-    archive = shutil.make_archive(str(src_dir.parent / tag), "zip", root_dir=str(src_dir))
+    archive = shutil.make_archive(str(src_dir.parent / tag), "zip", root_dir=str(dest_root))
     upload_episode_to_release(
         tag=tag,
         files=[Path(archive), idx_file],
