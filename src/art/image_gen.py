@@ -130,15 +130,18 @@ def _generate_panel_pollinations(prompt: str, seed: int) -> Image.Image:
         headers["Authorization"] = f"Bearer {api_key}"
 
     last_err: Exception | None = None
-    for attempt in range(3):
+    for attempt in range(4):
         try:
             resp = requests.get(url, headers=headers, timeout=90)
             if resp.status_code == 200 and resp.content and len(resp.content) > 5000:
                 return Image.open(BytesIO(resp.content)).convert("RGB")
             last_err = RuntimeError(f"HTTP {resp.status_code}: {resp.text[:120]}")
+            if resp.status_code == 402 or "FREE_LIMIT" in resp.text:
+                time.sleep(46)
+                continue
         except Exception as exc:
             last_err = exc
-        time.sleep(2 * (attempt + 1))
+        time.sleep(4 * (attempt + 1))
     raise RuntimeError(f"Pollinations failed: {last_err}")
 
 
