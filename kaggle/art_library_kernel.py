@@ -142,14 +142,14 @@ def main() -> None:
             chars[data["slug"]] = data
 
     # Batch limit per Kaggle run so we finish reliably inside ~45 minutes on T4/P100
-    max_chars = int(os.environ.get("TOON_ART_MAX_CHARS", "6"))
+    max_chars = int(os.environ.get("TOON_ART_MAX_CHARS", "3"))
     priority_slugs = [s for s in queue.get("characters", []) if s in chars]
     remaining_slugs = [s for s in sorted(chars.keys()) if not index.get("characters", {}).get(s) and s not in priority_slugs]
     target_slugs = (priority_slugs + remaining_slugs)[:max_chars]
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
-    model_id = os.environ.get("TOON_KAGGLE_MODEL", "stabilityai/stable-diffusion-xl-base-1.0")
+    model_id = os.environ.get("TOON_KAGGLE_MODEL", "stabilityai/sdxl-turbo")
     pipe = AutoPipelineForText2Image.from_pretrained(model_id, torch_dtype=dtype, variant="fp16" if dtype == torch.float16 else None)
     pipe = pipe.to(device)
     steps = 4 if "turbo" in model_id or "schnell" in model_id else 20
