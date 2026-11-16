@@ -164,16 +164,18 @@ def generate_part_script(
     last_err = ""
     for _attempt in range(3):
         cast_desc = "\n".join(
-            f"- slug={s}, name={chars[s]['name']}, catchphrase={chars[s]['catchphrase']}"
+            f"- slug={s}, name={chars[s]['name']}, personality={chars[s].get('personality', '')}, speech_style={chars[s].get('speech_style', '')}, catchphrase={chars[s]['catchphrase']}"
             for s in heroes + [villain]
         )
         prompt = (
-            f"Write Part {part_num}/{part_count} of a family-friendly all-ages Toonocalypse motion comic.\n"
-            f"Premise: {idea}\nSetting: {setting}\nCliffhanger type: {cliffhanger_type or 'satisfying funny resolution'}\n"
+            f"Write Part {part_num}/{part_count} of a sharp, witty, high-stakes Toonocalypse motion comic (Spider-Verse / Teen Titans / Gravity Falls energy).\n"
+            f"Premise: {idea}\nSetting: {setting}\nCliffhanger type: {cliffhanger_type or 'sharp twist or high-stakes standoff'}\n"
             f"Cast:\n{cast_desc}\n\n"
             f"Allowed character poses ONLY: {poses_list}\n"
             f"Allowed backgrounds ONLY: {bgs_list}\n\n"
-            "Rules:\n"
+            "Tone & Writing Rules:\n"
+            "- Write for teens & adults: snappy dialogue, dry wit, real tactical stakes, clever twists, and distinct character voices.\n"
+            "- STRICTLY NO kiddish/toddler talk, NO cheesy 'yay!/uh-oh!' filler, NO corny moralizing lessons (keep it YouTube/IG safe, no gore or slurs).\n"
             "- Include a punchy 'title' (>= 4 words, MUST contain a verb, MUST NOT end with a connector like when/and/but/the/to/with/of/a).\n"
             "- Exactly 6 panels (panel_id 1..6).\n"
             "- Panel 1 is the cold-open HOOK mid-action.\n"
