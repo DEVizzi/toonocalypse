@@ -39,6 +39,33 @@ def _apply_lighting_match(fg: Image.Image, bg: Image.Image) -> Image.Image:
     return adjusted
 
 
+def _soften_cropped_edges(
+    sprite: Image.Image,
+    left_cropped: bool,
+    right_cropped: bool,
+    top_cropped: bool,
+    fade_px: int = 20,
+) -> Image.Image:
+    """Fade alpha smoothly on edges that hit the source canvas border to avoid hard square cuts."""
+    if not (left_cropped or right_cropped or top_cropped):
+        return sprite
+    w, h = sprite.size
+    alpha = sprite.getchannel("A")
+    px = alpha.load()
+    f = max(4, min(fade_px, w // 6, h // 6))
+    for y in range(h):
+        ty = min(1.0, y / f) if top_cropped and y < f else 1.0
+        for x in range(w):
+            lx = min(1.0, x / f) if left_cropped and x < f else 1.0
+            rx = min(1.0, (w - 1 - x) / f) if right_cropped and x >= w - f else 1.0
+            mult = min(ty, lx, rx)
+            if mult < 1.0:
+                px[x, y] = int(px[x, y] * mult)
+    out = sprite.copy()
+    out.putalpha(alpha)
+    return out
+
+
 def compose_panel_layers(
     panel: dict[str, Any],
     library_index: dict[str, Any],
@@ -82,6 +109,9 @@ def compose_panel_layers(
         raw_sprite = Image.open(ROOT / pose_entry["path"]).convert("RGBA")
         raw_alpha = raw_sprite.getchannel("A")
         bbox = raw_alpha.getbbox()
+        left_cropped = bool(bbox and bbox[0] <= 10)
+        top_cropped = bool(bbox and bbox[1] <= 10)
+        right_cropped = bool(bbox and bbox[2] >= raw_sprite.width - 10)
         bottom_cropped = bool(bbox and bbox[3] >= raw_sprite.height - 12)
         sprite = raw_sprite.crop(bbox) if bbox else raw_sprite
         cdata = chars_bible.get(slug, {"height_units": 1.0})
@@ -92,9 +122,10 @@ def compose_panel_layers(
             target_h = max(64, int(target_h * (max_w / target_w)))
             target_w = max_w
         sprite = sprite.resize((target_w, target_h), Image.Resampling.LANCZOS)
-        # Subtle alpha-edge smoothing to eliminate any background-removal halo
+        # Subtle alpha-edge smoothing + cropped-border fade to eliminate hard box edges
         a_chan = sprite.getchannel("A").filter(ImageFilter.GaussianBlur(radius=0.6))
         sprite.putalpha(a_chan)
+        sprite = _soften_cropped_edges(sprite, left_cropped, right_cropped, top_cropped)
         sprite = _apply_lighting_match(sprite, bg_img)
 
         cx = int(w * (idx + 1) / (count + 1))
