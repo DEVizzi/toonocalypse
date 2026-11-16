@@ -5,15 +5,15 @@
   },
   "gemini": {
     "date": "2026-11-16",
-    "calls": 5,
+    "calls": 8,
     "retry_after": {
       "gemini-3.8-flash": "2026-11-17T07:59:58.452277+00:00",
       "gemini-3.6-flash": "2026-11-17T07:58:48.452277+00:00"
     }
   },
   "aborts": {
-    "consecutive": 2,
-    "last_reason": "Gemini unavailable for scripts: gemini-3.5-flash-lite 503",
-    "paused_until": null
+    "consecutive": 3,
+    "last_reason": "Scripts failed validation: part 1: 6 panels; part 1: duration 41.0s outside 45-60s; part 2: 6 panels; part 2: duration 41.0s outside 45-60s; part 3: 6 panels; part 3: duration 40.9s outside 45-60s; final part has no moral_card",
+    "paused_until": "2026-11-17T08:02:43.408336+00:00"
   }
 }
