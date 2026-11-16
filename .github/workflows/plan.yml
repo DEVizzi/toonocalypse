@@ -47,7 +47,7 @@ jobs:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
         run: |
-          pip install -q "kaggle>=1.7"
+          pip install -q "kaggle>=1.7" six
           mkdir -p ~/.kaggle
           python3 -c 'import json,os; json.dump({"username":os.environ["KAGGLE_USERNAME"],"key":os.environ["KAGGLE_API_TOKEN"]}, open(os.path.expanduser("~/.kaggle/kaggle.json"),"w"))'
           chmod 600 ~/.kaggle/kaggle.json
