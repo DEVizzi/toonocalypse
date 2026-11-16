@@ -22,8 +22,8 @@ def print_sample(story: dict) -> None:
         print(f"\n--- {p['title']} ({len(p['panels'])} panels, {sum(float(x['duration']) for x in p['panels']):.0f}s)")
         print(f"Hook: {p['hook_text']}")
         for x in p["panels"][:3]:
-            lines = " / ".join(f"{d['speaker']}: {d['line']}" for d in x.get("dialogue", []))
-            print(f"  [{x['id']}] {x['image_prompt'][:110]}… | {lines or x.get('narration', '')}")
+            lines = " / ".join(f"{d.get('speaker')}: {d.get('line')}" for d in x.get("dialogue", []))
+            print(f"  [{x.get('id')}] {str(x.get('image_prompt', ''))[:110]}… | {lines or x.get('narration', '')}")
     print("=" * 70, flush=True)
 
 

@@ -129,6 +129,10 @@ def write_scripts(plan: dict[str, Any], quota: Quota | None = None, feedback: st
             out, model = generate_json(_part_prompt(plan, n, total, parts, fb), f"scripts_p{n}", quota=quota)
             part = out.get("parts", [out])[0] if isinstance(out, dict) and "parts" in out else out
             part["part"] = n
+            for p in part.get("panels", []):
+                p["dialogue"] = [{"speaker": d.get("speaker") or d.get("character") or d.get("name"),
+                                  "line": (d.get("line") or d.get("text") or "").strip()}
+                                 for d in (p.get("dialogue") or []) if isinstance(d, dict) and (d.get("line") or d.get("text"))]
             normalize_durations(part)
             errs = validate_part(part, total, names)
             if not errs:
