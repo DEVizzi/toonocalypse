@@ -1,6 +1,6 @@
 {
   "date": "2026-11-16",
-  "text_calls": 13,
+  "text_calls": 15,
   "image_calls": 0,
   "vision_calls": 3,
   "pending_jobs": [],
@@ -11,8 +11,8 @@
   "last_abort_at": "2026-11-16T15:46:28.948763+00:00",
   "model_retry_after": {
     "gemini-3.8-flash": {
-      "retry_delay_sec": 59017.749219553,
-      "until": "2026-11-17T08:00:00.016001+00:00"
+      "retry_delay_sec": 49668.853488711,
+      "until": "2026-11-17T08:00:00.006261+00:00"
     }
   }
 }
