@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "characters": {
+    "baron-byte-bat": {
+      "idle": {
+        "path": "assets/art_library/characters/baron-byte-bat/idle.png",
+        "qa_score": 0.775
+      },
+      "walk": {
+        "path": "assets/art_library/characters/baron-byte-bat/walk.png",
+        "qa_score": 0.83
+      },
+      "point": {
+        "path": "assets/art_library/characters/baron-byte-bat/point.png",
+        "qa_score": 0.874
+      },
+      "surprised": {
+        "path": "assets/art_library/characters/baron-byte-bat/surprised.png",
+        "qa_score": 0.885
+      },
+      "laughing": {
+        "path": "assets/art_library/characters/baron-byte-bat/laughing.png",
+        "qa_score": 0.82
+      },
+      "comic-angry": {
+        "path": "assets/art_library/characters/baron-byte-bat/comic-angry.png",
+        "qa_score": 0.785
+      },
+      "sad": {
+        "path": "assets/art_library/characters/baron-byte-bat/sad.png",
+        "qa_score": 0.776
+      },
+      "thinking": {
+        "path": "assets/art_library/characters/baron-byte-bat/thinking.png",
+        "qa_score": 0.789
+      },
+      "cheering": {
+        "path": "assets/art_library/characters/baron-byte-bat/cheering.png",
+        "qa_score": 0.785
+      },
+      "talking": {
+        "path": "assets/art_library/characters/baron-byte-bat/talking.png",
+        "qa_score": 0.841
+      }
+    },
+    "blazetail": {},
+    "blitzshell": {},
+    "brewtan-the-yeti": {},
+    "bubblebeard": {},
+    "captain-slobber": {}
+  },
+  "backgrounds": {
+    "frosty-espresso-bar": {
+      "16x9": "assets/art_library/backgrounds/frosty-espresso-bar_16x9.png",
+      "9x16": "assets/art_library/backgrounds/frosty-espresso-bar_9x16.png"
+    },
+    "sunny-town-square": {
+      "16x9": "assets/art_library/backgrounds/sunny-town-square_16x9.png",
+      "9x16": "assets/art_library/backgrounds/sunny-town-square_9x16.png"
+    },
+    "cozy-treehouse-hq": {
+      "16x9": "assets/art_library/backgrounds/cozy-treehouse-hq_16x9.png",
+      "9x16": "assets/art_library/backgrounds/cozy-treehouse-hq_9x16.png"
+    },
+    "neon-arcade-alley": {
+      "16x9": "assets/art_library/backgrounds/neon-arcade-alley_16x9.png",
+      "9x16": "assets/art_library/backgrounds/neon-arcade-alley_9x16.png"
+    },
+    "botanical-glasshouse": {
+      "16x9": "assets/art_library/backgrounds/botanical-glasshouse_16x9.png",
+      "9x16": "assets/art_library/backgrounds/botanical-glasshouse_9x16.png"
+    },
+    "clockwork-bakery": {
+      "16x9": "assets/art_library/backgrounds/clockwork-bakery_16x9.png",
+      "9x16": "assets/art_library/backgrounds/clockwork-bakery_9x16.png"
+    },
+    "starlight-observatory": {
+      "16x9": "assets/art_library/backgrounds/starlight-observatory_16x9.png",
+      "9x16": "assets/art_library/backgrounds/starlight-observatory_9x16.png"
+    },
+    "rainbow-skate-park": {
+      "16x9": "assets/art_library/backgrounds/rainbow-skate-park_16x9.png",
+      "9x16": "assets/art_library/backgrounds/rainbow-skate-park_9x16.png"
+    },
+    "cloudtop-lighthouse": {
+      "16x9": "assets/art_library/backgrounds/cloudtop-lighthouse_16x9.png",
+      "9x16": "assets/art_library/backgrounds/cloudtop-lighthouse_9x16.png"
+    },
+    "bamboo-tea-garden": {
+      "16x9": "assets/art_library/backgrounds/bamboo-tea-garden_16x9.png",
+      "9x16": "assets/art_library/backgrounds/bamboo-tea-garden_9x16.png"
+    },
+    "midnight-museum-hall": {
+      "16x9": "assets/art_library/backgrounds/midnight-museum-hall_16x9.png",
+      "9x16": "assets/art_library/backgrounds/midnight-museum-hall_9x16.png"
+    },
+    "coral-reef-cove": {
+      "16x9": "assets/art_library/backgrounds/coral-reef-cove_16x9.png",
+      "9x16": "assets/art_library/backgrounds/coral-reef-cove_9x16.png"
+    },
+    "snowy-mountain-lodge": {
+      "16x9": "assets/art_library/backgrounds/snowy-mountain-lodge_16x9.png",
+      "9x16": "assets/art_library/backgrounds/snowy-mountain-lodge_9x16.png"
+    },
+    "pumpkin-harvest-fair": {
+      "16x9": "assets/art_library/backgrounds/pumpkin-harvest-fair_16x9.png",
+      "9x16": "assets/art_library/backgrounds/pumpkin-harvest-fair_9x16.png"
+    },
+    "candy-factory-floor": {
+      "16x9": "assets/art_library/backgrounds/candy-factory-floor_16x9.png",
+      "9x16": "assets/art_library/backgrounds/candy-factory-floor_9x16.png"
+    },
+    "retro-comic-bookstore": {
+      "16x9": "assets/art_library/backgrounds/retro-comic-bookstore_16x9.png",
+      "9x16": "assets/art_library/backgrounds/retro-comic-bookstore_9x16.png"
+    },
+    "floating-sky-docks": {
+      "16x9": "assets/art_library/backgrounds/floating-sky-docks_16x9.png",
+      "9x16": "assets/art_library/backgrounds/floating-sky-docks_9x16.png"
+    },
+    "underground-crystal-cavern": {
+      "16x9": "assets/art_library/backgrounds/underground-crystal-cavern_16x9.png",
+      "9x16": "assets/art_library/backgrounds/underground-crystal-cavern_9x16.png"
+    },
+    "rooftop-pizzeria": {
+      "16x9": "assets/art_library/backgrounds/rooftop-pizzeria_16x9.png",
+      "9x16": "assets/art_library/backgrounds/rooftop-pizzeria_9x16.png"
+    },
+    "whimsical-science-lab": {
+      "16x9": "assets/art_library/backgrounds/whimsical-science-lab_16x9.png",
+      "9x16": "assets/art_library/backgrounds/whimsical-science-lab_9x16.png"
+    },
+    "autumn-park-bridge": {
+      "16x9": "assets/art_library/backgrounds/autumn-park-bridge_16x9.png",
+      "9x16": "assets/art_library/backgrounds/autumn-park-bridge_9x16.png"
+    },
+    "tropical-tiki-beach": {
+      "16x9": "assets/art_library/backgrounds/tropical-tiki-beach_16x9.png",
+      "9x16": "assets/art_library/backgrounds/tropical-tiki-beach_9x16.png"
+    },
+    "winter-ice-rink": {
+      "16x9": "assets/art_library/backgrounds/winter-ice-rink_16x9.png",
+      "9x16": "assets/art_library/backgrounds/winter-ice-rink_9x16.png"
+    },
+    "lantern-night-market": {
+      "16x9": "assets/art_library/backgrounds/lantern-night-market_16x9.png",
+      "9x16": "assets/art_library/backgrounds/lantern-night-market_9x16.png"
+    },
+    "toy-workshop-attic": {
+      "16x9": "assets/art_library/backgrounds/toy-workshop-attic_16x9.png",
+      "9x16": "assets/art_library/backgrounds/toy-workshop-attic_9x16.png"
+    },
+    "submarine-bridge": {
+      "16x9": "assets/art_library/backgrounds/submarine-bridge_16x9.png",
+      "9x16": "assets/art_library/backgrounds/submarine-bridge_9x16.png"
+    },
+    "desert-cactus-diner": {
+      "16x9": "assets/art_library/backgrounds/desert-cactus-diner_16x9.png",
+      "9x16": "assets/art_library/backgrounds/desert-cactus-diner_9x16.png"
+    },
+    "music-studio-stage": {
+      "16x9": "assets/art_library/backgrounds/music-studio-stage_16x9.png",
+      "9x16": "assets/art_library/backgrounds/music-studio-stage_9x16.png"
+    },
+    "library-spiral-tower": {
+      "16x9": "assets/art_library/backgrounds/library-spiral-tower_16x9.png",
+      "9x16": "assets/art_library/backgrounds/library-spiral-tower_9x16.png"
+    },
+    "carousel-carnival-plaza": {
+      "16x9": "assets/art_library/backgrounds/carousel-carnival-plaza_16x9.png",
+      "9x16": "assets/art_library/backgrounds/carousel-carnival-plaza_9x16.png"
+    }
+  }
+}
