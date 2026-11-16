@@ -63,6 +63,9 @@ Avoid these recent settings/morals/premises: {json.dumps(avoid)}
 {WRITING}
 Cast: {s['cast_size']['min']}-{s['cast_size']['max']} named characters, mostly human, ethnicity/region fitting the setting.
 Each character needs a different signature colour, hairstyle and silhouette; no two of similar age+gender+hair.
+Design looks the image model can reproduce reliably: ONE dominant signature colour on the main garment (e.g. "bright red kurta"),
+neutral secondary clothing (black/white/grey/brown/khaki), ONE large clearly visible accessory in a contrasting colour
+(e.g. "yellow headband", "big brass pocket watch"), and a simple distinctive hairstyle. Never put two strong colours on two garments.
 visual_prompt: <= {s['visual_prompt_max_chars']} chars, describes ONLY that character's fixed look (age, build, face, hair+colour, skin, outfit colours, accessory). No style words.
 Part 1: hook + world + problem + cliffhanger. Middle parts: escalation, twist, setback + cliffhanger. Final: climax, the moral CHOICE, payoff.
 Cliffhanger types (rotate, no repeats in a row): {s['cliffhanger_types']}. Write each payoff first.

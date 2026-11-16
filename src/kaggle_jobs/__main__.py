@@ -17,6 +17,7 @@ def abort_story(b: dict, story: dict, reason: str, q: Quota) -> None:
     story["abort_reason"] = reason
     b.setdefault("history", []).append({"story_id": story["story_id"], "title": story["title"], "category": story["category"],
                                         "status": "ABORTED", "reason": reason, "at": time.time()})
+    b["archive"] = {story["story_id"]: story} | b.get("archive", {})
     b["current"] = None
     q.record_abort(reason)
     print(f"ABORTED: {reason}")
