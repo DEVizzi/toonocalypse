@@ -44,6 +44,16 @@
         "anchor_score 0.20 < 0.7"
       ],
       "notes": "Panel 3 and Panel 6 display severe compositing flaws where characters are pasted onto the background with harsh square artifacts and inconsistent scaling/perspective. Panel 5 shows the background bridge abruptly cut off behind the characters."
+    },
+    {
+      "type": "art_qa",
+      "episode": "ep-20261116-cade11_pt1",
+      "passed": false,
+      "anchor_score": 0.35,
+      "reasons": [
+        "anchor_score 0.35 < 0.7"
+      ],
+      "notes": "Severe image cutout artifacts present, including visible unblended rectangular bounding boxes around characters in panel 5 and panel 6, as well as head artifacts in panel 1."
     }
   ]
 }
