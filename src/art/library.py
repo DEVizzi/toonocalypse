@@ -94,17 +94,31 @@ def latest_art_release_tag() -> str | None:
     return best_tag
 
 
+def _extract_art_zips(target: Path) -> None:
+    import zipfile
+
+    while True:
+        zips = sorted(target.glob("art-library-v*.zip"))
+        if not zips:
+            break
+        for zp in zips:
+            with zipfile.ZipFile(zp, "r") as zf:
+                zf.extractall(target)
+            zp.unlink()
+
+
 def ensure_art_library_downloaded(dest_dir: Path | None = None) -> dict[str, Any]:
     """Ensure assets/library_index.json and PNGs from art-library-vN are present locally."""
     target = dest_dir or LIBRARY_CACHE_DIR
     target.mkdir(parents=True, exist_ok=True)
     idx = load_library_index()
     if idx.get("characters") and idx.get("backgrounds"):
-        # Verify at least one character sprite exists on disk; otherwise download from release
-        first_char = next(iter(idx["characters"].values()), {})
+        first_char = next((v for v in idx["characters"].values() if v), {})
         first_pose = next(iter(first_char.values()), {})
-        rel_path = first_pose.get("path", "")
-        if rel_path and (ROOT / rel_path).exists():
+        first_bg = next(iter(idx["backgrounds"].values()), {})
+        char_ok = bool(first_pose.get("path")) and (ROOT / first_pose["path"]).exists()
+        bg_ok = bool(first_bg.get("16x9")) and (ROOT / first_bg["16x9"]).exists()
+        if char_ok and bg_ok:
             return idx
 
     tag = latest_art_release_tag()
@@ -114,6 +128,7 @@ def ensure_art_library_downloaded(dest_dir: Path | None = None) -> dict[str, Any
         ["gh", "release", "download", tag, "--dir", str(target), "--clobber"],
         check=True,
     )
+    _extract_art_zips(target)
     idx_file = target / "library_index.json"
     if idx_file.exists():
         idx = json.loads(idx_file.read_text(encoding="utf-8"))
