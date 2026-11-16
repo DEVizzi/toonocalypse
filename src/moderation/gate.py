@@ -55,12 +55,16 @@ def check_text(text: str, use_llm: bool = False, quota: QuotaTracker | None = No
 
 
 def check_script(script: dict[str, Any], use_llm: bool = False) -> ModerationResult:
-    parts = [script.get("title", ""), script.get("logline", ""), script.get("on_screen_hook", "")]
+    parts = [
+        str(script.get("title") or ""),
+        str(script.get("logline") or ""),
+        str(script.get("on_screen_hook") or ""),
+    ]
     for p in script.get("panels", []):
-        parts.append(p.get("action", ""))
-        parts.append(p.get("narrator", ""))
-        for d in p.get("dialogue", []):
-            parts.append(d.get("line", ""))
+        parts.append(str(p.get("action") or ""))
+        parts.append(str(p.get("narrator") or ""))
+        for d in p.get("dialogue") or []:
+            parts.append(str(d.get("line") or ""))
     return check_text("\n".join(parts), use_llm=use_llm)
 
 
