@@ -53,7 +53,8 @@ def portrait_items(story: dict[str, Any], names: list[str] | None = None, salt: 
     for c in story["cast"]:
         if names and c["name"] not in names:
             continue
-        prompt = (f"solo portrait of ONE person only, {c['visual_prompt']}, full body, front view, standing, "
+        emphasis = ", ".join(f"({x})1.25" for x in [c.get("outfit"), c.get("accessory"), *c.get("anchors", [])] if x)
+        prompt = (f"solo portrait of ONE person only, {c['visual_prompt']}, {emphasis}, full body, front view, standing, "
                   f"centered, plain light grey studio background, {sg['positive']}")
         negative = (f"{sg['negative']}, character sheet, turnaround, multiple views, collage, grid, duplicate person, "
                     f"two people, crowd, split screen, monochrome")
