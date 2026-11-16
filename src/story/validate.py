@@ -78,7 +78,7 @@ def validate_part(part: dict[str, Any], total: int, cast_names: set[str]) -> lis
     if not s["panels_per_part"]["min"] <= len(panels) <= s["panels_per_part"]["max"]:
         errs.append(f"part {n}: {len(panels)} panels")
     if words(part.get("hook_text", "")) > s["hook_line_max_words"]:
-        errs.append(f"part {n}: hook line > {s['hook_line_max_words']} words")
+        errs.append(f"part {n}: hook line > {s['hook_line_max_words']} words — shorten hook_text {part.get('hook_text')!r} (put any recap in 'previously', not the hook)")
     dur = sum(float(p.get("duration", 0)) for p in panels)
     if not s["part_seconds"]["min"] <= dur <= s["part_seconds"]["hard_cap"]:
         errs.append(f"part {n}: duration {dur:.1f}s outside {s['part_seconds']['min']}-{s['part_seconds']['hard_cap']}s")
