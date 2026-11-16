@@ -42,9 +42,9 @@ def check_text(text: str, use_llm: bool = False, quota: QuotaTracker | None = No
     if use_llm:
         qt = quota or QuotaTracker()
         prompt = (
-            "Reply ONLY 'PASS' or 'FAIL: <reason>'. Is this 100% safe, wholesome, "
-            "all-ages family-friendly cartoon content with no scary imagery, real brands, "
-            "romance, weapons aimed at characters, or unsafe imitable behaviour?\n\n"
+            "Reply ONLY 'PASS' or 'FAIL: <reason>'. Evaluate this PG-13 teen/adult comic-book script for YouTube/Instagram safety. "
+            "Comic action, suspense, countdowns, rivalry, and fictional sci-fi gadgets are PASS. "
+            "FAIL only for hate speech, slurs, graphic gore, sexual content, self-harm, or real-world dangerous instructions:\n\n"
             f"{text[:4000]}"
         )
         ans_raw, _model = generate_text(prompt, step="moderation", quota=qt)
