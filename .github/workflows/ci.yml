@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        env:
+          GITLEAKS_VERSION: "8.21.2"
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
+          # Scan the working tree, plus every commit after the legacy-v1 tag.
+          # TODO(full-history): after .env is purged from history, scan all commits.
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
+          if git rev-parse -q --verify refs/tags/legacy-v1 >/dev/null; then
+            ./gitleaks detect --source . --config .gitleaks.toml --redact --log-opts="legacy-v1..HEAD"
+          else
+            ./gitleaks detect --source . --config .gitleaks.toml --redact
+          fi
+
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q

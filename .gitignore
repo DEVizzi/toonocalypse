@@ -1,38 +1,15 @@
-# Secrets & credentials (NEVER commit)
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
 .env
 .env.*
-*.pem
-*.key
-*credentials*.json
-*client_secret*.json
-myvoiceoverbot*.json
-/token*.json
-!state/tokens.json
-
-# Python
-.venv/
-venv/
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-
-# Generated media & build artifacts
-/STORY/
-dry_run_output/
-frames/
-voiceovers/
-build/
-dist/
-out/
-tmp/
-*.mp4
-*.mov
-*.avi
-*.mkv
-
-# OS / IDE
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+*.tmp
+# Kaggle credentials and job output (never committed)
+.kaggle/
+access_token
+kaggle.json
+kaggle/job.json
+kaggle_out/
+work/
+state/models_cache.json

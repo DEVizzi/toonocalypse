@@ -1,0 +1,65 @@
+# Toonocalypse v2 — global settings. All tunables live here or in models.yaml / categories.yaml.
+series_name: "Toonocalypse"
+
+schedule:
+  timezone: "Asia/Kolkata"
+  post_time_local: "18:30"
+
+story:
+  parts: {min: 3, max: 5}
+  panels_per_part: {min: 7, max: 9}
+  part_seconds: {min: 45, max: 60, hard_cap: 60}
+  cast_size: {min: 2, max: 4}
+  max_chars_per_panel: 2
+  no_repeat_window: 20          # no repeated premise / setting / moral within N stories
+  spoken_line_max_words: 14
+  hook_line_max_words: 7
+  moral_max_words: 10
+  title_max_chars: 60
+  visual_prompt_max_chars: 300
+  cliffhanger_types: [reveal, ticking_clock, impossible_choice, betrayal, mid_action_freeze]
+
+judge:                          # story/script judge (§8)
+  min_avg: 8
+  min_hook: 8
+  safety: 10
+  max_rewrites: 3
+
+panel_qa:                       # Gemini vision QA (§7.3/§7.4)
+  min_each: 7
+  min_avg: 8
+  safety: 10
+  max_repair_rounds: 2
+
+buffer:
+  target_ready_episodes: 5
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  loudness_lufs: -14
+  ken_burns_pct: {min: 6, max: 10}
+  transition_frames: 6
+  shake_frames: 2
+  moral_card_seconds: 3
+  max_black_or_frozen_seconds: 2
+
+safe_zone:                      # percentages of frame height/width
+  top_clear_pct: 10
+  bottom_clear_pct: 20
+  bubble_area_top_pct: 25
+  sfx_margin_pct: 6
+
+publish:
+  made_for_kids: false
+  youtube_privacy: "public"
+  youtube_category_id: "1"      # Film & Animation
+  hashtags: {min: 3, max: 5}
+
+abort:
+  consecutive_limit: 3
+  pause_hours: 12
+
+tokens:
+  instagram_refresh_when_days_left: 20

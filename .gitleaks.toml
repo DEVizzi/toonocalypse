@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "kaggle-api-token"
+description = "Kaggle API token (new KGAT_ format)"
+regex = '''KGAT_[A-Za-z0-9]{16,}'''
+keywords = ["KGAT_"]

@@ -1,0 +1,44 @@
+# Model names and limits. Every entry must be commercial-safe and listed in LICENSES.md.
+
+gemini:
+  api_version: "v1beta"
+  discovery_cache_hours: 24
+  # Preference order; models.list() at startup filters to the ones that exist.
+  # 404 -> skipped for the rest of the run; 429 -> retryDelay recorded in state/quota.json.
+  text: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
+  vision: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
+
+kaggle:
+  kernel_slug: "toonocalypse-art"     # full id = <KAGGLE_USERNAME>/toonocalypse-art
+  weights_dataset_slug: "toonocalypse-weights"
+  weekly_gpu_hours: 30                # verified against Kaggle docs at implementation time
+  stop_at_pct: 85
+
+image:
+  base: "stabilityai/stable-diffusion-xl-base-1.0"
+  width: 768
+  height: 1344
+  steps: 28
+  scheduler: "dpmpp_2m_karras"
+  guidance: 6.5
+  ip_adapter:
+    repo: "h94/IP-Adapter"
+    weight: "sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors"
+    image_encoder: "models/image_encoder"
+    scale: 0.65
+    repair_scale: 0.75
+  upscaler: "RealESRGAN_x2plus"
+  candidates:
+    portrait: 8
+    portrait_keep: 3
+    panel: 3
+    panel_keep: 2
+  prefilter:
+    clip_model: "openai/clip-vit-large-patch14"
+    dino_model: "facebook/dinov2-base"
+    dino_min_similarity: 0.55
+    reject_if_text: true
+
+tts:
+  primary: "kokoro"
+  fallback: "piper"

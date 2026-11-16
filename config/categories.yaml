@@ -1,0 +1,45 @@
+# Category weights (tuned weekly by the learning loop, ±10%/week). Never the same category twice in a row.
+categories:
+  mythology:
+    label: "Mythology & Legends"
+    weight: 25
+    brief: "Epic heroes, cursed treasures, guardian beasts; Indian epic heroes, Norse, Greek, Japanese, Egyptian, world folklore. Never write dialogue for worshipped deities; portray sacred figures with dignity."
+    music_mood: epic
+  moral_fable:
+    label: "Moral Fables (modern)"
+    weight: 20
+    brief: "Everyday people facing a choice: kindness, honesty, greed, patience."
+    music_mood: emotional
+  ai_future:
+    label: "AI & Future"
+    weight: 15
+    brief: "Robots, AI companions, smart cities, a hacker kid, an AI that learns empathy."
+    music_mood: tech
+  action:
+    label: "Action & Adventure"
+    weight: 15
+    brief: "Heists, rescues, chases, tournaments, underdog warriors."
+    music_mood: epic
+  mystery:
+    label: "Mystery & Suspense"
+    weight: 15
+    brief: "Locked rooms, vanishing villages, eerie forests; spooky, never gory."
+    music_mood: mystery
+  survival:
+    label: "Survival"
+    weight: 10
+    brief: "Shipwreck, desert, mountain, jungle; wits beat danger."
+    music_mood: emotional
+
+# Seed slate (§4.5): used first, in order, then the planner invents new stories in the same spirit.
+seeds:
+  - {category: mythology, title: "The Last Arrow", parts: 4, moral: "Power used for others comes back to you.", premise: "A young archer guards a mountain gate with one enchanted arrow that returns only when fired for others."}
+  - {category: moral_fable, title: "The Golden Rickshaw", parts: 3, moral: "Honesty is the richest fare.", premise: "A poor rickshaw driver finds a bag of gold; every ride tests whether he'll keep it."}
+  - {category: ai_future, title: "Unit 7 Learns to Lie", parts: 4, moral: "Trust breaks faster than code.", premise: "A helper robot finds a tiny lie could save a child's science fair, and learns what it costs."}
+  - {category: action, title: "The Monsoon Heist", parts: 5, moral: "Together is stronger.", premise: "Twin sisters stop thieves stealing their village's water pump in a storm."}
+  - {category: mystery, title: "The Village With No Echo", parts: 4, moral: "Listen to the quiet ones.", premise: "A girl notices her village stopped echoing, then people forget names."}
+  - {category: survival, title: "Three Matches", parts: 3, moral: "Sharing keeps everyone warm.", premise: "Three strangers on a snowy peak, three matches, one choice each."}
+  - {category: mythology, title: "The Serpent's Pearl", parts: 5, moral: "What you take, you owe.", premise: "A fisherman's son must return a sea serpent's stolen pearl before a storm swallows his island."}
+  - {category: ai_future, title: "Grandma's Hologram", parts: 3, moral: "Love lives in what we learned.", premise: "A boy builds an AI of his late grandmother, which teaches him to let go."}
+  - {category: action, title: "The Tournament of Fools", parts: 4, moral: "Brains beat brawn.", premise: "The weakest fighter wins a sword tournament with wit."}
+  - {category: moral_fable, title: "The Kite and the String", parts: 3, moral: "Rise without cutting others down.", premise: "A champion kite flyer cuts every rival's string until his own falls with no one to help."}
