@@ -42,6 +42,7 @@ def check_page_qa(
 
     anchor_score = 0.90
     has_text = False
+    notes = ""
     from src.common.gemini import discover_text_models, get_client, has_gemini_key
 
     if not offline and has_gemini_key():
@@ -74,6 +75,7 @@ def check_page_qa(
                     data = json.loads(m.group(0))
                     anchor_score = float(data.get("anchor_score", 0.9))
                     has_text = bool(data.get("has_text", False))
+                    notes = str(data.get("notes", ""))
                     if data.get("forbidden_found"):
                         reasons.append("forbidden character item detected")
             except Exception:
@@ -87,7 +89,7 @@ def check_page_qa(
     res = ArtQAResult(passed=not reasons, anchor_score=anchor_score, panel_count=len(boxes), has_text=has_text, reasons=reasons)
     log = load_state("qa_log.json", {"entries": []})
     log.setdefault("entries", []).append(
-        {"type": "art_qa", "episode": f"{script.get('story_id')}_pt{script.get('part_num')}", "passed": res.passed, "anchor_score": anchor_score, "reasons": reasons}
+        {"type": "art_qa", "episode": f"{script.get('story_id')}_pt{script.get('part_num')}", "passed": res.passed, "anchor_score": anchor_score, "reasons": reasons, "notes": notes}
     )
     save_state("qa_log.json", log)
     return res
