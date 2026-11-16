@@ -34,6 +34,16 @@
         "anchor_score 0.38 < 0.7"
       ],
       "notes": "Severe sprite layering glitches, clipping backgrounds, and merged limbs across all panels."
+    },
+    {
+      "type": "art_qa",
+      "episode": "ep-20261116-79c03c_pt1",
+      "passed": false,
+      "anchor_score": 0.2,
+      "reasons": [
+        "anchor_score 0.20 < 0.7"
+      ],
+      "notes": "Panel 3 and Panel 6 display severe compositing flaws where characters are pasted onto the background with harsh square artifacts and inconsistent scaling/perspective. Panel 5 shows the background bridge abruptly cut off behind the characters."
     }
   ]
 }
