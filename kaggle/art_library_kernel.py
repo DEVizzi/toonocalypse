@@ -171,9 +171,10 @@ def main() -> None:
                 f"clean ink outlines, no text, no watermark"
             )
             passed, score, reasons, fg_img = False, 0.0, [], None
+            gen_size = 512 if "turbo" in model_id else 1024
             for attempt in range(2):
                 gen = torch.Generator(device=device).manual_seed(seed_base + p_idx + attempt * 1000)
-                raw_img = pipe(prompt=prompt, num_inference_steps=steps, guidance_scale=guidance, width=1024, height=1024, generator=gen).images[0]
+                raw_img = pipe(prompt=prompt, num_inference_steps=steps, guidance_scale=guidance, width=gen_size, height=gen_size, generator=gen).images[0]
                 fg_img = remove(raw_img).resize((1024, 1024), Image.Resampling.LANCZOS)
                 passed, score, reasons = _qa_sprite(fg_img, c)
                 if passed:

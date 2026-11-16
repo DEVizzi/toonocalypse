@@ -83,13 +83,17 @@ def compose_panel_layers(
         cdata = chars_bible.get(slug, {"height_units": 1.0})
         target_h = int(h * _scale_factor(cdata))
         target_w = max(64, int(sprite.width * (target_h / max(1, sprite.height))))
+        max_w = int(w * (0.72 if count == 1 else (0.44 if count == 2 else 0.31)))
+        if target_w > max_w:
+            target_h = max(64, int(target_h * (max_w / target_w)))
+            target_w = max_w
         sprite = sprite.resize((target_w, target_h), Image.Resampling.LANCZOS)
         sprite = _apply_lighting_match(sprite, bg_img)
 
         cx = int(w * (idx + 1) / (count + 1))
         x = max(20, min(w - target_w - 20, cx - target_w // 2))
-        y = int(h * 0.78) - target_h
-        _paste_with_contact_shadow(fg_canvas, sprite, x, max(40, y))
+        y = int(h * 0.84) - target_h
+        _paste_with_contact_shadow(fg_canvas, sprite, x, max(24, y))
 
     fg_path = out_dir / f"panel_{pid}_fg.png"
     fg_canvas.save(fg_path)
@@ -120,6 +124,7 @@ def compose_comic_page(
     for idx, panel in enumerate(script["panels"][:6]):
         v_layers = compose_panel_layers(panel, library_index, layers_dir / "v", size=(1080, 1920), aspect_key="9x16")
         w_layers = compose_panel_layers(panel, library_index, layers_dir / "w", size=(1920, 1080), aspect_key="16x9")
+        p_layers = compose_panel_layers(panel, library_index, layers_dir / "page", size=(pw, ph), aspect_key="16x9")
         talk_layers = compose_panel_layers(
             panel,
             library_index,
@@ -150,7 +155,7 @@ def compose_comic_page(
         row, col = idx // 2, idx % 2
         x0 = gutter + col * (pw + gutter)
         y0 = gutter + row * (ph + gutter)
-        thumb = ImageOps.fit(Image.open(v_layers["composite"]).convert("RGB"), (pw, ph), method=Image.Resampling.LANCZOS)
+        thumb = Image.open(p_layers["composite"]).convert("RGB")
         page.paste(thumb, (x0, y0))
         draw.rectangle([x0, y0, x0 + pw - 1, y0 + ph - 1], outline="#222222", width=3)
 
