@@ -1,1 +1,90 @@
-{"current": null, "history": [], "used": {"categories": [], "settings": [], "morals": [], "premises": []}}
+{
+  "current": {
+    "title": "The Golden Rickshaw",
+    "category": "moral_fable",
+    "logline": "A struggling rickshaw driver finds a forgotten pouch of heavy gold coins, setting off a city-wide chase where every passenger tests his integrity.",
+    "moral": "Honesty is the richest fare.",
+    "parts": 3,
+    "setting": "Neo-Shanghai, a bustling neon-lit metropolis of towering skyscrapers and crowded elevated pathways.",
+    "music_mood": "emotional",
+    "cast": [
+      {
+        "name": "Jin",
+        "age": 22,
+        "gender": "male",
+        "region": "Neo-Shanghai",
+        "build": "lean and wiry",
+        "face_shape": "oval",
+        "eyes": "dark brown",
+        "eyebrows": "thin and straight",
+        "hair": "short black buzz cut",
+        "skin_tone": "warm tan",
+        "outfit": "faded blue cotton vest and orange trousers",
+        "accessory": "worn leather sweatband",
+        "signature_color": "blue",
+        "anchors": [
+          "faded blue cotton vest",
+          "orange trousers",
+          "worn leather sweatband"
+        ],
+        "visual_prompt": "22-year-old male, lean and wiry build, oval face, dark brown eyes, short black buzz cut, warm tan skin, wearing a faded blue cotton vest, orange trousers, and a worn leather sweatband.",
+        "voice": "young male warm"
+      },
+      {
+        "name": "Madam Wong",
+        "age": 55,
+        "gender": "female",
+        "region": "Neo-Shanghai",
+        "build": "stout and imposing",
+        "face_shape": "round",
+        "eyes": "sharp black",
+        "eyebrows": "arch hennaed",
+        "hair": "silver hair in a tight bun",
+        "skin_tone": "fair",
+        "outfit": "emerald green silk jacket and black slacks",
+        "accessory": "jade pendant necklace",
+        "signature_color": "green",
+        "anchors": [
+          "emerald green silk jacket",
+          "black slacks",
+          "jade pendant necklace"
+        ],
+        "visual_prompt": "55-year-old female, stout and imposing build, round face, sharp black eyes, silver hair in a tight bun, fair skin, wearing an emerald green silk jacket, black slacks, and a jade pendant necklace.",
+        "voice": "mature female sharp"
+      }
+    ],
+    "beats": [
+      {
+        "part": 1,
+        "summary": "Jin finds a heavy leather pouch stuffed with glowing gold coins left in his rickshaw after dropping off a mysterious wealthy passenger.",
+        "cliffhanger_type": "reveal",
+        "cliffhanger": "Jin unzips the pouch to find the gold gleaming under a neon streetlamp, right as Madam Wong steps out of the shadows, claiming the money is hers.",
+        "payoff_next": "Jin holds the pouch tightly against his chest while Madam Wong steps closer with an outstretched hand."
+      },
+      {
+        "part": 2,
+        "summary": "Madam Wong offers Jin half the gold if he keeps quiet, but doubts begin to eat at him as he realizes the coins belong to the city's orphanage fund.",
+        "cliffhanger_type": "impossible_choice",
+        "cliffhanger": "Madam Wong blocks the alley exit, forcing Jin to choose between keeping the wealth to save his struggling family or returning the stolen funds to the children.",
+        "payoff_next": "Jin steps past Madam Wong, gripping the handles of his rickshaw and turning away from the gleaming gold."
+      },
+      {
+        "part": 3,
+        "summary": "Jin pedals the rickshaw directly to the orphanage gates, handing back the exact pouch of gold, and discovers that honesty brings a true reward far greater than riches.",
+        "cliffhanger_type": null,
+        "cliffhanger": null,
+        "payoff_next": null
+      }
+    ],
+    "story_id": "st-20261116-ab646f",
+    "planner_model": "gemini-3.5-flash-lite",
+    "status": "PLANNED"
+  },
+  "history": [],
+  "used": {
+    "categories": [],
+    "settings": [],
+    "morals": [],
+    "premises": []
+  }
+}
