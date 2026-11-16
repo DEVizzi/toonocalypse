@@ -676,19 +676,18 @@
     "art": {
       "phase": "PORTRAITS",
       "job": {
-        "id": "st-20261116-8f4551-portraits-1794864833",
+        "id": "st-20261116-8f4551-portraits-1794866249",
         "phase": "PORTRAITS",
         "items": [
           "portrait-bari",
-          "portrait-meera",
           "portrait-seth"
         ],
-        "pushed_at": 1794864835.1698294,
-        "est_hours": 0.52,
-        "version": "6"
+        "pushed_at": 1794866251.425634,
+        "est_hours": 0.43,
+        "version": "7"
       },
       "session_retries": 0,
-      "portrait_repair": 0,
+      "portrait_repair": 1,
       "repair_round": 0,
       "portraits": {
         "Bari": {
@@ -698,9 +697,72 @@
           "failed": false
         },
         "Meera": {
-          "candidates": [],
-          "approved": null,
-          "qa": null,
+          "candidates": [
+            "portrait-meera__s956368966.jpg",
+            "portrait-meera__s956345209.jpg",
+            "portrait-meera__s956321452.jpg"
+          ],
+          "approved": "portrait-meera__s956321452.jpg",
+          "qa": {
+            "model": "gemini-3.5-flash-lite",
+            "results": [
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 3,
+                  "outfit_colors": 10,
+                  "accessory": 10,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.3,
+                "passed": false,
+                "index": 0,
+                "note": "Hair is loose rather than braided, capping hair score at 3."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 3,
+                  "outfit_colors": 5,
+                  "accessory": 3,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 8.1,
+                "passed": false,
+                "index": 1,
+                "note": "Missing braid, missing pocket watch, and added a yellow shirt."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 8,
+                  "outfit_colors": 10,
+                  "accessory": 8,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.6,
+                "passed": true,
+                "index": 2,
+                "note": "Features braided elements and a brass watch-like pendant among layered necklaces."
+              }
+            ],
+            "best": 2
+          },
           "failed": false
         },
         "Seth": {
@@ -717,7 +779,11 @@
         "2026-11-16T21:25:01Z portrait Meera: approved portrait-meera__s955627944.jpg",
         "2026-11-16T21:25:21Z portrait Seth: no candidate passed QA",
         "2026-11-16T21:25:23Z pushed PORTRAITS job st-20261116-8f4551-portraits-1794864321 (1 items, ~0.34 GPU-h, kernel v5)",
-        "2026-11-16T21:33:55Z pushed PORTRAITS job st-20261116-8f4551-portraits-1794864833 (3 items, ~0.52 GPU-h, kernel v6)"
+        "2026-11-16T21:33:55Z pushed PORTRAITS job st-20261116-8f4551-portraits-1794864833 (3 items, ~0.52 GPU-h, kernel v6)",
+        "2026-11-16T21:56:26Z portrait Bari: no candidate passed QA",
+        "2026-11-16T21:57:18Z portrait Meera: approved portrait-meera__s956321452.jpg",
+        "2026-11-16T21:57:29Z portrait Seth: no candidate passed QA",
+        "2026-11-16T21:57:31Z pushed PORTRAITS job st-20261116-8f4551-portraits-1794866249 (2 items, ~0.43 GPU-h, kernel v7)"
       ]
     }
   },
