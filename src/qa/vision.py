@@ -8,8 +8,8 @@ from src.common.config import settings
 from src.common.gemini import generate_json
 from src.common.quota import Quota
 
-PORTRAIT_CRITERIA = ["single_character", "hair", "outfit_colors", "accessory", "skin_tone", "age", "anatomy", "no_text", "safety"]
-PANEL_CRITERIA = ["matches_description", "character_consistency", "anatomy", "no_text", "empty_top", "composition", "safety"]
+PORTRAIT_CRITERIA = ["single_character", "comic_style", "hair", "outfit_colors", "accessory", "skin_tone", "age", "anatomy", "no_text", "safety"]
+PANEL_CRITERIA = ["matches_description", "character_consistency", "comic_style", "anatomy", "no_text", "empty_top", "composition", "safety"]
 
 
 def verdict(scores: dict[str, Any], criteria: list[str]) -> dict[str, Any]:
@@ -28,15 +28,20 @@ def _img(path: Path):
     return img
 
 
+STRICT = ("Be strict. First, for each lock-card item, write what you actually SEE in the image. "
+          "Any item that is missing or a different colour/object scores at most 3. "
+          "comic_style=10 only for illustrated comic-book art with ink lines; a photo, photorealistic or 3D-render look scores at most 3. ")
+
+
 def portrait_qa(char: dict[str, Any], candidates: list[Path], quota: Quota | None = None) -> dict[str, Any]:
     lock = {k: char.get(k) for k in ["name", "age", "gender", "region", "build", "hair", "skin_tone", "outfit",
                                      "accessory", "signature_color", "anchors"]}
     prompt = (f"You check character design candidates for a comic. Lock card: {lock}. "
-              f"There are {len(candidates)} candidate images in order. For EACH score 1-10: {PORTRAIT_CRITERIA}. "
+              f"There are {len(candidates)} candidate images in order. {STRICT}For EACH candidate score 1-10: {PORTRAIT_CRITERIA}. "
               "single_character=10 only if exactly ONE person/creature is shown once (no character sheets, turnarounds or duplicates); "
               "hair/outfit_colors/accessory/skin_tone/age must match the lock card exactly; anatomy = correct human (or creature) anatomy, "
               "right number of fingers and limbs; no_text=10 only if there are no letters/watermarks; safety=10 if suitable for ages 10+. "
-              'Return JSON: {"candidates":[{"index":0,"scores":{...},"note":""}]}')
+              'Return JSON: {"candidates":[{"index":0,"seen":{"hair":"","outfit":"","accessory":""},"scores":{...},"note":""}]}')
     out, model = generate_json([prompt, *[_img(p) for p in candidates]], "qa_portrait", kind="vision", quota=quota)
     results = []
     for c in out.get("candidates", []):
@@ -55,7 +60,7 @@ def panel_qa(panel: dict[str, Any], cast: dict[str, dict[str, Any]], image: Path
     prompt = (f"You are a strict comic panel QA reviewer. The LAST image is the panel to judge. "
               f"{'The first images are approved character portraits in this order: ' + str([n for n, _ in refs]) + '. ' if refs else ''}"
               f"Panel description: {panel['image_prompt']}. Characters and positions: {chars or 'none (character-free shot)'}. "
-              f"Lock cards: {locks}. Score 1-10: {PANEL_CRITERIA}. character_consistency=10 if there are no characters; "
+              f"Lock cards: {locks}. {STRICT}Score 1-10: {PANEL_CRITERIA}. character_consistency=10 if there are no characters; "
               "otherwise faces, hair, outfit colours and accessory must match the portraits. empty_top: upper 25% is empty sky/wall "
               "suitable for speech bubbles. no_text=10 only with no letters/logos/watermarks. safety=10 only if fine for ages 10+ "
               '(no gore/blood). Return JSON: {"scores":{...},"note":"short reason"}')

@@ -54,13 +54,26 @@ def smoke(cmd: str, story: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["start", "collect", "smoke", "smoke-collect"])
+    ap.add_argument("cmd", choices=["start", "collect", "smoke", "smoke-collect", "restart-portraits"])
     args = ap.parse_args(argv)
     q = Quota()
     b = load_state("story_bible.json")
     story = b.get("current")
     if args.cmd.startswith("smoke"):
         smoke(args.cmd, story)
+        return 0
+    if args.cmd == "restart-portraits":
+        from src.kaggle_jobs import job as jobs
+
+        if cli_tools.status() in ("queued", "running"):
+            print("A Kaggle job is still running; try again after it finishes.")
+            return 0
+        art = story["art"]
+        art.update(phase="PORTRAITS", job=None, portrait_repair=0, repair_round=0, session_retries=0, panels={})
+        art["portraits"] = {c["name"]: {"candidates": [], "approved": None, "qa": None, "failed": False} for c in story["cast"]}
+        machine.push_job(story, "PORTRAITS", jobs.portrait_items(story, salt=7), cli_tools, q)
+        save_state("story_bible.json", b)
+        q.save()
         return 0
     try:
         if args.cmd == "start":

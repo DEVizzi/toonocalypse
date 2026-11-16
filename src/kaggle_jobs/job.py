@@ -54,10 +54,11 @@ def portrait_items(story: dict[str, Any], names: list[str] | None = None, salt: 
         if names and c["name"] not in names:
             continue
         emphasis = ", ".join(f"({x})1.25" for x in [c.get("outfit"), c.get("accessory"), *c.get("anchors", [])] if x)
-        prompt = (f"solo portrait of ONE person only, {c['visual_prompt']}, {emphasis}, full body, front view, standing, "
-                  f"centered, plain light grey studio background, {sg['positive']}")
-        negative = (f"{sg['negative']}, character sheet, turnaround, multiple views, collage, grid, duplicate person, "
-                    f"two people, crowd, split screen, monochrome")
+        prompt = (f"({sg['positive']})1.3, solo character portrait of ONE person only, {c['visual_prompt']}, {emphasis}, "
+                  f"full body, front view, standing, centered, plain light grey background")
+        negative = (f"{sg['negative']}, photo, photograph, photorealistic, realistic skin, 3d render, cgi, "
+                    f"character sheet, turnaround, multiple views, collage, grid, duplicate person, two people, crowd, "
+                    f"split screen, monochrome")
         items.append(_base_item(id=portrait_id(c["name"]), kind="portrait", prompt=prompt, negative=negative,
                                 seed=char_seed(story["story_id"], c["name"], salt), n=im["candidates"]["portrait"],
                                 keep=im["candidates"]["portrait_keep"], clip_text=c["visual_prompt"][:300],
@@ -70,8 +71,11 @@ def panel_prompt(panel: dict[str, Any], cast_by_name: dict[str, dict[str, Any]])
     chars = "; ".join(f"{c['name']} on the {c['position']}: {cast_by_name[c['name']]['visual_prompt']}"
                       for c in panel.get("characters", []))
     shot = f"{panel.get('camera', '')} shot, {panel.get('lighting', '')} lighting, {panel.get('emotion', '')} mood"
-    return (f"{panel['image_prompt']}. {chars + '. ' if chars else ''}{shot}. "
-            f"Empty sky or plain wall in the upper quarter of the frame. {sg['positive']}")
+    return (f"({sg['positive']})1.2, {panel['image_prompt']}. {chars + '. ' if chars else ''}{shot}. "
+            f"Empty sky or plain wall in the upper quarter of the frame.")
+
+
+PANEL_NEGATIVE_EXTRA = "photo, photograph, photorealistic, 3d render, cgi"
 
 
 def panel_items(story: dict[str, Any], only: set[str] | None = None, salt: int = 0, repair: bool = False) -> list[dict[str, Any]]:
@@ -90,7 +94,8 @@ def panel_items(story: dict[str, Any], only: set[str] | None = None, salt: int =
                 refs.append({"char": c["name"], "where": where})
             seed = sum(char_seed(story["story_id"], c["name"], salt) for c in chars) % 2_000_000_000 if chars \
                 else char_seed(story["story_id"], pid, salt)
-            items.append(_base_item(id=pid, kind="panel", prompt=panel_prompt(p, cast), negative=sg["negative"],
+            items.append(_base_item(id=pid, kind="panel", prompt=panel_prompt(p, cast),
+                                    negative=f"{sg['negative']}, {PANEL_NEGATIVE_EXTRA}",
                                     seed=seed, n=im["candidates"]["panel"], keep=im["candidates"]["panel_keep"],
                                     clip_text=p["image_prompt"][:300], refs=refs,
                                     ip_scale=im["ip_adapter"]["repair_scale" if repair else "scale"]))

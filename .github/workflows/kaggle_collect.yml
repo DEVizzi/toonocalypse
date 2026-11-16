@@ -31,7 +31,7 @@ jobs:
           python3 - <<'EOF' >> "$GITHUB_OUTPUT"
           import json, os
           s = (json.load(open("state/story_bible.json")).get("current") or {}).get("status")
-          go = s in ("SCRIPTED", "ART_IN_PROGRESS") or os.environ["CMD"].startswith("smoke")
+          go = s in ("SCRIPTED", "ART_IN_PROGRESS") or os.environ["CMD"].startswith("smoke") or os.environ["CMD"] == "restart-portraits"
           print("go=" + ("true" if go else "false"))
           EOF
       - uses: actions/setup-python@v5
