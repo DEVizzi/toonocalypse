@@ -128,8 +128,11 @@ def ensure_art_library_downloaded(dest_dir: Path | None = None) -> dict[str, Any
         ["gh", "release", "download", tag, "--dir", str(target), "--clobber"],
         check=True,
     )
-    _extract_art_zips(target)
     idx_file = target / "library_index.json"
+    top_idx_bytes = idx_file.read_bytes() if idx_file.exists() else None
+    _extract_art_zips(target)
+    if top_idx_bytes is not None:
+        idx_file.write_bytes(top_idx_bytes)
     if idx_file.exists():
         idx = json.loads(idx_file.read_text(encoding="utf-8"))
         save_library_index(idx)
