@@ -24,6 +24,16 @@
       "reasons": [
         "anchor_score 0.20 < 0.7"
       ]
+    },
+    {
+      "type": "art_qa",
+      "episode": "ep-20261116-c696ac_pt1",
+      "passed": false,
+      "anchor_score": 0.38,
+      "reasons": [
+        "anchor_score 0.38 < 0.7"
+      ],
+      "notes": "Severe sprite layering glitches, clipping backgrounds, and merged limbs across all panels."
     }
   ]
 }

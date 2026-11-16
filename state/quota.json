@@ -1,18 +1,18 @@
 {
   "date": "2026-11-16",
-  "text_calls": 10,
+  "text_calls": 13,
   "image_calls": 0,
-  "vision_calls": 2,
+  "vision_calls": 3,
   "pending_jobs": [],
   "tts_calls": 0,
   "paused_until": null,
-  "consecutive_aborts": 0,
-  "last_abort_reason": "Panel QA failed: ['anchor_score 0.20 < 0.7']",
-  "last_abort_at": "2026-11-16T14:53:53.994474+00:00",
+  "consecutive_aborts": 1,
+  "last_abort_reason": "Panel QA failed: ['anchor_score 0.38 < 0.7']",
+  "last_abort_at": "2026-11-16T15:46:28.948763+00:00",
   "model_retry_after": {
     "gemini-3.8-flash": {
-      "retry_delay_sec": 61714.428938546,
-      "until": "2026-11-17T08:00:00.016969+00:00"
+      "retry_delay_sec": 59017.749219553,
+      "until": "2026-11-17T08:00:00.016001+00:00"
     }
   }
 }
