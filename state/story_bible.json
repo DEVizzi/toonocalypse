@@ -597,38 +597,227 @@
       "judge_model": "gemini-3.5-flash-lite"
     },
     "art": {
-      "phase": "PORTRAITS",
+      "phase": "PANELS",
       "job": {
-        "id": "st-20261116-0217f9-portraits-1794868020",
-        "phase": "PORTRAITS",
+        "id": "st-20261116-0217f9-panels-1794869517",
+        "phase": "PANELS",
         "items": [
-          "portrait-jian",
-          "portrait-mei"
+          "p1-1",
+          "p1-2",
+          "p1-3",
+          "p1-4",
+          "p1-5",
+          "p1-6",
+          "p1-7",
+          "p1-8",
+          "p2-1",
+          "p2-2",
+          "p2-3",
+          "p2-4",
+          "p2-5",
+          "p2-6",
+          "p2-7",
+          "p2-8",
+          "p3-1",
+          "p3-2",
+          "p3-3",
+          "p3-4",
+          "p3-5",
+          "p3-6",
+          "p3-7",
+          "p3-8"
         ],
-        "pushed_at": 1794868022.2914891,
-        "est_hours": 0.61,
-        "version": "8"
+        "pushed_at": 1794869519.8977785,
+        "est_hours": 1.05,
+        "version": "9"
       },
       "session_retries": 0,
       "portrait_repair": 0,
       "repair_round": 0,
       "portraits": {
         "Jian": {
-          "candidates": [],
-          "approved": null,
-          "qa": null,
+          "candidates": [
+            "portrait-jian__s988359896.jpg",
+            "portrait-jian__s988312382.jpg",
+            "portrait-jian__s988304463.jpg",
+            "portrait-jian__s988344058.jpg"
+          ],
+          "approved": "portrait-jian__s988344058.jpg",
+          "qa": {
+            "model": "gemini-3.5-flash-lite",
+            "results": [
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 10,
+                  "outfit_colors": 3,
+                  "accessory": 3,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 8.6,
+                "passed": false,
+                "index": 0,
+                "note": "Jacket is olive green instead of bright blue, and lacks the exact silver bangle."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 6,
+                  "outfit_colors": 10,
+                  "accessory": 3,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 8.9,
+                "passed": false,
+                "index": 1,
+                "note": "Hair has blue dye on top, and has watches instead of the required silver bangle."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 10,
+                  "outfit_colors": 8,
+                  "accessory": 3,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.1,
+                "passed": false,
+                "index": 2,
+                "note": "Pants are dark blue instead of grey, and missing the thick silver bangle."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 8,
+                  "outfit_colors": 8,
+                  "accessory": 7,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.3,
+                "passed": true,
+                "index": 3,
+                "note": "Shirt is brown instead of black, but close on most other design elements."
+              }
+            ],
+            "best": 3
+          },
           "failed": false
         },
         "Mei": {
-          "candidates": [],
-          "approved": null,
-          "qa": null,
+          "candidates": [
+            "portrait-mei__s111330963.jpg",
+            "portrait-mei__s111283449.jpg",
+            "portrait-mei__s111299287.jpg",
+            "portrait-mei__s111323044.jpg"
+          ],
+          "approved": "portrait-mei__s111330963.jpg",
+          "qa": {
+            "model": "gemini-3.5-flash-lite",
+            "results": [
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 10,
+                  "outfit_colors": 10,
+                  "accessory": 10,
+                  "skin_tone": 10,
+                  "age": 8,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.8,
+                "passed": true,
+                "index": 0,
+                "note": "Excellent match to the lock card, featuring the correct twin braids, bright green vest, and brown leather satchel across the chest in a distinct comic ink style."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 3,
+                  "outfit_colors": 10,
+                  "accessory": 4,
+                  "skin_tone": 10,
+                  "age": 8,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 8.5,
+                "passed": false,
+                "index": 1,
+                "note": "Hair is incorrect (bun instead of long black braid) and the accessory is a backpack harness rather than a single brown leather satchel across the chest."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 3,
+                  "outfit_colors": 10,
+                  "accessory": 3,
+                  "skin_tone": 10,
+                  "age": 8,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 8.4,
+                "passed": false,
+                "index": 2,
+                "note": "Fails the hair requirement (loose hair instead of braid) and lacks the required brown leather satchel across the chest."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "comic_style": 10,
+                  "hair": 6,
+                  "outfit_colors": 10,
+                  "accessory": 5,
+                  "skin_tone": 10,
+                  "age": 8,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 8.9,
+                "passed": false,
+                "index": 3,
+                "note": "Hair is styled into a complex braided updo rather than a straightforward long black braid, and the accessory resembles backpack straps rather than a simple crossbody satchel."
+              }
+            ],
+            "best": 0
+          },
           "failed": false
         }
       },
       "panels": {},
       "log": [
-        "2026-11-16T22:27:02Z pushed PORTRAITS job st-20261116-0217f9-portraits-1794868020 (2 items, ~0.61 GPU-h, kernel v8)"
+        "2026-11-16T22:27:02Z pushed PORTRAITS job st-20261116-0217f9-portraits-1794868020 (2 items, ~0.61 GPU-h, kernel v8)",
+        "2026-11-16T22:51:26Z portrait Jian: approved portrait-jian__s988344058.jpg",
+        "2026-11-16T22:51:57Z portrait Mei: approved portrait-mei__s111330963.jpg",
+        "2026-11-16T22:51:59Z pushed PANELS job st-20261116-0217f9-panels-1794869517 (24 items, ~1.05 GPU-h, kernel v9)"
       ]
     }
   },
