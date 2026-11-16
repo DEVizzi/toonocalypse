@@ -75,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"collect: {result}")
             if result == "READY_TO_RENDER":
                 q.record_success()
+                import subprocess
+
+                subprocess.run(["gh", "workflow", "run", "render.yml"], check=False)
     except machine.QuotaWait as e:
         print(f"WAITING: {e}")
     except Abort as e:
