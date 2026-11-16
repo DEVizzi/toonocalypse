@@ -6,8 +6,8 @@
   "pending_jobs": [],
   "tts_calls": 0,
   "paused_until": null,
-  "consecutive_aborts": 1,
-  "last_abort_reason": "Deliberate preflight failure check",
-  "last_abort_at": "2026-11-16T09:54:38.638973+00:00",
+  "consecutive_aborts": 2,
+  "last_abort_reason": "No compatible cast poses in art library",
+  "last_abort_at": "2026-11-16T11:13:10.362451+00:00",
   "model_retry_after": {}
 }
