@@ -1,5 +1,637 @@
 {
-  "current": null,
+  "current": {
+    "title": "The Golden Rickshaw",
+    "category": "moral_fable",
+    "logline": "A struggling rickshaw driver finds a heavy bag of gold coins and must choose between sudden wealth and his own honesty.",
+    "moral": "Honesty is the richest fare.",
+    "parts": [
+      {
+        "part": 1,
+        "title": "The Golden Rickshaw: A Driver's Choice | Pt 1/3",
+        "hook_text": "A heavy secret waits in the rain.",
+        "previously": null,
+        "description": "Jian pedals through a neon-lit rainy city and discovers a mysterious leather pouch filled with gold coins on his rickshaw seat.",
+        "caption": "A heavy secret waits in the rain. Part 1/3 — save this so you don't miss the next part. What would you do with a bag of gold found in your cab? #Gold #Mystery #StoryTime #RainyNight",
+        "hashtags": [
+          "Gold",
+          "Mystery",
+          "StoryTime",
+          "RainyNight"
+        ],
+        "moral_card": null,
+        "panels": [
+          {
+            "id": 1,
+            "image_prompt": "A futuristic city street at night under heavy rain, neon signs reflecting in puddles, upper 25% empty dark sky, wide cinematic shot, vibrant cyan and magenta lighting, tense mood",
+            "characters": [],
+            "camera": "wide cinematic shot",
+            "lighting": "vibrant cyan and magenta neon glow",
+            "emotion": "tense",
+            "narration": "A heavy secret waits in the rain.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "A heavy secret waits in the rain."
+              }
+            ],
+            "sfx": "Pattering rain and distant traffic hum",
+            "duration": 6.5
+          },
+          {
+            "id": 2,
+            "image_prompt": "Jian pedaling a bicycle rickshaw hard down a wet alleyway, water splashing from wheels, upper 25% dark wet brick wall, medium action shot, moody street lamps, exhausting effort",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "medium action shot",
+            "lighting": "moody street lamps",
+            "emotion": "exhausted",
+            "narration": "Jian pedals through the cold city. The rain falls harder.",
+            "dialogue": [],
+            "sfx": "Heavy panting and squeaking pedals",
+            "duration": 6.0
+          },
+          {
+            "id": 3,
+            "image_prompt": "Neon signs blurred in the rainy night, empty asphalt street, upper 25% dark gloomy sky, low angle close-up, dim amber lighting, lonely atmosphere",
+            "characters": [],
+            "camera": "low angle close-up",
+            "lighting": "dim amber lighting",
+            "emotion": "lonely",
+            "narration": "The streets empty out. Every passenger has gone home.",
+            "dialogue": [],
+            "sfx": "Wind howling",
+            "duration": 6.0
+          },
+          {
+            "id": 4,
+            "image_prompt": "Jian pulling the rickshaw to a stop beneath a glowing billboard, wiping sweat from his brow, upper 25% glowing neon sign, medium close-up, tired expression",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "medium close-up",
+            "lighting": "bright neon sign overhead",
+            "emotion": "tired",
+            "narration": "Jian pulls over to catch his breath.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "Just a few more miles to go."
+              }
+            ],
+            "sfx": "Brakes screeching softly",
+            "duration": 6.5
+          },
+          {
+            "id": 5,
+            "image_prompt": "A dark leather pouch resting on the vinyl seat of the rickshaw, wet drops glistening on the leather, upper 25% dark empty background, close-up shot, dramatic spotlight",
+            "characters": [],
+            "camera": "close-up shot",
+            "lighting": "dramatic spotlight from street lamp",
+            "emotion": "mysterious",
+            "narration": "A heavy leather pouch rests on the back seat.",
+            "dialogue": [],
+            "sfx": "Thud of leather hitting vinyl",
+            "duration": 6.0
+          },
+          {
+            "id": 6,
+            "image_prompt": "Jian turning around from the handlebars to look closely at the back seat, upper 25% dark alley shadows, over-the-shoulder medium shot, cool blue tones, curious expression",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "over-the-shoulder medium shot",
+            "lighting": "cool blue tones",
+            "emotion": "curious",
+            "narration": "Someone left something behind.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "What is this?"
+              }
+            ],
+            "sfx": "Water dripping",
+            "duration": 6.0
+          },
+          {
+            "id": 7,
+            "image_prompt": "Jian's hands untying a thick leather drawstring on the pouch, upper 25% dark interior of the rickshaw, extreme close-up, moody shadow lighting, suspenseful mood",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "extreme close-up",
+            "lighting": "moody shadow lighting",
+            "emotion": "suspenseful",
+            "narration": "Jian's fingers pull the cord.",
+            "dialogue": [],
+            "sfx": "Leather creaking",
+            "duration": 6.5
+          },
+          {
+            "id": 8,
+            "image_prompt": "Jian gasping as a blinding golden glow shines upward from an open pouch onto his face, upper 25% brilliant warm golden light casting shadows, close-up shot, shocked expression",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "close-up shot",
+            "lighting": "blinding golden glow",
+            "emotion": "shocked",
+            "narration": "Jian pulls the drawstring of the pouch and gasps at the blinding glow of pure gold inside.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "It's... real gold."
+              }
+            ],
+            "sfx": "Soft shimmering chime",
+            "duration": 7.0
+          }
+        ]
+      },
+      {
+        "part": 2,
+        "title": "Gold Coins in the Cab | Pt 2/3",
+        "hook_text": "Is this real gold?",
+        "previously": "Jian found a heavy bag of gold coins hidden inside his rickshaw.",
+        "description": "Jian tries to work through the rain while hiding the heavy bag of gold coins, but a sharp passenger boards and starts asking dangerous questions.",
+        "caption": "Is this real gold? Part 2/3 — save this so you don't miss the next part. What would you do with a bag of gold? #story #gold #choices #drama",
+        "hashtags": [
+          "story",
+          "gold",
+          "choices",
+          "drama"
+        ],
+        "moral_card": null,
+        "panels": [
+          {
+            "id": 1,
+            "image_prompt": "Empty neon alleyway at night, upper 25% dark rain clouds, close-up shot of a leather pouch spilling glowing coins, bright warm golden light, shocked",
+            "characters": [],
+            "camera": "close-up shot",
+            "lighting": "bright warm golden light",
+            "emotion": "shocked",
+            "narration": "Jian stares at the bright treasure in his hands.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "Is this real gold?"
+              }
+            ],
+            "sfx": "RAIN POURS",
+            "duration": 6.0
+          },
+          {
+            "id": 2,
+            "image_prompt": "Busy wet city street at night, upper 25% neon signs reflecting in puddles, wide shot of Jian pedaling his rickshaw fast, determined",
+            "characters": [],
+            "camera": "wide shot",
+            "lighting": "neon glow",
+            "emotion": "determined",
+            "narration": "He hides the bag under his seat and pedals into the rain.",
+            "dialogue": [],
+            "sfx": "TIRES SPLASH",
+            "duration": 6.0
+          },
+          {
+            "id": 3,
+            "image_prompt": "Street corner under a glowing noodle shop sign, upper 25% dark sky, medium shot of Jian wiping sweat from his forehead, anxious",
+            "characters": [],
+            "camera": "medium shot",
+            "lighting": "dim streetlamp",
+            "emotion": "anxious",
+            "narration": "Every shadow looks like a thief. His hands shake on the bars.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "Keep moving. Just drive."
+              }
+            ],
+            "sfx": "THUNDER RUMBLES",
+            "duration": 6.0
+          },
+          {
+            "id": 4,
+            "image_prompt": "Wet sidewalk outside a luxury hotel, upper 25% glowing hotel canopy, medium shot of Mei holding a silk umbrella, demanding expression",
+            "characters": [
+              {
+                "name": "Mei",
+                "position": "center"
+              }
+            ],
+            "camera": "medium shot",
+            "lighting": "bright white marquee light",
+            "emotion": "demanding",
+            "narration": "A wealthy passenger steps out from the shadows and signals him down.",
+            "dialogue": [
+              {
+                "speaker": "Mei",
+                "line": "Take me to the station now."
+              }
+            ],
+            "sfx": "HEELS CLICK",
+            "duration": 6.0
+          },
+          {
+            "id": 5,
+            "image_prompt": "Inside the covered rickshaw cabin, upper 25% dark roof canvas, close-up of Mei sitting upright, sharp and suspicious expression",
+            "characters": [
+              {
+                "name": "Mei",
+                "position": "center"
+              }
+            ],
+            "camera": "close-up shot",
+            "lighting": "dim interior light",
+            "emotion": "suspicious",
+            "narration": "Mei climbs inside and the heavy gold bag shifts beneath the seat cushion.",
+            "dialogue": [
+              {
+                "speaker": "Mei",
+                "line": "Drive carefully. I lost something very precious today."
+              }
+            ],
+            "sfx": "FABRICS RUSTLE",
+            "duration": 6.0
+          },
+          {
+            "id": 6,
+            "image_prompt": "Rickshaw seat close-up, upper 25% dark cushions, tight shot of the leather pouch strap sticking out from the cushion, tense",
+            "characters": [],
+            "camera": "tight shot",
+            "lighting": "shadowy",
+            "emotion": "tense",
+            "narration": "The gold bag peeks out. Jian's heart leaps into his throat.",
+            "dialogue": [],
+            "sfx": "HEAVY BREATHING",
+            "duration": 6.0
+          },
+          {
+            "id": 7,
+            "image_prompt": "Wet rainy street, upper 25% dark neon lights, over-the-shoulder shot of Jian looking back toward the passenger seat, nervous",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "left"
+              }
+            ],
+            "camera": "over-the-shoulder shot",
+            "lighting": "neon reflection",
+            "emotion": "nervous",
+            "narration": "He grips the handlebars tighter. Sweat mixes with the rain on his face.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "Did you... lose something important?"
+              }
+            ],
+            "sfx": "RAIN INTENSIFIES",
+            "duration": 6.0
+          },
+          {
+            "id": 8,
+            "image_prompt": "Inside the rickshaw cabin, upper 25% dark canvas, close-up of Mei leaning forward with a piercing gaze, sharp",
+            "characters": [
+              {
+                "name": "Mei",
+                "position": "center"
+              }
+            ],
+            "camera": "close-up shot",
+            "lighting": "sharp neon light",
+            "emotion": "piercing",
+            "narration": "Mei looks right at Jian and asks if he found anything valuable in his cab today.",
+            "dialogue": [
+              {
+                "speaker": "Mei",
+                "line": "Did you find anything valuable in my cab today?"
+              }
+            ],
+            "sfx": "SILENCE FALLS",
+            "duration": 6.5
+          }
+        ]
+      },
+      {
+        "part": 3,
+        "title": "The Golden Rickshaw: The Final Choice | Pt 3/3",
+        "hook_text": "I found your gold right here!",
+        "previously": "Jian stared at a bag of glowing gold coins while Mei turned around to ask if he found anything valuable in his cab.",
+        "description": "Jian battles his temptation, hands the golden pouch back to its rightful owner, and receives an honest fare that warms his heart.",
+        "caption": "I found your gold right here! Part 3/3 — save this so you don't miss the next part. Would you have given the gold back? #Honesty #GoldenRickshaw #StoryTime #GoodDeeds",
+        "hashtags": [
+          "Honesty",
+          "GoldenRickshaw",
+          "StoryTime",
+          "GoodDeeds"
+        ],
+        "moral_card": "Honesty is the richest fare.",
+        "panels": [
+          {
+            "id": 1,
+            "image_prompt": "Busy neon street at night, Jian holding the heavy golden pouch open inside the rickshaw, upper 25% dark wet canvas top, medium eye-level shot, neon glow and warm gold light, nervous tension",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "medium eye-level shot",
+            "neon glow and warm gold light": "neon and gold reflection",
+            "emotion": "nervous tension",
+            "narration": "The heavy pouch felt like a mountain in my hands.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "I found your gold right here!"
+              }
+            ],
+            "sfx": "RAIN POURS",
+            "duration": 6.0
+          },
+          {
+            "id": 2,
+            "image_prompt": "Dark rainy alleyway beside the neon street, Mei turning around with a sharp stare, upper 25% empty dark brick wall, close-up shot, dramatic streetlamp lighting, curious",
+            "characters": [
+              {
+                "name": "Mei",
+                "position": "center"
+              }
+            ],
+            "camera": "close-up shot",
+            "lighting": "dramatic streetlamp lighting",
+            "emotion": "curious",
+            "narration": "Mei turned slowly and stared into the shadows of the cab.",
+            "dialogue": [],
+            "sfx": "THUNDER RUMBLES",
+            "duration": 5.5
+          },
+          {
+            "id": 3,
+            "image_prompt": "Wet rickshaw seat with the heavy golden pouch resting on the cushion, upper 25% dark canvas roof, low angle close-up shot, neon pink reflection, temptation",
+            "characters": [],
+            "camera": "low angle close-up shot",
+            "lighting": "neon pink reflection",
+            "emotion": "temptation",
+            "narration": "Rich overnight. Just like that.",
+            "dialogue": [],
+            "sfx": "COINS CLINK",
+            "duration": 6.0
+          },
+          {
+            "id": 4,
+            "image_prompt": "Jian wiping sweat from his forehead inside the dark rickshaw cabin, upper 25% empty dark roof, medium close-up shot, dim amber light, conflicted",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "medium close-up shot",
+            "lighting": "dim amber light",
+            "emotion": "conflicted",
+            "narration": "My hands shook. The gold could fix all my problems.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "No. This is not mine to keep."
+              }
+            ],
+            "sfx": "HEAVY BREATHING",
+            "duration": 6.5
+          },
+          {
+            "id": 5,
+            "image_prompt": "Jian holding out the heavy golden pouch toward the passenger seat, upper 25% empty rainy sky, medium shot, bright warm gold light on hands, resolute",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "medium shot",
+            "lighting": "bright warm gold light on hands",
+            "emotion": "resolute",
+            "narration": "I pushed the heavy weight away from myself and held it out.",
+            "dialogue": [
+              {
+                "speaker": "Jian",
+                "line": "You dropped this in my cab."
+              }
+            ],
+            "sfx": "FABRICS RUSTLE",
+            "duration": 6.0
+          },
+          {
+            "id": 6,
+            "image_prompt": "Mei taking the golden pouch with a warm smile on her face, upper 25% dark rainy background, close-up shot, soft glowing neon light, relieved",
+            "characters": [
+              {
+                "name": "Mei",
+                "position": "center"
+              }
+            ],
+            "camera": "close-up shot",
+            "lighting": "soft glowing neon light",
+            "emotion": "relieved",
+            "narration": "A wide smile spread across her face like the morning sun.",
+            "dialogue": [
+              {
+                "speaker": "Mei",
+                "line": "Thank you for your honesty."
+              }
+            ],
+            "sfx": "GENTLE SMILE",
+            "duration": 6.0
+          },
+          {
+            "id": 7,
+            "image_prompt": "Mei handing a small coin to Jian in the glowing rain, upper 25% empty wet street, medium two-shot, warm golden streetlamp light, happy",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "left"
+              },
+              {
+                "name": "Mei",
+                "position": "right"
+              }
+            ],
+            "camera": "medium two-shot",
+            "lighting": "warm golden streetlamp light",
+            "emotion": "happy",
+            "narration": "She handed me a fair and honest coin for the ride.",
+            "dialogue": [
+              {
+                "speaker": "Mei",
+                "line": "You earned every bit of this."
+              }
+            ],
+            "sfx": "COIN TINGLE",
+            "duration": 6.0
+          },
+          {
+            "id": 8,
+            "image_prompt": "Jian smiling brightly while pulling his rickshaw down a sparkling rainy street, upper 25% glowing neon signs in the rain, wide angle shot, brilliant warm sunrise light breaking through clouds, peaceful",
+            "characters": [
+              {
+                "name": "Jian",
+                "position": "center"
+              }
+            ],
+            "camera": "wide angle shot",
+            "lighting": "brilliant warm sunrise light breaking through clouds",
+            "emotion": "peaceful",
+            "narration": "My pockets were light, but my heart was richer than gold.",
+            "dialogue": [],
+            "sfx": "RAIN FADES",
+            "duration": 6.5
+          }
+        ]
+      }
+    ],
+    "setting": "Busy rainy streets of a modern neon-lit Asian city",
+    "music_mood": "emotional",
+    "cast": [
+      {
+        "name": "Jian",
+        "age": 35,
+        "gender": "male",
+        "region": "urban Asia",
+        "build": "lean and muscular",
+        "face_shape": "oval face with kind eyes",
+        "eyes": "dark brown",
+        "eyebrows": "thin black",
+        "hair": "short black buzz cut",
+        "skin_tone": "warm tan",
+        "outfit": "bright blue jacket over black shirt and grey pants",
+        "accessory": "thick silver bangle on left wrist",
+        "signature_color": "bright blue",
+        "anchors": [
+          "bright blue jacket",
+          "short black buzz cut",
+          "thick silver bangle"
+        ],
+        "visual_prompt": "35-year-old Asian male, lean build, oval face, dark brown eyes, short black buzz cut, warm tan skin, bright blue jacket, thick silver bangle on wrist.",
+        "voice": "warm and tired narrator"
+      },
+      {
+        "name": "Mei",
+        "age": 40,
+        "gender": "female",
+        "region": "urban Asia",
+        "build": "sturdy",
+        "face_shape": "round face with sharp gaze",
+        "eyes": "black",
+        "eyebrows": "strong black",
+        "hair": "long black braid",
+        "skin_tone": "medium",
+        "outfit": "bright green vest over white shirt and dark trousers",
+        "accessory": "brown leather satchel across chest",
+        "signature_color": "bright green",
+        "anchors": [
+          "bright green vest",
+          "long black braid",
+          "brown leather satchel"
+        ],
+        "visual_prompt": "40-year-old Asian female, sturdy build, round face, black eyes, long black braid, medium skin, bright green vest, brown leather satchel across chest.",
+        "voice": "sharp and demanding"
+      }
+    ],
+    "beats": [
+      {
+        "part": 1,
+        "summary": "Jian pedals his rickshaw through the rain. He finds a heavy leather pouch left behind on the back seat. He opens it to see it is full of gleaming gold coins.",
+        "cliffhanger_type": "reveal",
+        "cliffhanger": "Jian pulls the drawstring of the pouch and gasps at the blinding glow of pure gold inside.",
+        "payoff_next": "Jian stares at the glowing gold coins on his lap while the streetlights hum in the heavy rain."
+      },
+      {
+        "part": 2,
+        "summary": "Jian tries to continue his day, but temptation grows. A wealthy passenger, Mei, boards his rickshaw and drops a subtle hint about a lost reward, testing Jian's resolve.",
+        "cliffhanger_type": "impossible_choice",
+        "cliffhanger": "Mei looks right at Jian and asks if he found anything valuable in his cab today.",
+        "payoff_next": "Jian grips the handlebars tightly, sweating under his bright blue jacket as he faces the passenger."
+      },
+      {
+        "part": 3,
+        "summary": "Jian fights his greed and hands the heavy pouch back to Mei. Mei smiles warmly and gives him a modest, honest fare, leaving Jian with a light heart and true wealth.",
+        "cliffhanger_type": null,
+        "cliffhanger": null,
+        "payoff_next": null
+      }
+    ],
+    "story_id": "st-20261116-0217f9",
+    "planner_model": "gemini-3.5-flash-lite",
+    "status": "ART_IN_PROGRESS",
+    "script_model": "gemini-3.5-flash-lite",
+    "judge": {
+      "scores": {
+        "hook": 9,
+        "clarity": 10,
+        "tension": 9,
+        "twist": 7,
+        "emotion": 9,
+        "cliffhanger": 9,
+        "moral_payoff": 10,
+        "readability": 10,
+        "safety": 10
+      },
+      "avg": 9.22,
+      "passed": true,
+      "notes": "The story is exceptionally well-paced with strong vertical comic formatting, clear panel descriptions, and high emotional resonance. The moral payoff is delivered naturally without feeling overly preachy. Safety and audience appropriateness are strictly maintained.",
+      "judge_model": "gemini-3.5-flash-lite"
+    },
+    "art": {
+      "phase": "PORTRAITS",
+      "job": {
+        "id": "st-20261116-0217f9-portraits-1794868020",
+        "phase": "PORTRAITS",
+        "items": [
+          "portrait-jian",
+          "portrait-mei"
+        ],
+        "pushed_at": 1794868022.2914891,
+        "est_hours": 0.61,
+        "version": "8"
+      },
+      "session_retries": 0,
+      "portrait_repair": 0,
+      "repair_round": 0,
+      "portraits": {
+        "Jian": {
+          "candidates": [],
+          "approved": null,
+          "qa": null,
+          "failed": false
+        },
+        "Mei": {
+          "candidates": [],
+          "approved": null,
+          "qa": null,
+          "failed": false
+        }
+      },
+      "panels": {},
+      "log": [
+        "2026-11-16T22:27:02Z pushed PORTRAITS job st-20261116-0217f9-portraits-1794868020 (2 items, ~0.61 GPU-h, kernel v8)"
+      ]
+    }
+  },
   "history": [
     {
       "story_id": "st-20261116-ab646f",
