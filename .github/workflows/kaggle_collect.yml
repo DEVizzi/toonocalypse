@@ -24,11 +24,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Quick exit when no story needs art
         id: gate
+        env:
+          CMD: ${{ inputs.command || 'collect' }}
         run: |
           python3 - <<'EOF' >> "$GITHUB_OUTPUT"
-          import json
+          import json, os
           s = (json.load(open("state/story_bible.json")).get("current") or {}).get("status")
-          print("go=" + ("true" if s in ("SCRIPTED", "ART_IN_PROGRESS") else "false"))
+          go = s in ("SCRIPTED", "ART_IN_PROGRESS") or os.environ["CMD"].startswith("smoke")
+          print("go=" + ("true" if go else "false"))
           EOF
       - uses: actions/setup-python@v5
         if: steps.gate.outputs.go == 'true'

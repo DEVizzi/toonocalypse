@@ -22,13 +22,45 @@ def abort_story(b: dict, story: dict, reason: str, q: Quota) -> None:
     print(f"ABORTED: {reason}")
 
 
+def smoke(cmd: str, story: dict) -> None:
+    """Kernel smoke test: 2 portrait candidates per character from the saved plan; outputs go to a 'smoke-test' draft release."""
+    from pathlib import Path
+
+    from src.kaggle_jobs import job as jobs
+
+    work = Path("work/smoke")
+    if cmd == "smoke":
+        cli_tools.preflight()
+        items = jobs.portrait_items(story)
+        for it in items:
+            it.update(n=2, keep=2)
+        job = jobs.build_job(story, "PORTRAITS", items, {}, f"smoke-{int(time.time())}")
+        print(f"pushed smoke job, kernel v{cli_tools.push(jobs.render_kernel(job, work / 'kernel', __import__('os').environ['KAGGLE_USERNAME']))}")
+        return
+    st = cli_tools.status()
+    print(f"kernel status: {st}")
+    if st in ("queued", "running", "unknown"):
+        return
+    out = cli_tools.download_output(work / "out")
+    if not out:
+        print("no output found")
+        return
+    manifest = (out / "manifest.json").read_text()
+    print(manifest[:4000])
+    cli_tools.ensure_release("smoke-test", "[draft] kernel smoke test")
+    cli_tools.upload_assets("smoke-test", sorted(out.glob("*.jpg")) + [out / "manifest.json"])
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["start", "collect"])
+    ap.add_argument("cmd", choices=["start", "collect", "smoke", "smoke-collect"])
     args = ap.parse_args(argv)
     q = Quota()
     b = load_state("story_bible.json")
     story = b.get("current")
+    if args.cmd.startswith("smoke"):
+        smoke(args.cmd, story)
+        return 0
     try:
         if args.cmd == "start":
             if not story or story.get("status") != "SCRIPTED":
