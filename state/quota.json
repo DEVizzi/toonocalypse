@@ -5,9 +5,9 @@
   "vision_calls": 0,
   "pending_jobs": [],
   "tts_calls": 0,
-  "paused_until": "2026-11-17T02:26:37.911342+00:00",
-  "consecutive_aborts": 4,
-  "last_abort_reason": "Generation paused until 2026-11-17T02:24:23.897254+00:00",
-  "last_abort_at": "2026-11-16T14:26:37.911342+00:00",
+  "paused_until": null,
+  "consecutive_aborts": 0,
+  "last_abort_reason": "",
+  "last_abort_at": "",
   "model_retry_after": {}
 }
