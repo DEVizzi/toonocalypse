@@ -1,13 +1,13 @@
 {
   "date": "2026-11-16",
-  "text_calls": 4,
+  "text_calls": 7,
   "image_calls": 0,
-  "vision_calls": 0,
+  "vision_calls": 1,
   "pending_jobs": [],
   "tts_calls": 0,
   "paused_until": null,
-  "consecutive_aborts": 0,
-  "last_abort_reason": "",
-  "last_abort_at": "",
+  "consecutive_aborts": 1,
+  "last_abort_reason": "Panel QA failed: ['anchor_score 0.68 < 0.7']",
+  "last_abort_at": "2026-11-16T14:45:45.390133+00:00",
   "model_retry_after": {}
 }

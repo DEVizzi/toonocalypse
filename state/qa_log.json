@@ -6,6 +6,15 @@
       "passed": true,
       "anchor_score": 0.9,
       "reasons": []
+    },
+    {
+      "type": "art_qa",
+      "episode": "ep-20261116-dc2fa6_pt1",
+      "passed": false,
+      "anchor_score": 0.68,
+      "reasons": [
+        "anchor_score 0.68 < 0.7"
+      ]
     }
   ]
 }
