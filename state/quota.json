@@ -5,15 +5,15 @@
   },
   "gemini": {
     "date": "2026-11-16",
-    "calls": 16,
+    "calls": 21,
     "retry_after": {
       "gemini-3.8-flash": "2026-11-17T07:59:58.452277+00:00",
       "gemini-3.6-flash": "2026-11-17T07:58:48.452277+00:00"
     }
   },
   "aborts": {
-    "consecutive": 1,
-    "last_reason": "Cast portraits failed QA after repair: ['Jin']",
+    "consecutive": 0,
+    "last_reason": "",
     "paused_until": null
   }
 }

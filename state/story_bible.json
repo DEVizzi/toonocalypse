@@ -1,5 +1,721 @@
 {
-  "current": null,
+  "current": {
+    "title": "The Golden Rickshaw",
+    "category": "moral_fable",
+    "logline": "A struggling rickshaw driver finds a heavy bag of gold left behind by a wealthy merchant, and every passenger he carries tests his honesty.",
+    "moral": "Honesty is the richest fare.",
+    "parts": [
+      {
+        "part": 1,
+        "title": "A Fortune on the Seat | Pt 1/3",
+        "hook_text": "Is this my lucky day?",
+        "previously": null,
+        "description": "Bari finds a heavy bag of gold in his rickshaw and faces a hard choice.",
+        "caption": "Is this my lucky day? Part 1/3 — save this so you don't miss the next part. What would you do with a bag of gold?",
+        "hashtags": [
+          "#rickshaw",
+          "#gold",
+          "#story",
+          "#honesty"
+        ],
+        "moral_card": null,
+        "panels": [
+          {
+            "id": 1,
+            "image_prompt": "Ancient stone harbor city alleys, empty upper sky, Bari staring in shock at a heavy leather pouch on a wooden rickshaw seat, medium shot, warm sunset light, suspenseful emotion",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "center"
+              }
+            ],
+            "camera": "Medium shot",
+            "lighting": "Warm sunset light",
+            "emotion": "Suspenseful",
+            "narration": "A heavy leather pouch sits on the wooden seat.",
+            "dialogue": [
+              {
+                "speaker": "Bari",
+                "line": "Is this my lucky day?"
+              }
+            ],
+            "sfx": "CLINK",
+            "duration": 6.5
+          },
+          {
+            "id": 2,
+            "image_prompt": "Bari pulling an empty rickshaw up a steep stone alley, empty top wall space, wide shot, harsh midday sun, tired emotion",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "center"
+              }
+            ],
+            "camera": "Wide shot",
+            "lighting": "Harsh midday sun",
+            "emotion": "Tired",
+            "narration": "The streets are steep and the day is long.",
+            "dialogue": [],
+            "sfx": "CREAK",
+            "duration": 6.0
+          },
+          {
+            "id": 3,
+            "image_prompt": "Close up of a dusty glass medicine jar on a wooden shelf, empty upper background, macro shot, dim indoor lighting, worried emotion",
+            "characters": [],
+            "camera": "Macro shot",
+            "lighting": "Dim indoor lighting",
+            "emotion": "Worried",
+            "narration": "Medicine for the sick daughter sits empty on the shelf.",
+            "dialogue": [],
+            "sfx": "RATTLING",
+            "duration": 6.0
+          },
+          {
+            "id": 4,
+            "image_prompt": "Busy ancient market with crowded stalls, empty top sky, high angle shot, bright daylight, busy emotion",
+            "characters": [],
+            "camera": "High angle shot",
+            "lighting": "Bright daylight",
+            "emotion": "Busy",
+            "narration": "Wealthy merchants rush through the crowded market.",
+            "dialogue": [],
+            "sfx": "MURMUR",
+            "duration": 6.0
+          },
+          {
+            "id": 5,
+            "image_prompt": "Seth stepping out of the rickshaw in a hurry, empty top stone wall, medium shot, golden hour light, demanding emotion",
+            "characters": [
+              {
+                "name": "Seth",
+                "position": "center"
+              }
+            ],
+            "camera": "Medium shot",
+            "lighting": "Golden hour light",
+            "emotion": "Demanding",
+            "narration": "A hurried passenger jumps off and runs into the crowd.",
+            "dialogue": [
+              {
+                "speaker": "Seth",
+                "line": "Hurry up! I have no time to waste!"
+              }
+            ],
+            "sfx": "THUD",
+            "duration": 6.5
+          },
+          {
+            "id": 6,
+            "image_prompt": "Bari opening the heavy leather pouch to reveal shining gold coins, empty top dark space, close up shot, dramatic side lighting, amazed emotion",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "center"
+              }
+            ],
+            "camera": "Close up shot",
+            "lighting": "Dramatic side lighting",
+            "emotion": "Amazed",
+            "narration": "Gold coins gleam in the fading light.",
+            "dialogue": [
+              {
+                "speaker": "Bari",
+                "line": "So much gold. Who will ever know?"
+              }
+            ],
+            "sfx": "GLINT",
+            "duration": 6.5
+          },
+          {
+            "id": 7,
+            "image_prompt": "Bari holding the heavy pouch near his chest inside the rickshaw, empty top wall, medium shot, soft shadow, conflicted emotion",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "center"
+              }
+            ],
+            "camera": "Medium shot",
+            "lighting": "Soft shadow",
+            "emotion": "Conflicted",
+            "narration": "The medicine is finally within reach.",
+            "dialogue": [],
+            "sfx": "HEAVY BREATH",
+            "duration": 6.0
+          },
+          {
+            "id": 8,
+            "image_prompt": "Seth rushing back toward the rickshaw stand shouting with arms raised, empty top sky, wide tracking shot, urgent lighting, frantic emotion",
+            "characters": [
+              {
+                "name": "Seth",
+                "position": "center"
+              }
+            ],
+            "camera": "Wide tracking shot",
+            "lighting": "Urgent lighting",
+            "emotion": "Frantic",
+            "narration": "A sudden shout breaks the quiet moment.",
+            "dialogue": [
+              {
+                "speaker": "Seth",
+                "line": "My fortune! Where is my missing bag of gold?!"
+              }
+            ],
+            "sfx": "SHOUT",
+            "duration": 6.5
+          }
+        ]
+      },
+      {
+        "part": 2,
+        "title": "Racing the Steep Hills | Pt 2/3",
+        "hook_text": "Faster! Run faster to the docks!",
+        "previously": "Bari found a heavy bag of gold just as Seth returned shouting.",
+        "description": "Seth hires Bari to race across the steep hill city to the harbor docks, testing Bari's patience and greed. Meera boards midway, dropping a silver coin, and Bari faces the choice to help her or hide the extra coin alongside the gold.",
+        "caption": "Faster! Run faster to the docks! Part 2/3 — save this so you don't miss the next part. Would you keep the gold or return it? #GoldenRickshaw #StoryTime #Adventure #ComicArt",
+        "hashtags": [
+          "#GoldenRickshaw",
+          "#StoryTime",
+          "#Adventure",
+          "#ComicArt"
+        ],
+        "moral_card": null,
+        "panels": [
+          {
+            "id": 1,
+            "image_prompt": "Upper 25% empty stone wall. Seth jumping frantically waving arms at Bari by the rickshaw stand. Wide tracking shot, urgent morning lighting, frantic emotion.",
+            "characters": [
+              {
+                "name": "Seth",
+                "position": "center"
+              },
+              {
+                "name": "Bari",
+                "position": "left"
+              }
+            ],
+            "camera": "Wide tracking shot",
+            "lighting": "Urgent morning lighting",
+            "emotion": "Frantic",
+            "narration": "Seth chases the rickshaw.",
+            "dialogue": [
+              {
+                "speaker": "Seth",
+                "line": "Faster! Run faster to the docks!"
+              }
+            ],
+            "sfx": "SHOUTING",
+            "duration": 6.5
+          },
+          {
+            "id": 2,
+            "image_prompt": "Upper 25% empty blue sky. Bari pulling the rickshaw hard up a steep stone alley. Medium side angle, harsh midday sun, determined emotion.",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "left"
+              },
+              {
+                "name": "Seth",
+                "position": "right"
+              }
+            ],
+            "camera": "Medium side angle",
+            "lighting": "Harsh midday sun",
+            "emotion": "Determined",
+            "narration": "Legs burn on the uphill climb.",
+            "dialogue": [
+              {
+                "speaker": "Seth",
+                "line": "Move your feet! My ship leaves now!"
+              }
+            ],
+            "sfx": "HEAVY BREATHING",
+            "duration": 6.0
+          },
+          {
+            "id": 3,
+            "image_prompt": "Upper 25% empty gray stone archway. Seth paying a single coin and stepping out at the busy harbor market. Close up, bright daylight, impatient emotion.",
+            "characters": [
+              {
+                "name": "Seth",
+                "position": "center"
+              }
+            ],
+            "camera": "Close up",
+            "lighting": "Bright daylight",
+            "emotion": "Impatient",
+            "narration": "Seth leaps out at the busy market.",
+            "dialogue": [
+              {
+                "speaker": "Seth",
+                "line": "Keep the change. I am gone."
+              }
+            ],
+            "sfx": "COIN CLINK",
+            "duration": 5.5
+          },
+          {
+            "id": 4,
+            "image_prompt": "Upper 25% empty sky above market stalls. Meera stepping up to the rickshaw with a heavy travel bag. Medium shot, warm afternoon light, hurried emotion.",
+            "characters": [
+              {
+                "name": "Meera",
+                "position": "right"
+              },
+              {
+                "name": "Bari",
+                "position": "left"
+              }
+            ],
+            "camera": "Medium shot",
+            "lighting": "Warm afternoon light",
+            "emotion": "Hurried",
+            "narration": "Meera hops into the passenger seat.",
+            "dialogue": [
+              {
+                "speaker": "Meera",
+                "line": "Take me to the upper gate, quickly."
+              }
+            ],
+            "sfx": "WOOD CREAK",
+            "duration": 6.0
+          },
+          {
+            "id": 5,
+            "image_prompt": "Upper 25% empty cobblestone street. A silver coin falling from Meera's hand toward the dusty ground. Low angle shot, sharp sunlight, surprised emotion.",
+            "characters": [
+              {
+                "name": "Meera",
+                "position": "center"
+              }
+            ],
+            "camera": "Low angle shot",
+            "lighting": "Sharp sunlight",
+            "emotion": "Surprised",
+            "narration": "A silver coin slips from her fingers.",
+            "dialogue": [
+              {
+                "speaker": "Meera",
+                "line": "Oh, my silver coin dropped!"
+              }
+            ],
+            "sfx": "CLINK",
+            "duration": 5.5
+          },
+          {
+            "id": 6,
+            "image_prompt": "Upper 25% empty dark alley wall. Bari looking down at the silver coin on the floor next to the hidden gold pouch. Close up on hands, dim shadow lighting, conflicted emotion.",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "center"
+              }
+            ],
+            "camera": "Close up on hands",
+            "lighting": "Dim shadow lighting",
+            "emotion": "Conflicted",
+            "narration": "Bari stares at the extra coin.",
+            "dialogue": [
+              {
+                "speaker": "Bari",
+                "line": "Another coin in the dirt."
+              }
+            ],
+            "sfx": "SILENCE",
+            "duration": 6.5
+          },
+          {
+            "id": 7,
+            "image_prompt": "Upper 25% empty harbor wall. Bari reaching down to point at the fallen silver coin. Medium shot, warm golden hour light, honest emotion.",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "left"
+              },
+              {
+                "name": "Meera",
+                "position": "right"
+              }
+            ],
+            "camera": "Medium shot",
+            "lighting": "Warm golden hour light",
+            "emotion": "Honest",
+            "narration": "Bari moves to help the passenger.",
+            "dialogue": [
+              {
+                "speaker": "Bari",
+                "line": "Miss, you dropped your silver."
+              }
+            ],
+            "sfx": "FOOTSTEPS",
+            "duration": 6.0
+          },
+          {
+            "id": 8,
+            "image_prompt": "Upper 25% empty dusty road. The heavy gold pouch rolling out from under the rickshaw seat right onto the dirt road. Extreme close up low angle, dramatic spotlight, shocking emotion.",
+            "characters": [],
+            "camera": "Extreme close up low angle",
+            "lighting": "Dramatic spotlight",
+            "emotion": "Shocking",
+            "narration": "The hidden secret rolls into the light.",
+            "dialogue": [],
+            "sfx": "THUD",
+            "duration": 6.5
+          }
+        ]
+      },
+      {
+        "part": 3,
+        "title": "The Weight of Truth | Pt 3/3",
+        "hook_text": "Is this the gold you lost?",
+        "previously": "Seth chased the rickshaw, but the heavy gold pouch slipped out onto the dusty road right at Meera's feet.",
+        "description": "Bari chooses honesty over stolen wealth, returning the gold pouch and earning a generous reward.",
+        "caption": "Is this the gold you lost? Part 3/3 — save this so you don't miss the next part. Would you return a bag of gold?",
+        "hashtags": [
+          "#storytime",
+          "#folktale",
+          "#honesty",
+          "#animation"
+        ],
+        "moral_card": "Honesty is the richest fare.",
+        "panels": [
+          {
+            "id": 1,
+            "image_prompt": "Upper 25% empty dusty road. Meera looking down at the heavy gold pouch on the dirt, extreme close up low angle, dramatic spotlight, shocking emotion.",
+            "characters": [
+              {
+                "name": "Meera",
+                "position": "center"
+              }
+            ],
+            "camera": "extreme close up low angle",
+            "lighting": "dramatic spotlight",
+            "emotion": "shocking emotion",
+            "narration": "The gold pouch lands in the dust.",
+            "dialogue": [
+              {
+                "speaker": "Meera",
+                "line": "Is this the gold you lost?"
+              }
+            ],
+            "sfx": "CLINK",
+            "duration": 6.0
+          },
+          {
+            "id": 2,
+            "image_prompt": "Upper 25% empty stone wall. Seth rushing up with outstretched hands toward the rickshaw, wide tracking shot, urgent lighting, frantic emotion.",
+            "characters": [
+              {
+                "name": "Seth",
+                "position": "right"
+              }
+            ],
+            "camera": "wide tracking shot",
+            "lighting": "urgent lighting",
+            "emotion": "frantic emotion",
+            "narration": "Seth runs back in a panic.",
+            "dialogue": [
+              {
+                "speaker": "Seth",
+                "line": "My fortune! You found my money!"
+              }
+            ],
+            "sfx": "FOOTSTEPS",
+            "duration": 6.0
+          },
+          {
+            "id": 3,
+            "image_prompt": "Upper 25% empty dark alley. Bari holding out the heavy pouch to Seth, medium shot, harsh sunlight, nervous tension.",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "left"
+              },
+              {
+                "name": "Seth",
+                "position": "right"
+              }
+            ],
+            "camera": "medium shot",
+            "lighting": "harsh sunlight",
+            "emotion": "nervous tension",
+            "narration": "The temptation weighs heavily.",
+            "dialogue": [
+              {
+                "speaker": "Seth",
+                "line": "Keep quiet, and it is yours to keep."
+              }
+            ],
+            "sfx": "WHISPERS",
+            "duration": 6.0
+          },
+          {
+            "id": 4,
+            "image_prompt": "Upper 25% empty harbor sky. Meera crossing her arms and watching Bari closely, close up, warm light, suspicious emotion.",
+            "characters": [
+              {
+                "name": "Meera",
+                "position": "center"
+              }
+            ],
+            "camera": "close up",
+            "lighting": "warm light",
+            "emotion": "suspicious emotion",
+            "narration": "Meera tests his true character.",
+            "dialogue": [
+              {
+                "speaker": "Meera",
+                "line": "What will you do with it, driver?"
+              }
+            ],
+            "sfx": "WIND",
+            "duration": 6.0
+          },
+          {
+            "id": 5,
+            "image_prompt": "Upper 25% empty stone harbor. Bari handing the heavy gold pouch back to Seth, medium shot, soft golden light, resolute emotion.",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "left"
+              },
+              {
+                "name": "Seth",
+                "position": "right"
+              }
+            ],
+            "camera": "medium shot",
+            "lighting": "soft golden light",
+            "emotion": "resolute emotion",
+            "narration": "Bari refuses to lie or steal.",
+            "dialogue": [
+              {
+                "speaker": "Bari",
+                "line": "It belongs to you. Take it back."
+              }
+            ],
+            "sfx": "THUD",
+            "duration": 6.0
+          },
+          {
+            "id": 6,
+            "image_prompt": "Upper 25% empty market stall. Seth smiling warmly while holding out a smaller coin purse, close up, bright daylight, grateful emotion.",
+            "characters": [
+              {
+                "name": "Seth",
+                "position": "center"
+              }
+            ],
+            "camera": "close up",
+            "lighting": "bright daylight",
+            "emotion": "grateful emotion",
+            "narration": "Seth rewards his honesty.",
+            "dialogue": [
+              {
+                "speaker": "Seth",
+                "line": "Your honesty is rare. Take this reward."
+              }
+            ],
+            "sfx": "COINS",
+            "duration": 6.0
+          },
+          {
+            "id": 7,
+            "image_prompt": "Upper 25% empty ancient alley. Bari smiling deeply while holding the coin purse, medium shot, sunset glow, peaceful emotion.",
+            "characters": [
+              {
+                "name": "Bari",
+                "position": "center"
+              }
+            ],
+            "camera": "medium shot",
+            "lighting": "sunset glow",
+            "emotion": "peaceful emotion",
+            "narration": "Bari has enough for the medicine now.",
+            "dialogue": [
+              {
+                "speaker": "Bari",
+                "line": "My mind is clear, and my heart is light."
+              }
+            ],
+            "sfx": "BREATH",
+            "duration": 6.0
+          },
+          {
+            "id": 8,
+            "image_prompt": "Upper 25% empty harbor wall. Golden rickshaw parked under the sun with bold text overlay, wide shot, glowing light, triumphant emotion.",
+            "characters": [],
+            "camera": "wide shot",
+            "lighting": "glowing light",
+            "emotion": "triumphant emotion",
+            "narration": "He drives away with true riches.",
+            "dialogue": [],
+            "sfx": "BELL",
+            "duration": 6.0
+          }
+        ]
+      }
+    ],
+    "setting": "A bustling ancient harbor city of stone alleys, busy markets, and steep hills.",
+    "music_mood": "emotional",
+    "cast": [
+      {
+        "name": "Bari",
+        "age": 28,
+        "gender": "male",
+        "region": "coastal city",
+        "build": "lean and muscular",
+        "face_shape": "angular",
+        "eyes": "dark brown",
+        "eyebrows": "thick",
+        "hair": "short black buzzcut",
+        "skin_tone": "warm tan",
+        "outfit": "bright red kurta shirt with grey cotton trousers",
+        "accessory": "yellow cotton headband",
+        "signature_color": "bright red",
+        "anchors": [
+          "bright red kurta",
+          "yellow cotton headband",
+          "grey cotton trousers"
+        ],
+        "visual_prompt": "28-year-old male with an angular face, warm tan skin, short black buzzcut. Wearing a bright red kurta and grey trousers with a yellow cotton headband.",
+        "voice": "steadfast, tired, and warm"
+      },
+      {
+        "name": "Meera",
+        "age": 35,
+        "gender": "female",
+        "region": "coastal city",
+        "build": "tall and sturdy",
+        "face_shape": "oval",
+        "eyes": "deep brown",
+        "eyebrows": "expressive",
+        "hair": "long black braid",
+        "skin_tone": "medium brown",
+        "outfit": "navy blue tunic over khaki pants",
+        "accessory": "big brass pocket watch",
+        "signature_color": "navy blue",
+        "anchors": [
+          "navy blue tunic",
+          "big brass pocket watch",
+          "khaki pants"
+        ],
+        "visual_prompt": "35-year-old female with an oval face, medium brown skin, long black braid. Wearing a navy blue tunic and khaki pants with a big brass pocket watch.",
+        "voice": "sharp, hurried, and direct"
+      },
+      {
+        "name": "Seth",
+        "age": 50,
+        "gender": "male",
+        "region": "coastal city",
+        "build": "round and soft",
+        "face_shape": "round",
+        "eyes": "small",
+        "eyebrows": "thin",
+        "hair": "bald head with grey side fringes",
+        "skin_tone": "light brown",
+        "outfit": "emerald green silk vest over white shirt and black trousers",
+        "accessory": "wide purple silk sash",
+        "signature_color": "emerald green",
+        "anchors": [
+          "emerald green silk vest",
+          "wide purple silk sash",
+          "black trousers"
+        ],
+        "visual_prompt": "50-year-old male with a round face, light brown skin, bald head with grey side fringes. Wearing an emerald green silk vest, white shirt, black trousers, and a wide purple silk sash.",
+        "voice": "wealthy, demanding, and sly"
+      }
+    ],
+    "beats": [
+      {
+        "part": 1,
+        "summary": "Bari finds a heavy leather pouch stuffed with gold coins left on his rickshaw seat by a hurried passenger. Struggling to pay for his sick daughter's medicine, he looks inside the pouch and wonders if anyone will ever know.",
+        "cliffhanger_type": "reveal",
+        "cliffhanger": "A frantic Seth rushes back to the rickshaw stand shouting about a missing fortune.",
+        "payoff_next": "Bari hides the gold pouch quickly under his wooden seat just as Seth grabs the handles of his rickshaw."
+      },
+      {
+        "part": 2,
+        "summary": "Seth hires Bari to race across the steep hill city to the harbor docks, testing Bari's patience and greed. Meera boards midway, dropping a silver coin, and Bari faces the choice to help her or hide the extra coin alongside the gold.",
+        "cliffhanger_type": "impossible_choice",
+        "cliffhanger": "The gold pouch slips out from under the seat and rolls onto the dusty road right at Meera's feet.",
+        "payoff_next": "Meera picks up the heavy gold pouch with wide eyes and looks straight at Bari."
+      },
+      {
+        "part": 3,
+        "summary": "Bari refuses to lie, telling Meera and Seth the truth and handing back the gold pouch entirely. Seth offers a generous reward for his honesty, giving Bari enough money for the medicine without losing his peace of mind.",
+        "cliffhanger_type": null,
+        "cliffhanger": null,
+        "payoff_next": null
+      }
+    ],
+    "story_id": "st-20261116-8f4551",
+    "planner_model": "gemini-3.5-flash-lite",
+    "status": "ART_IN_PROGRESS",
+    "script_model": "gemini-3.5-flash-lite",
+    "judge": {
+      "scores": {
+        "hook": 8,
+        "clarity": 9,
+        "tension": 8,
+        "twist": 7,
+        "emotion": 8,
+        "cliffhanger": 8,
+        "moral_payoff": 9,
+        "readability": 9,
+        "safety": 10
+      },
+      "avg": 8.44,
+      "passed": true,
+      "notes": "The story is engaging, beautifully paced for a vertical comic format, and hits the general audience safety guidelines perfectly. Minor note: Ensure the transition between Seth leaving and Meera boarding in Part 2 is visually smooth, as Seth originally rushed back shouting in Part 1's cliffhanger, but Part 2 immediately resumes the chase. Overall, excellent structure and clear character motivation.",
+      "judge_model": "gemini-3.5-flash-lite"
+    },
+    "art": {
+      "phase": "PORTRAITS",
+      "job": {
+        "id": "st-20261116-8f4551-portraits-1794862649",
+        "phase": "PORTRAITS",
+        "items": [
+          "portrait-bari",
+          "portrait-meera",
+          "portrait-seth"
+        ],
+        "pushed_at": 1794862651.3210902,
+        "est_hours": 0.52,
+        "version": "4"
+      },
+      "session_retries": 0,
+      "portrait_repair": 0,
+      "repair_round": 0,
+      "portraits": {
+        "Bari": {
+          "candidates": [],
+          "approved": null,
+          "qa": null,
+          "failed": false
+        },
+        "Meera": {
+          "candidates": [],
+          "approved": null,
+          "qa": null,
+          "failed": false
+        },
+        "Seth": {
+          "candidates": [],
+          "approved": null,
+          "qa": null,
+          "failed": false
+        }
+      },
+      "panels": {},
+      "log": [
+        "2026-11-16T20:57:31Z pushed PORTRAITS job st-20261116-8f4551-portraits-1794862649 (3 items, ~0.52 GPU-h, kernel v4)"
+      ]
+    }
+  },
   "history": [
     {
       "story_id": "st-20261116-ab646f",
