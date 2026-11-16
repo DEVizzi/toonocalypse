@@ -121,8 +121,9 @@ Return JSON exactly in this shape:
 def write_scripts(plan: dict[str, Any], quota: Quota | None = None, feedback: str = "") -> dict[str, Any]:
     total = int(plan["parts"])
     names = {c["name"] for c in plan["cast"]}
-    parts, model = [], ""
-    for n in range(1, total + 1):
+    parts = [] if feedback else list(plan.get("parts_done", []))
+    model = plan.get("script_model", "")
+    for n in range(len(parts) + 1, total + 1):
         last_err = ""
         for _ in range(3):
             fb = "; ".join(x for x in [feedback, last_err] if x)
@@ -137,6 +138,11 @@ def write_scripts(plan: dict[str, Any], quota: Quota | None = None, feedback: st
             errs = validate_part(part, total, names)
             if not errs:
                 parts.append(part)
+                b = bible()
+                if (b.get("current") or {}).get("story_id") == plan.get("story_id"):
+                    b["current"]["parts_done"] = parts
+                    b["current"]["script_model"] = model
+                    save_state("story_bible.json", b)
                 break
             last_err = "; ".join(errs[:8])
             print(f"[scripts] part {n} rejected: {last_err}", flush=True)
