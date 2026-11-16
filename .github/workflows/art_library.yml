@@ -47,13 +47,18 @@ jobs:
           if [ "$FETCH_EXISTING" != "true" ]; then
             kaggle kernels push -p kaggle
           fi
-          for i in $(seq 1 90); do
+          COMPLETE=0
+          for i in $(seq 1 115); do
             STATUS=$(kaggle kernels status "${KAGGLE_USERNAME}/toonocalypse-art-library" | tr '[:upper:]' '[:lower:]')
             echo "Poll $i: $STATUS"
-            if echo "$STATUS" | grep -q "complete"; then break; fi
+            if echo "$STATUS" | grep -q "complete"; then COMPLETE=1; break; fi
             if echo "$STATUS" | grep -q "error\|cancel"; then exit 1; fi
             sleep 45
           done
+          if [ "$COMPLETE" != "1" ]; then
+            echo "Timed out waiting for Kaggle kernel completion"
+            exit 1
+          fi
           mkdir -p kaggle_out
           kaggle kernels output "${KAGGLE_USERNAME}/toonocalypse-art-library" -p kaggle_out
           ls -la kaggle_out
