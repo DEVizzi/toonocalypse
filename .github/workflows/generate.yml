@@ -2,7 +2,7 @@ name: Generate Episode Buffer
 
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
     inputs:
       format:
@@ -20,9 +20,13 @@ on:
       draft:
         description: "Upload as draft release"
         type: boolean
-        default: false
+        default: true
       force:
-        description: "Generate even if buffer >= 3 days"
+        description: "Generate even if paused or buffer >= 3"
+        type: boolean
+        default: false
+      fail_preflight:
+        description: "Deliberately fail preflight to verify clean abort"
         type: boolean
         default: false
 
@@ -37,7 +41,7 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,24 +54,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GOOGLE_API_KEY1: ${{ secrets.GOOGLE_API_KEY1 }}
-          GOOGLE_API_KEY2: ${{ secrets.GOOGLE_API_KEY2 }}
-          GOOGLE_API_KEY3: ${{ secrets.GOOGLE_API_KEY3 }}
-          GOOGLE_API_KEYS: ${{ secrets.GOOGLE_API_KEYS }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
-        run: |
-          ARGS=""
-          if [ -n "${{ inputs.format }}" ]; then ARGS="$ARGS --format ${{ inputs.format }}"; fi
-          if [ -n "${{ inputs.heroes }}" ]; then ARGS="$ARGS --heroes ${{ inputs.heroes }}"; fi
-          if [ "${{ inputs.offline }}" = "true" ]; then ARGS="$ARGS --offline"; fi
-          if [ "${{ inputs.draft }}" = "true" ]; then ARGS="$ARGS --draft"; fi
-          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
-          python3 -m src.cli generate $ARGS
+          GOOGLE_GENAI_API_VERSION: "v1beta"
+          TOON_FORMAT: ${{ inputs.format }}
+          TOON_HEROES: ${{ inputs.heroes }}
+          TOON_OFFLINE: ${{ inputs.offline }}
+          TOON_DRAFT: ${{ inputs.draft }}
+          TOON_FORCE: ${{ inputs.force }}
+          TOON_FAIL_PREFLIGHT: ${{ inputs.fail_preflight }}
+        run: python3 -m src.cli generate
       - name: Commit state updates
+        if: always()
         run: |
           git config user.name "toonocalypse-bot"
           git config user.email "actions@users.noreply.github.com"
           git add state/
-          git diff --cached --quiet || git commit -m "chore: update episode buffer state"
+          git diff --cached --quiet || git commit -m "chore: update generation state"
           git push

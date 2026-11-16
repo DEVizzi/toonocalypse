@@ -42,25 +42,24 @@ def check_page_qa(
 
     anchor_score = 0.90
     has_text = False
-    from src.common.gemini import call_with_key_failover, has_gemini_keys
+    from src.common.gemini import discover_text_models, get_client, has_gemini_key
 
-    if not offline and has_gemini_keys():
+    if not offline and has_gemini_key():
         qt = quota or QuotaTracker()
         if qt.can_spend("vision", 1):
             try:
-                models = load_models().get("vision_models", ["gemini-3.1-flash-lite-preview"])
+                cli = get_client()
+                models = discover_text_models(client=cli)
                 resp = None
                 for model in models:
                     try:
-                        resp = call_with_key_failover(
-                            lambda client, m=model: client.models.generate_content(
-                                model=m,
-                                contents=[
-                                    "Check this 2x3 comic page. Return ONLY JSON: "
-                                    '{"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}',
-                                    img,
-                                ],
-                            )
+                        resp = cli.models.generate_content(
+                            model=model,
+                            contents=[
+                                "Check this 2x3 comic page. Return ONLY JSON: "
+                                '{"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}',
+                                img,
+                            ],
                         )
                         qt.spend("vision", 1)
                         break

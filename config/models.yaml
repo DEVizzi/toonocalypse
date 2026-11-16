@@ -1,28 +1,28 @@
 text_models:
-  - "gemini-3.1-flash-lite-preview"
-  - "gemini-3-flash-preview"
-  - "gemini-2.5-flash-lite"
-
-image_models:
-  - "gemini-3.1-flash-image"
-  - "gemini-3.1-flash-lite-image"
-  - "gemini-2.5-flash-image"
+  - "gemini-3.8-flash"
+  - "gemini-3.6-flash"
+  - "gemini-3.5-flash-lite"
+  - "gemma-4"
 
 vision_models:
-  - "gemini-3.1-flash-lite-preview"
-  - "gemini-3-flash-preview"
-  - "gemini-2.5-flash-lite"
+  - "gemini-3.8-flash"
+  - "gemini-3.6-flash"
+  - "gemini-3.5-flash-lite"
 
 tts:
-  primary: "piper"
-  fallback: "espeak"
+  primary: "gemini"
+  fallback: "piper"
+  gemini_tts_models:
+    - "gemini-3.8-flash-tts"
+    - "gemini-3.8-flash-lite-tts"
   piper_models:
     us_libritts: "en_US-libritts_r-medium"
     us_lessac: "en_US-lessac-medium"
     gb_alan: "en_GB-alan-medium"
     gb_alba: "en_GB-alba-medium"
   narrator:
-    engine: "piper"
+    engine: "gemini"
+    gemini_voice: "Charon"
     model: "en_US-lessac-medium"
     speaker_id: 0
     length_scale: 1.0
@@ -30,6 +30,7 @@ tts:
 
 quota:
   daily_text_limit: 450
-  daily_image_limit: 40
   daily_vision_limit: 200
-  min_delay_between_images_sec: 5
+  daily_tts_limit: 100
+  max_consecutive_aborts: 3
+  pause_hours: 12

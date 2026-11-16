@@ -37,33 +37,20 @@ def check_text(text: str, use_llm: bool = False, quota: QuotaTracker | None = No
     if reasons:
         return ModerationResult(passed=False, reasons=sorted(set(reasons)))
 
-    from src.common.gemini import call_with_key_failover, has_gemini_keys
+    from src.common.gemini import generate_text
 
-    if use_llm and has_gemini_keys():
+    if use_llm:
         qt = quota or QuotaTracker()
-        if qt.can_spend("text", 1):
-            try:
-                models = load_models().get("text_models", ["gemini-3.1-flash-lite-preview"])
-                prompt = (
-                    "Reply ONLY 'PASS' or 'FAIL: <reason>'. Is this 100% safe, wholesome, "
-                    "all-ages family-friendly cartoon content with no scary imagery, real brands, "
-                    "romance, weapons aimed at characters, or unsafe imitable behaviour?\n\n"
-                    f"{text[:4000]}"
-                )
-                for model in models:
-                    try:
-                        resp = call_with_key_failover(
-                            lambda client, m=model: client.models.generate_content(model=m, contents=prompt)
-                        )
-                        qt.spend("text", 1)
-                        ans = (resp.text or "").strip()
-                        if ans.upper().startswith("FAIL"):
-                            return ModerationResult(passed=False, reasons=[ans])
-                        break
-                    except Exception:
-                        continue
-            except Exception:
-                pass
+        prompt = (
+            "Reply ONLY 'PASS' or 'FAIL: <reason>'. Is this 100% safe, wholesome, "
+            "all-ages family-friendly cartoon content with no scary imagery, real brands, "
+            "romance, weapons aimed at characters, or unsafe imitable behaviour?\n\n"
+            f"{text[:4000]}"
+        )
+        ans_raw, _model = generate_text(prompt, step="moderation", quota=qt)
+        ans = ans_raw.strip()
+        if ans.upper().startswith("FAIL"):
+            return ModerationResult(passed=False, reasons=[ans])
     return ModerationResult(passed=True, reasons=[])
 
 

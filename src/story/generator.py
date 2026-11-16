@@ -129,86 +129,103 @@ def _build_offline_part(
 
 def generate_part_script(
     story_id: str,
-    title: str,
+    title: str | None,
     part_num: int,
     part_count: int,
     heroes: list[str],
     villain: str,
     setting: str,
     idea: str,
-    cliffhanger_type: str | None,
+    cliffhanger_type: str | None = None,
     offline: bool = False,
     quota: QuotaTracker | None = None,
+    allowed_poses: list[str] | None = None,
+    allowed_backgrounds: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Generate a 6-panel script and pass moderation + Hook & Retention gates."""
+    """Generate a 6-panel script and pass moderation + Hook & Retention gates. Never degrades in live mode."""
     chars = load_all_characters()
     qt = quota or QuotaTracker()
+    poses_list = allowed_poses or ["idle", "talking", "surprised", "laughing", "jump", "point", "cheering"]
+    bgs_list = allowed_backgrounds or [setting]
 
-    for attempt in range(3):
-        script: dict[str, Any] | None = None
-        from src.common.gemini import call_with_key_failover, has_gemini_keys
+    if offline:
+        offline_title = title or f"{display_name(heroes[0])} Stops {display_name(villain)} Today"
+        script = _build_offline_part(story_id, offline_title, part_num, part_count, heroes, villain, setting, idea, cliffhanger_type)
+        gate = judge_script(script, offline=True, quota=qt)
+        script["source"] = "offline"
+        script["model_used"] = "offline"
+        script["is_llm_judged"] = False
+        script["hook_gate"] = {"avg": gate.avg_score, "scores": gate.scores, "passed": gate.passed}
+        return script
 
-        if not offline and has_gemini_keys() and qt.can_spend("text", 1):
-            try:
-                text_models = load_models().get("text_models", ["gemini-3.1-flash-lite-preview"])
-                cast_desc = "\n".join(
-                    f"- slug={s}, name={chars[s]['name']}, catchphrase={chars[s]['catchphrase']}"
-                    for s in heroes + [villain]
-                )
-                prompt = (
-                    f"Write Part {part_num}/{part_count} of a family-friendly all-ages Toonocalypse motion comic.\n"
-                    f"Premise: {idea}\nSetting: {setting}\nCliffhanger type: {cliffhanger_type or 'satisfying funny resolution'}\n"
-                    f"Cast:\n{cast_desc}\n\n"
-                    "Rules:\n"
-                    "- Exactly 6 panels (panel_id 1..6).\n"
-                    "- Panel 1 is the cold-open HOOK mid-action.\n"
-                    "- Narrator speaks <=25% of total words.\n"
-                    "- Panel 'action' <=180 chars and MUST NOT mention character colors, outfits, or body features.\n"
-                    "- on_screen_hook <=6 words.\n"
-                    "Return ONLY valid JSON with keys: on_screen_hook, hook_panel_id, panels (list of {panel_id, camera, impact, sfx, characters, action, narrator, dialogue:[{speaker, line}]})."
-                )
-                resp = None
-                for model in text_models:
-                    try:
-                        resp = call_with_key_failover(
-                            lambda client, m=model: client.models.generate_content(model=m, contents=prompt)
-                        )
-                        qt.spend("text", 1)
-                        break
-                    except Exception:
-                        continue
-                if resp is None:
-                    raise RuntimeError("All text models failed")
-                m = re.search(r"\{[\s\S]*\}", resp.text or "")
-                if m:
-                    parsed = json.loads(m.group(0))
-                    if len(parsed.get("panels", [])) == 6:
-                        script = {
-                            "story_id": story_id,
-                            "part_num": part_num,
-                            "part_count": part_count,
-                            "title": title,
-                            "logline": idea,
-                            "setting": setting,
-                            "heroes": heroes,
-                            "villain": villain,
-                            "hook_panel_id": int(parsed.get("hook_panel_id", 1)),
-                            "on_screen_hook": str(parsed.get("on_screen_hook", "Hold On!"))[:60],
-                            "cliffhanger_type": cliffhanger_type,
-                            "panels": parsed["panels"],
-                        }
-            except Exception:
-                script = None
+    from src.common.gemini import generate_text
+    from src.story.title_validator import validate_title
 
-        if script is None:
-            script = _build_offline_part(story_id, title, part_num, part_count, heroes, villain, setting, idea, cliffhanger_type)
-
-        mod = check_script(script, use_llm=not offline)
-        if not mod.passed:
+    last_err = ""
+    for _attempt in range(3):
+        cast_desc = "\n".join(
+            f"- slug={s}, name={chars[s]['name']}, catchphrase={chars[s]['catchphrase']}"
+            for s in heroes + [villain]
+        )
+        prompt = (
+            f"Write Part {part_num}/{part_count} of a family-friendly all-ages Toonocalypse motion comic.\n"
+            f"Premise: {idea}\nSetting: {setting}\nCliffhanger type: {cliffhanger_type or 'satisfying funny resolution'}\n"
+            f"Cast:\n{cast_desc}\n\n"
+            f"Allowed character poses ONLY: {poses_list}\n"
+            f"Allowed backgrounds ONLY: {bgs_list}\n\n"
+            "Rules:\n"
+            "- Include a punchy 'title' (>= 4 words, MUST contain a verb, MUST NOT end with a connector like when/and/but/the/to/with/of/a).\n"
+            "- Exactly 6 panels (panel_id 1..6).\n"
+            "- Panel 1 is the cold-open HOOK mid-action.\n"
+            "- Narrator speaks <=25% of total words.\n"
+            "- Panel 'action' <=180 chars and MUST NOT mention character colors, outfits, or body features.\n"
+            "- Each panel MUST specify 'background' from Allowed backgrounds and 'poses' (dict of {slug: pose}) from Allowed poses.\n"
+            "- on_screen_hook <=6 words.\n"
+            "Return ONLY valid JSON with keys: title, on_screen_hook, hook_panel_id, panels (list of {panel_id, camera, impact, sfx, background, characters, poses, action, narrator, dialogue:[{speaker, line}]})."
+        )
+        raw, model_used = generate_text(prompt, step="script_gen", quota=qt)
+        m = re.search(r"\{[\s\S]*\}", raw)
+        if not m:
+            last_err = "No JSON object in LLM script response"
             continue
-        gate = judge_script(script, offline=offline, quota=qt)
-        if gate.passed or attempt == 2:
-            script["hook_gate"] = {"avg": gate.avg_score, "scores": gate.scores, "passed": gate.passed}
-            return script
+        parsed = json.loads(m.group(0))
+        panels = parsed.get("panels", [])
+        if len(panels) != 6:
+            last_err = f"Expected 6 panels, got {len(panels)}"
+            continue
 
-    raise RuntimeError("Failed to generate a family-safe script after 3 attempts")
+        llm_title = str(parsed.get("title") or title or "").strip()
+        title_ok, title_reasons = validate_title(llm_title)
+        if not title_ok:
+            last_err = f"Title rejected: {title_reasons}"
+            continue
+
+        script = {
+            "story_id": story_id,
+            "part_num": part_num,
+            "part_count": part_count,
+            "title": llm_title,
+            "logline": idea,
+            "setting": setting,
+            "heroes": heroes,
+            "villain": villain,
+            "hook_panel_id": int(parsed.get("hook_panel_id", 1)),
+            "on_screen_hook": str(parsed.get("on_screen_hook", "Watch This!"))[:60],
+            "cliffhanger_type": cliffhanger_type,
+            "panels": panels,
+            "source": "llm",
+            "model_used": model_used,
+        }
+        mod = check_script(script, use_llm=True)
+        if not mod.passed:
+            last_err = f"Moderation failed: {mod.reasons}"
+            continue
+        gate = judge_script(script, offline=False, quota=qt)
+        if not gate.passed:
+            last_err = f"Hook gate failed ({gate.avg_score}): {gate.feedback}"
+            continue
+        script["is_llm_judged"] = gate.is_llm_judged
+        script["hook_gate"] = {"avg": gate.avg_score, "scores": gate.scores, "passed": gate.passed}
+        return script
+
+    raise RuntimeError(f"Script generation aborted after 3 attempts: {last_err}")

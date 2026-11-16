@@ -1,56 +1,74 @@
-"""Tests for daily Gemini quota tracking and resume queue."""
+"""Tests for QuotaTracker, backoff pause, model discovery, and 404/429/5xx handling (§8)."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
-from src.common import state as state_mod
+import pytest
+
+from src.common import gemini, state as state_mod
 from src.common.quota import QuotaTracker
 
 
-def test_quota_spend_and_resume_queue(tmp_path: Path, monkeypatch) -> None:
+def test_quota_spend_and_3_abort_backoff(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(state_mod, "STATE_DIR", tmp_path)
     qt = QuotaTracker(filename="quota_test.json")
+    now = datetime(2026, 11, 16, 12, 0, tzinfo=timezone.utc)
+
     assert qt.can_spend("text", 1)
     qt.spend("text", 2)
     assert qt.summary()["text_calls"] == 2
-    qt.enqueue_resume({"episode_id": "ep-99-pt2", "stage": "art"})
-    popped = qt.pop_resume()
-    assert popped == {"episode_id": "ep-99-pt2", "stage": "art"}
-    assert qt.pop_resume() is None
+
+    qt.record_abort("err1", now=now)
+    assert not qt.is_paused(now=now)[0]
+    qt.record_abort("err2", now=now)
+    assert not qt.is_paused(now=now)[0]
+    qt.record_abort("err3", retry_delay_sec=24 * 3600, now=now)
+    paused, until = qt.is_paused(now=now)
+    assert paused
+    assert datetime.fromisoformat(until) >= now + timedelta(hours=23)
+
+    qt.record_success()
+    assert not qt.is_paused(now=now)[0]
 
 
-def test_gemini_multi_key_failover(monkeypatch) -> None:
-    import types
-    import sys
-    from src.common import gemini
+def test_model_discovery_and_error_classification(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(state_mod, "STATE_DIR", tmp_path)
+    gemini.reset_skipped_models()
 
-    gemini.reset_exhausted_keys()
-    monkeypatch.setenv("GOOGLE_API_KEY", "key-a")
-    monkeypatch.setenv("GOOGLE_API_KEY1", "key-b")
-    monkeypatch.setenv("GOOGLE_API_KEY2", "key-a")  # duplicate should be deduped
-    monkeypatch.setenv("GOOGLE_API_KEYS", "key-c, key-b")
+    assert gemini.classify_gemini_error(RuntimeError("404 NOT_FOUND")) == "not_found"
+    assert gemini.classify_gemini_error(RuntimeError("429 RESOURCE_EXHAUSTED retryDelay: 45s")) == "rate_limit"
+    assert gemini.extract_retry_delay_seconds(RuntimeError("retry in 1h2m3s")) == 3723.0
+    assert gemini.classify_gemini_error(RuntimeError("503 Service Unavailable")) == "transient"
 
-    keys = gemini.get_gemini_api_keys()
-    assert keys == ["key-a", "key-b", "key-c"]
+    class FakeModels:
+        def __init__(self):
+            self.calls = []
 
-    class FakeClient:
-        def __init__(self, api_key: str):
-            self.api_key = api_key
+        def list(self):
+            return [
+                SimpleNamespace(name="models/gemini-3.8-flash", supported_actions=["generateContent"]),
+                SimpleNamespace(name="models/gemini-3.6-flash", supported_actions=["generateContent"]),
+            ]
 
-    monkeypatch.setitem(sys.modules, "google", types.SimpleNamespace(genai=types.SimpleNamespace(Client=FakeClient)))
+        def generate_content(self, model: str, contents: str):
+            self.calls.append(model)
+            if model == "gemini-3.8-flash":
+                raise RuntimeError("404 NOT_FOUND")
+            return SimpleNamespace(text="hello from 3.6")
 
-    attempts: list[str] = []
+    fake_client = SimpleNamespace(models=FakeModels())
+    discovered = gemini.discover_text_models(force_refresh=True, client=fake_client)
+    assert discovered == ["gemini-3.8-flash", "gemini-3.6-flash"]
 
-    def fn(client):
-        attempts.append(client.api_key)
-        if client.api_key == "key-a":
-            raise RuntimeError("429 RESOURCE_EXHAUSTED quota")
-        return f"ok:{client.api_key}"
+    qt = QuotaTracker(filename="quota_disc.json")
+    txt, used = gemini.generate_text("hi", step="test", quota=qt, client=fake_client)
+    assert txt == "hello from 3.6"
+    assert used == "gemini-3.6-flash"
 
-    assert gemini.call_with_key_failover(fn) == "ok:key-b"
-    assert attempts == ["key-a", "key-b"]
-    # Subsequent call skips exhausted key-a
-    attempts.clear()
-    assert gemini.call_with_key_failover(fn) == "ok:key-b"
-    assert attempts == ["key-b"]
-    gemini.reset_exhausted_keys()
+    # 404 model stays skipped on subsequent calls
+    fake_client.models.calls.clear()
+    txt2, _ = gemini.generate_text("hi2", step="test", quota=qt, client=fake_client)
+    assert fake_client.models.calls == ["gemini-3.6-flash"]
+    gemini.reset_skipped_models()

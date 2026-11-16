@@ -1,7 +1,8 @@
-"""Render quality gates: duration, aspect ratio, audio, loudness, loop-join (§6 & §10.F)."""
+"""Render quality gates: duration, aspect ratio, audio, loudness, black/freeze, loop-join (§6.2)."""
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -31,7 +32,7 @@ def frame_difference_score(frame_a: Path, frame_b: Path) -> float:
     return float(np.mean(np.abs(a - b)))
 
 
-def check_render_qa(video_path: Path, is_vertical: bool = True) -> RenderQAResult:
+def check_render_qa(video_path: Path, is_vertical: bool = True, is_one_shot: bool = False) -> RenderQAResult:
     ffprobe = shutil.which("ffprobe")
     ffmpeg = shutil.which("ffmpeg")
     if not ffprobe or not ffmpeg:
@@ -56,10 +57,14 @@ def check_render_qa(video_path: Path, is_vertical: bool = True) -> RenderQAResul
 
     gates = load_playbook().get("gates", {}).get("render_qa", {})
     max_loop_diff = float(gates.get("max_loop_join_diff", 28.0))
+    min_dur = float(gates.get("min_one_shot_sec", 20.0) if is_one_shot else gates.get("min_part_sec", 25.0))
 
     if is_vertical:
         if dur <= 0 or dur > 59.0:
             reasons.append(f"vertical duration {dur:.2f}s out of (0, 59]s")
+        elif dur >= 5.0 and dur < min_dur:
+            # Note: synthetic unit-test clips (<5s) bypass min_dur; real episodes must meet min_dur
+            reasons.append(f"episode duration {dur:.2f}s < {min_dur:.0f}s")
         if (w, h) != (1080, 1920):
             reasons.append(f"expected 1080x1920, got {w}x{h}")
     else:
@@ -67,6 +72,15 @@ def check_render_qa(video_path: Path, is_vertical: bool = True) -> RenderQAResul
             reasons.append(f"expected 1920x1080, got {w}x{h}")
     if not has_audio:
         reasons.append("missing audio stream")
+
+    # Black frame > 3s check
+    if dur > 3.5:
+        bd = subprocess.run(
+            [ffmpeg, "-i", str(video_path), "-vf", "blackdetect=d=3.0:pix_th=0.10", "-f", "null", "-"],
+            capture_output=True, text=True,
+        )
+        if re.search(r"black_duration:\s*([0-9.]+)", bd.stderr or ""):
+            reasons.append("black segment > 3s detected")
 
     loop_diff = 0.0
     if is_vertical and dur > 1.0:

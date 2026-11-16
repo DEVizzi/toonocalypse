@@ -1,6 +1,8 @@
-"""Character-voiced TTS synthesis (Piper primary, espeak fallback, WAV tone dry-run)."""
+"""Character-voiced TTS synthesis: Gemini TTS primary, Piper fallback, line hash cache (§4)."""
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import shutil
 import struct
@@ -10,10 +12,15 @@ from pathlib import Path
 from typing import Any
 
 from src.common.config import ROOT, load_all_characters, load_models, load_playbook
+from src.common.gemini import classify_gemini_error, get_client, has_gemini_key
+from src.common.quota import QuotaTracker
+
+GEMINI_VOICES = ("Puck", "Charon", "Kore", "Fenrir", "Aoede", "Zephyr", "Leda", "Orus")
+TTS_CACHE_DIR = ROOT / "assets" / "tts_cache"
 
 
 def _write_fallback_speech_wav(text: str, out_path: Path, length_scale: float = 1.0) -> Path:
-    """Deterministic speech-paced WAV for offline tests when Piper/espeak are absent."""
+    """Deterministic speech-paced WAV ONLY for offline unit/smoke tests (never in live mode)."""
     sr = 22050
     words = max(1, len(text.split()))
     dur = max(0.8, min(6.0, words * 0.34 * length_scale))
@@ -56,77 +63,148 @@ def _apply_voice_fx(raw_wav: Path, out_wav: Path, pitch_semitones: float, fx: st
     return out_wav
 
 
-def synthesize_line(
-    text: str,
-    voice_cfg: dict[str, Any],
-    out_wav: Path,
-    is_narrator: bool = False,
-    models_dir: Path | None = None,
-) -> Path:
-    if out_wav.exists():
-        return out_wav
-    out_wav.parent.mkdir(parents=True, exist_ok=True)
-
-    length_scale = float(voice_cfg.get("length_scale", 1.0))
+def _gemini_voice_for(voice_cfg: dict[str, Any], is_narrator: bool) -> str:
     if is_narrator:
-        mult = float(load_playbook().get("narration", {}).get("narration_length_scale_multiplier", 0.92))
-        length_scale *= mult
+        return str(voice_cfg.get("gemini_voice") or "Charon")
+    if voice_cfg.get("gemini_voice"):
+        return str(voice_cfg["gemini_voice"])
+    key = json.dumps(voice_cfg, sort_keys=True)
+    idx = int(hashlib.sha256(key.encode()).hexdigest(), 16) % len(GEMINI_VOICES)
+    return GEMINI_VOICES[idx]
 
-    pitch = float(voice_cfg.get("pitch_semitones", 0))
-    fx = str(voice_cfg.get("fx", "none"))
-    raw_wav = out_wav.with_suffix(".raw.wav")
 
-    piper_bin = shutil.which("piper")
-    model_name = voice_cfg.get("model", "en_US-lessac-medium")
-    model_file = (models_dir or (ROOT / ".cache" / "piper")) / f"{model_name}.onnx"
+def _synthesize_gemini_tts(text: str, voice_name: str, out_wav: Path, quota: QuotaTracker | None = None) -> Path:
+    from google.genai import types
 
-    synthesized = False
-    if piper_bin and model_file.exists():
-        cmd = [
-            piper_bin,
-            "--model",
-            str(model_file),
-            "--output_file",
-            str(raw_wav),
-            "--length_scale",
-            f"{length_scale:.2f}",
-        ]
-        if voice_cfg.get("speaker_id") is not None:
-            cmd.extend(["--speaker", str(voice_cfg["speaker_id"])])
+    qt = quota or QuotaTracker()
+    if not has_gemini_key() or not qt.can_spend("tts", 1):
+        raise RuntimeError("Gemini TTS unavailable or quota exhausted")
+
+    cli = get_client()
+    models = load_models().get("tts", {}).get("gemini_tts_models", ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"])
+    last_exc: Exception | None = None
+    for model in models:
         try:
-            subprocess.run(cmd, input=text, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            synthesized = True
-        except Exception:
-            synthesized = False
+            resp = cli.models.generate_content(
+                model=model,
+                contents=text,
+                config=types.GenerateContentConfig(
+                    response_modalities=["AUDIO"],
+                    speech_config=types.SpeechConfig(
+                        voice_config=types.VoiceConfig(
+                            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+                        )
+                    ),
+                ),
+            )
+            for cand in getattr(resp, "candidates", []) or []:
+                for part in cand.content.parts:
+                    inline = getattr(part, "inline_data", None)
+                    if inline is not None and inline.data:
+                        out_wav.parent.mkdir(parents=True, exist_ok=True)
+                        # Gemini TTS returns 24kHz 16-bit mono PCM (or WAV)
+                        data = inline.data
+                        if data[:4] == b"RIFF":
+                            out_wav.write_bytes(data)
+                        else:
+                            with wave.open(str(out_wav), "wb") as wf:
+                                wf.setnchannels(1)
+                                wf.setsampwidth(2)
+                                wf.setframerate(24000)
+                                wf.writeframes(data)
+                        qt.spend("tts", 1)
+                        return out_wav
+        except Exception as exc:
+            last_exc = exc
+            if classify_gemini_error(exc) == "not_found":
+                continue
+    raise RuntimeError(f"Gemini TTS failed: {last_exc}")
 
-    if not synthesized:
-        espeak_bin = shutil.which("espeak-ng") or shutil.which("espeak")
-        if espeak_bin:
-            try:
-                subprocess.run([espeak_bin, "-w", str(raw_wav), text], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                synthesized = True
-            except Exception:
-                synthesized = False
 
-    if not synthesized:
-        _write_fallback_speech_wav(text, raw_wav, length_scale=length_scale)
+def _synthesize_piper(text: str, voice_cfg: dict[str, Any], out_wav: Path) -> Path:
+    piper = shutil.which("piper")
+    model = str(voice_cfg.get("model") or "en_US-lessac-medium")
+    model_path = ROOT / "assets" / "voices" / f"{model}.onnx"
+    if not piper or not model_path.exists():
+        raise RuntimeError(f"Piper binary or voice model missing ({model_path})")
 
-    _apply_voice_fx(raw_wav, out_wav, pitch, fx)
-    if raw_wav.exists() and raw_wav != out_wav:
+    raw_wav = out_wav.with_suffix(".raw.wav")
+    out_wav.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        piper,
+        "--model", str(model_path),
+        "--output_file", str(raw_wav),
+        "--length_scale", str(voice_cfg.get("length_scale", 1.0)),
+    ]
+    if "speaker_id" in voice_cfg:
+        cmd.extend(["--speaker", str(voice_cfg["speaker_id"])])
+    subprocess.run(cmd, input=text, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _apply_voice_fx(raw_wav, out_wav, float(voice_cfg.get("pitch_semitones", 0)), str(voice_cfg.get("fx", "none")))
+    if raw_wav.exists():
         raw_wav.unlink()
     return out_wav
 
 
+def tts_reachable() -> tuple[bool, str]:
+    """Preflight check (§6.1): verify Gemini key or Piper voice model is available."""
+    if has_gemini_key():
+        return True, "gemini-tts-ready"
+    piper = shutil.which("piper")
+    models_dir = ROOT / "assets" / "voices"
+    if piper and models_dir.exists() and any(models_dir.glob("*.onnx")):
+        return True, "piper-ready"
+    return False, "Neither GOOGLE_API_KEY (Gemini TTS) nor Piper voice models are available"
+
+
+def synthesize_line(
+    text: str,
+    voice_cfg: dict[str, Any],
+    out_path: Path,
+    is_narrator: bool = False,
+    offline: bool = False,
+    quota: QuotaTracker | None = None,
+) -> Path:
+    """Synthesize dialogue/narration with Gemini TTS primary, Piper fallback, and line-hash cache."""
+    if offline:
+        return _write_fallback_speech_wav(text, out_path, float(voice_cfg.get("length_scale", 1.0)))
+
+    g_voice = _gemini_voice_for(voice_cfg, is_narrator=is_narrator)
+    cache_key = hashlib.sha256(
+        f"{text}|{g_voice}|{json.dumps(voice_cfg, sort_keys=True)}".encode("utf-8")
+    ).hexdigest()[:24]
+    cached = TTS_CACHE_DIR / f"{cache_key}.wav"
+    if cached.exists() and cached.stat().st_size > 1000:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(cached.read_bytes())
+        return out_path
+
+    # Primary: Gemini TTS
+    try:
+        _synthesize_gemini_tts(text, g_voice, out_path, quota=quota)
+        TTS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cached.write_bytes(out_path.read_bytes())
+        return out_path
+    except Exception as gemini_exc:
+        print(f"[tts] Gemini TTS failed ({gemini_exc}); trying Piper fallback...")
+
+    # Fallback: Piper
+    try:
+        _synthesize_piper(text, voice_cfg, out_path)
+        TTS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cached.write_bytes(out_path.read_bytes())
+        return out_path
+    except Exception as piper_exc:
+        raise RuntimeError(f"TTS aborted: Gemini TTS and Piper both failed ({piper_exc})") from piper_exc
+
+
 def generate_voice_samples(out_dir: Path | None = None) -> list[Path]:
-    """Generate characters/voices/<slug>.wav for every hero and villain."""
+    """Generate short preview WAVs for all bible characters."""
+    dest = out_dir or (ROOT / "assets" / "voice_samples")
+    dest.mkdir(parents=True, exist_ok=True)
     chars = load_all_characters()
-    target_dir = out_dir or (ROOT / "characters" / "voices")
-    target_dir.mkdir(parents=True, exist_ok=True)
-    outputs: list[Path] = []
-    for slug, char in sorted(chars.items()):
-        p = target_dir / f"{slug}.wav"
-        if not p.exists():
-            line = f"{char['name']} reporting in! {char['catchphrase']}"
-            synthesize_line(line, char["voice"], p)
-        outputs.append(p)
-    return outputs
+    out: list[Path] = []
+    for slug, c in sorted(chars.items()):
+        p = dest / f"{slug}.wav"
+        synthesize_line(c["catchphrase"], c["voice"], p, offline=not has_gemini_key())
+        out.append(p)
+    return out

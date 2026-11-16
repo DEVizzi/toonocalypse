@@ -1,4 +1,4 @@
-"""Vertical 9:16 (1080x1920) motion-comic renderer for YouTube Shorts & Instagram Reels."""
+"""Vertical 9:16 (1080x1920) & Wide 16:9 renderer with layered parallax & acting (§5)."""
 from __future__ import annotations
 
 import shutil
@@ -15,15 +15,17 @@ from src.common.config import display_name, load_all_characters, load_models, lo
 from src.panels.bubbles import draw_speech_bubble
 from src.panels.effects import add_impact_effects
 from src.render.captions import build_ass_captions
-from src.render.motion import render_panel_clip
+from src.render.motion import render_layered_panel_clip, render_panel_clip
 
 
 def render_episode_formats(
     script: dict[str, Any],
     panel_paths: list[Path],
     work_dir: Path,
+    panel_layers: list[dict[str, Path]] | None = None,
+    offline: bool = False,
 ) -> dict[str, Path]:
-    """Render clean YouTube Shorts (9:16), Instagram Reels (9:16), and Wide (16:9) MP4s."""
+    """Render YouTube Shorts (9:16), Instagram Reels (9:16), and Wide (16:9) MP4s."""
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise RuntimeError("ffmpeg is required to render episode videos")
@@ -31,7 +33,10 @@ def render_episode_formats(
     chars = load_all_characters()
     settings = load_settings()
     narrator_cfg = load_models().get("tts", {}).get("narrator", {})
-    hard_cap = float(load_playbook().get("durations", {}).get("hard_cap_sec", 59))
+    durations_cfg = load_playbook().get("durations", {})
+    hard_cap = float(durations_cfg.get("hard_cap_sec", 59))
+    is_one_shot = int(script.get("part_count", 1)) <= 1
+    min_target = 22.0 if is_one_shot else 30.0
 
     work_dir.mkdir(parents=True, exist_ok=True)
     audio_dir = work_dir / "audio"
@@ -70,18 +75,21 @@ def render_episode_formats(
         p_timings: list[WordTiming] = []
         for li, (line_txt, vc, is_narr) in enumerate(spoken_parts):
             wav_p = audio_dir / f"p{idx}_l{li}.wav"
-            synthesize_line(line_txt, vc, wav_p, is_narrator=is_narr)
+            synthesize_line(line_txt, vc, wav_p, is_narrator=is_narr, offline=offline)
             d_sec = wav_duration(wav_p)
             p_timings.extend(compute_word_timings(line_txt, d_sec, offset=t_cursor))
             t_cursor += d_sec + 0.18
             p_dur += d_sec + 0.18
             all_wavs.append(wav_p)
 
-        panel_durations.append(max(2.2, p_dur))
+        panel_durations.append(max(2.6, p_dur))
         word_chunks.append(p_timings)
 
-    # Enforce hard cap <= 59s
     total_dur = sum(panel_durations)
+    if total_dur < min_target:
+        boost = min_target / max(1.0, total_dur)
+        panel_durations = [round(d * boost, 2) for d in panel_durations]
+        total_dur = sum(panel_durations)
     if total_dur > hard_cap - 1.5:
         scale = (hard_cap - 1.5) / total_dur
         panel_durations = [max(1.5, d * scale) for d in panel_durations]
@@ -90,19 +98,29 @@ def render_episode_formats(
     voice_wav = concat_wavs(all_wavs, work_dir / "voice_all.wav", gap_sec=0.18)
     mixed_audio = mix_with_bgm(voice_wav, work_dir / "audio_mixed.m4a", duration_sec=total_dur + 0.6)
 
-    # Render vertical 9:16 clips + 0.8s loop-tail matching panel 1 for seamless loop (§10.F)
     v_clips: list[Path] = []
     w_clips: list[Path] = []
     for idx, (pdata, ap, dur) in enumerate(zip(script["panels"][:6], annotated_panels, panel_durations), start=1):
         vc = v_dir / f"v_{idx}.mp4"
         wc = w_dir / f"w_{idx}.mp4"
         cam = "zoom_in" if idx == 1 else pdata.get("camera", "zoom_in")
-        render_panel_clip(ap, vc, dur, 1080, 1920, camera=cam, impact=bool(pdata.get("impact")))
-        render_panel_clip(ap, wc, dur, 1920, 1080, camera=pdata.get("camera", "zoom_in"), impact=bool(pdata.get("impact")))
+        has_speech = bool(pdata.get("dialogue") or pdata.get("narrator"))
+        if panel_layers and idx - 1 < len(panel_layers) and idx > 1:
+            lyr = panel_layers[idx - 1]
+            render_layered_panel_clip(
+                lyr["v_bg"], lyr["v_idle_fg"], lyr["v_talk_fg"], vc, dur, 1080, 1920,
+                camera=cam, impact=bool(pdata.get("impact")), has_speech=has_speech,
+            )
+            render_layered_panel_clip(
+                lyr["w_bg"], lyr["w_fg"], lyr["w_fg"], wc, dur, 1920, 1080,
+                camera=pdata.get("camera", "zoom_in"), impact=bool(pdata.get("impact")), has_speech=False,
+            )
+        else:
+            render_panel_clip(ap, vc, dur, 1080, 1920, camera=cam, impact=bool(pdata.get("impact")))
+            render_panel_clip(ap, wc, dur, 1920, 1080, camera=pdata.get("camera", "zoom_in"), impact=bool(pdata.get("impact")))
         v_clips.append(vc)
         w_clips.append(wc)
 
-    # Loop-tail clip matching opening panel (0.6s)
     loop_vc = v_dir / "v_loop.mp4"
     render_panel_clip(annotated_panels[0], loop_vc, 0.6, 1080, 1920, camera="static_loop")
     v_clips.append(loop_vc)
@@ -132,7 +150,6 @@ def render_episode_formats(
     )
     ig_out.write_bytes(yt_out.read_bytes())
 
-    # Wide 16:9 uniform encoding for stream-copy compilation
     w_list = work_dir / "w_concat.txt"
     w_list.write_text("".join(f"file '{c.resolve()}'\n" for c in w_clips), encoding="utf-8")
     w_raw = work_dir / "wide_raw.mp4"

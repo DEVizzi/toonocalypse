@@ -23,6 +23,10 @@ on:
         description: "Upload dry-run bundle as a draft GitHub Release"
         type: boolean
         default: false
+      fail_preflight:
+        description: "Deliberately fail preflight to verify clean abort"
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -60,21 +64,19 @@ jobs:
         run: python3 scripts/check_bible.py
       - name: Run pytest suite
         run: python3 -m pytest -q
-      - name: Run offline dry-run proof (Mini-Arc & One-Shot)
+      - name: Run offline dry-run proof
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GOOGLE_API_KEY1: ${{ secrets.GOOGLE_API_KEY1 }}
-          GOOGLE_API_KEY2: ${{ secrets.GOOGLE_API_KEY2 }}
-          GOOGLE_API_KEY3: ${{ secrets.GOOGLE_API_KEY3 }}
-          GOOGLE_API_KEYS: ${{ secrets.GOOGLE_API_KEYS }}
+          GOOGLE_GENAI_API_VERSION: "v1beta"
+          TOON_FORMAT: ${{ inputs.dry_run_format }}
+          TOON_HEROES: ${{ inputs.dry_run_heroes }}
+          TOON_OFFLINE: ${{ inputs.offline }}
+          TOON_DRAFT_RELEASE: ${{ inputs.draft_release }}
+          TOON_FAIL_PREFLIGHT: ${{ inputs.fail_preflight }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            OFFLINE_FLAG=""
-            if [ "${{ inputs.offline }}" = "true" ]; then OFFLINE_FLAG="--offline"; fi
-            DRAFT_FLAG=""
-            if [ "${{ inputs.draft_release }}" = "true" ]; then DRAFT_FLAG="--draft-release"; fi
-            python3 scripts/dry_run.py --format "${{ inputs.dry_run_format }}" --heroes "${{ inputs.dry_run_heroes }}" $OFFLINE_FLAG $DRAFT_FLAG
+            python3 scripts/dry_run.py
           else
             python3 scripts/dry_run.py --format Mini-Arc --heroes brewtan-the-yeti,detective-bubbles --offline
             python3 scripts/dry_run.py --format One-Shot --offline
