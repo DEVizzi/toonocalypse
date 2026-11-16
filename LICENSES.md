@@ -1,32 +1,45 @@
-# Asset Licenses
+# Licenses
 
-Every bundled asset in Toonocalypse is either open-source, Pixabay Content License (royalty-free for commercial & non-commercial use, no attribution required), or synthesized in-repo under CC0 1.0.
+Toonocalypse may monetize, so every model, voice, font, music track and sound effect must allow **commercial use**.
+Anything not listed here must not be used. Status: ✅ verified · ⏳ to verify before first use.
+
+## Image generation (Kaggle GPU)
+| Component | Source | License | Status |
+|---|---|---|---|
+| SDXL base 1.0 | [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) | [CreativeML Open RAIL++-M](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md) (commercial use allowed, with use-based restrictions) | ⏳ |
+| IP-Adapter Plus SDXL (ViT-H) | [h94/IP-Adapter](https://huggingface.co/h94/IP-Adapter) | [Apache-2.0](https://huggingface.co/h94/IP-Adapter) | ✅ |
+| OpenCLIP ViT-H/14 image encoder (bundled in h94/IP-Adapter `models/image_encoder`) | [laion/CLIP-ViT-H-14-laion2B-s32B-b79K](https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K) | MIT | ⏳ |
+| Real-ESRGAN x2plus | [xinntao/Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) | BSD-3-Clause | ⏳ |
+| CLIP ViT-L/14 (pre-filter) | [openai/clip-vit-large-patch14](https://huggingface.co/openai/clip-vit-large-patch14) | MIT | ⏳ |
+| DINOv2 base (pre-filter) | [facebook/dinov2-base](https://huggingface.co/facebook/dinov2-base) | Apache-2.0 | ⏳ |
+| EasyOCR (text detector) | [JaidedAI/EasyOCR](https://github.com/JaidedAI/EasyOCR) | Apache-2.0 | ⏳ |
+
+**Not used, by design:** FLUX.1-dev (non-commercial), and InsightFace-based models (FaceID, InstantID, PuLID).
+
+## Voices (GitHub Actions, CPU)
+| Component | Source | License | Status |
+|---|---|---|---|
+| Kokoro-82M + built-in voices | [hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) | Apache-2.0 | ✅ |
+| Piper (fallback engine) | [rhasspy/piper](https://github.com/rhasspy/piper) | MIT (engine). Each voice has its own dataset license; only voices whose model card permits commercial use may be listed here. | ⏳ |
 
 ## Fonts (`assets/fonts/`)
-
-| File | Font Family | License | Source |
+| File | Family | License | Source |
 |---|---|---|---|
-| `Esteban-Regular.ttf` | Esteban | SIL Open Font License (OFL 1.1) | Google Fonts |
-| `PlayfairDisplay-Regular.ttf` | Playfair Display | SIL Open Font License (OFL 1.1) | Google Fonts |
-| `PlayfairDisplay-VariableFont_wght.ttf` | Playfair Display (Variable) | SIL Open Font License (OFL 1.1) | Google Fonts |
-| `DancingScript-VariableFont_wght.ttf` | Dancing Script (Variable) | SIL Open Font License (OFL 1.1) | Google Fonts |
+| `Esteban-Regular.ttf` | Esteban | SIL OFL 1.1 | Google Fonts |
+| `PlayfairDisplay-Regular.ttf` | Playfair Display | SIL OFL 1.1 | Google Fonts |
+| `PlayfairDisplay-VariableFont_wght.ttf` | Playfair Display (variable) | SIL OFL 1.1 | Google Fonts |
+| `DancingScript-VariableFont_wght.ttf` | Dancing Script (variable) | SIL OFL 1.1 | Google Fonts |
 
-## Background Music (`assets/music/`)
+A bold comic font for SFX and captions will be added in Phase 4 (OFL only).
 
-| File | Title & Artist | License | Source |
+## Music (`assets/music/`)
+| File | Title & artist | License | Source |
 |---|---|---|---|
-| `cosy-quirky-comedy-248029.mp3` | Cosy Quirky Comedy (by leberch / Nikita Kondrashev) | Pixabay Content License | Pixabay Music ID 248029 |
-| `kids-quirky-playful-262598.mp3` | Funny Playful / Kids Quirky Playful (by leberch) | Pixabay Content License | Pixabay Music ID 262598 |
-| `quirky-fun-comedy-250869.mp3` | Quirky Fun Comedy (by leberch) | Pixabay Content License | Pixabay Music ID 250869 |
+| `cosy-quirky-comedy-248029.mp3` | Cosy Quirky Comedy (leberch) | Pixabay Content License | Pixabay Music ID 248029 |
+| `kids-quirky-playful-262598.mp3` | Kids Quirky Playful (leberch) | Pixabay Content License | Pixabay Music ID 262598 |
+| `quirky-fun-comedy-250869.mp3` | Quirky Fun Comedy (leberch) | Pixabay Content License | Pixabay Music ID 250869 |
 
-*Removed during v2.0 audit*: `quirky-kids-music-254537.mp3` and `quirky-playful-248036.mp3` were removed because their licenses could not be independently confirmed.
+There are no tracks yet for the epic, mystery, emotional and tech moods (Phase 4).
 
-## Sound Effects (`assets/sfx/`)
-
-All SFX (`pop.wav`, `whoosh.wav`, `boing.wav`, `splat.wav`, `zap.wav`, `ding.wav`, `end_chime.wav`) are procedurally synthesized in-repo using `numpy` / `wave` and dedicated to the public domain under **CC0 1.0 Universal**.
-
-## Outro Image (`assets/outro/`)
-
-| File | Description | License |
-|---|---|---|
-| `finalLike.jpg` | Channel end-card artwork | Original channel asset (owned by Toonocalypse / DEVizzi) |
+## Sound effects (`assets/sfx/`)
+None yet. They will be synthesized in-repo and dedicated to CC0 1.0 (Phase 4).
