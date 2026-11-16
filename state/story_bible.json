@@ -621,18 +621,17 @@
     "art": {
       "phase": "PORTRAITS",
       "job": {
-        "id": "st-20261116-ab646f-portraits-1794861119",
+        "id": "st-20261116-ab646f-portraits-1794861845",
         "phase": "PORTRAITS",
         "items": [
-          "portrait-jin",
-          "portrait-madam-wong"
+          "portrait-jin"
         ],
-        "pushed_at": 1794861121.6262496,
-        "est_hours": 0.43,
-        "version": "2"
+        "pushed_at": 1794861846.7522757,
+        "est_hours": 0.34,
+        "version": "3"
       },
       "session_retries": 0,
-      "portrait_repair": 0,
+      "portrait_repair": 1,
       "repair_round": 0,
       "portraits": {
         "Jin": {
@@ -642,15 +641,78 @@
           "failed": false
         },
         "Madam Wong": {
-          "candidates": [],
-          "approved": null,
-          "qa": null,
+          "candidates": [
+            "portrait-madam-wong__s922990187.jpg",
+            "portrait-madam-wong__s922958511.jpg",
+            "portrait-madam-wong__s923013944.jpg"
+          ],
+          "approved": "portrait-madam-wong__s922990187.jpg",
+          "qa": {
+            "model": "gemini-3.5-flash-lite",
+            "results": [
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 10,
+                  "outfit_colors": 10,
+                  "accessory": 10,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 10.0,
+                "passed": true,
+                "index": 0,
+                "note": "Excellent match for Madam Wong, featuring silver hair in a bun, emerald green jacket, black slacks, and jade pendant necklace."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 10,
+                  "outfit_colors": 7,
+                  "accessory": 10,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.67,
+                "passed": true,
+                "index": 1,
+                "note": "Good character design, but the inner shirt is white/cream instead of black slacks being visible, slightly deviating from outfit colors."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 10,
+                  "outfit_colors": 10,
+                  "accessory": 10,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 10.0,
+                "passed": true,
+                "index": 2,
+                "note": "Very strong candidate capturing all lock card elements accurately, including the green jacket, black inner layer, and jade accessories."
+              }
+            ],
+            "best": 0
+          },
           "failed": false
         }
       },
       "panels": {},
       "log": [
-        "2026-11-16T20:32:01Z pushed PORTRAITS job st-20261116-ab646f-portraits-1794861119 (2 items, ~0.43 GPU-h, kernel v2)"
+        "2026-11-16T20:32:01Z pushed PORTRAITS job st-20261116-ab646f-portraits-1794861119 (2 items, ~0.43 GPU-h, kernel v2)",
+        "2026-11-16T20:43:58Z portrait Jin: no candidate passed QA",
+        "2026-11-16T20:44:05Z portrait Madam Wong: approved portrait-madam-wong__s922990187.jpg",
+        "2026-11-16T20:44:06Z pushed PORTRAITS job st-20261116-ab646f-portraits-1794861845 (1 items, ~0.34 GPU-h, kernel v3)"
       ]
     }
   },
