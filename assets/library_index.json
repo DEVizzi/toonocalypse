@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "characters": {
     "baron-byte-bat": {
       "idle": {
@@ -43,9 +43,156 @@
         "qa_score": 0.841
       }
     },
-    "blazetail": {},
-    "blitzshell": {},
-    "brewtan-the-yeti": {},
+    "blazetail": {
+      "idle": {
+        "path": "assets/art_library/characters/blazetail/idle.png",
+        "qa_score": 0.619
+      },
+      "walk": {
+        "path": "assets/art_library/characters/blazetail/walk.png",
+        "qa_score": 0.828
+      },
+      "run": {
+        "path": "assets/art_library/characters/blazetail/run.png",
+        "qa_score": 0.844
+      },
+      "jump": {
+        "path": "assets/art_library/characters/blazetail/jump.png",
+        "qa_score": 0.726
+      },
+      "point": {
+        "path": "assets/art_library/characters/blazetail/point.png",
+        "qa_score": 0.834
+      },
+      "surprised": {
+        "path": "assets/art_library/characters/blazetail/surprised.png",
+        "qa_score": 0.82
+      },
+      "laughing": {
+        "path": "assets/art_library/characters/blazetail/laughing.png",
+        "qa_score": 0.842
+      },
+      "comic-angry": {
+        "path": "assets/art_library/characters/blazetail/comic-angry.png",
+        "qa_score": 0.729
+      },
+      "sad": {
+        "path": "assets/art_library/characters/blazetail/sad.png",
+        "qa_score": 0.819
+      },
+      "thinking": {
+        "path": "assets/art_library/characters/blazetail/thinking.png",
+        "qa_score": 0.783
+      },
+      "cheering": {
+        "path": "assets/art_library/characters/blazetail/cheering.png",
+        "qa_score": 0.838
+      },
+      "talking": {
+        "path": "assets/art_library/characters/blazetail/talking.png",
+        "qa_score": 0.808
+      }
+    },
+    "blitzshell": {
+      "idle": {
+        "path": "assets/art_library/characters/blitzshell/idle.png",
+        "qa_score": 0.689
+      },
+      "walk": {
+        "path": "assets/art_library/characters/blitzshell/walk.png",
+        "qa_score": 0.661
+      },
+      "run": {
+        "path": "assets/art_library/characters/blitzshell/run.png",
+        "qa_score": 0.666
+      },
+      "jump": {
+        "path": "assets/art_library/characters/blitzshell/jump.png",
+        "qa_score": 0.68
+      },
+      "point": {
+        "path": "assets/art_library/characters/blitzshell/point.png",
+        "qa_score": 0.682
+      },
+      "surprised": {
+        "path": "assets/art_library/characters/blitzshell/surprised.png",
+        "qa_score": 0.645
+      },
+      "laughing": {
+        "path": "assets/art_library/characters/blitzshell/laughing.png",
+        "qa_score": 0.687
+      },
+      "comic-angry": {
+        "path": "assets/art_library/characters/blitzshell/comic-angry.png",
+        "qa_score": 0.677
+      },
+      "sad": {
+        "path": "assets/art_library/characters/blitzshell/sad.png",
+        "qa_score": 0.673
+      },
+      "thinking": {
+        "path": "assets/art_library/characters/blitzshell/thinking.png",
+        "qa_score": 0.695
+      },
+      "cheering": {
+        "path": "assets/art_library/characters/blitzshell/cheering.png",
+        "qa_score": 0.687
+      },
+      "talking": {
+        "path": "assets/art_library/characters/blitzshell/talking.png",
+        "qa_score": 0.691
+      }
+    },
+    "brewtan-the-yeti": {
+      "idle": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/idle.png",
+        "qa_score": 0.742
+      },
+      "walk": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/walk.png",
+        "qa_score": 0.737
+      },
+      "run": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/run.png",
+        "qa_score": 0.75
+      },
+      "jump": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/jump.png",
+        "qa_score": 0.719
+      },
+      "point": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/point.png",
+        "qa_score": 0.771
+      },
+      "surprised": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/surprised.png",
+        "qa_score": 0.791
+      },
+      "laughing": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/laughing.png",
+        "qa_score": 0.731
+      },
+      "comic-angry": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/comic-angry.png",
+        "qa_score": 0.759
+      },
+      "sad": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/sad.png",
+        "qa_score": 0.752
+      },
+      "thinking": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/thinking.png",
+        "qa_score": 0.72
+      },
+      "cheering": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/cheering.png",
+        "qa_score": 0.731
+      },
+      "talking": {
+        "path": "assets/art_library/characters/brewtan-the-yeti/talking.png",
+        "qa_score": 0.742
+      }
+    },
     "bubblebeard": {},
     "captain-slobber": {}
   },
