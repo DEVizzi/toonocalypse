@@ -233,7 +233,7 @@ def cmd_publish(args: argparse.Namespace) -> int:
     chosen = None
     for rel in releases:
         tag = rel.get("tagName", "")
-        ep_id = tag.removeprefix("ep-")
+        ep_id = tag.removeprefix("buffer-").removeprefix("ep-")
         ep_rec = pub_state.get("episodes", {}).get(ep_id, {})
         if not (ep_rec.get("youtube", {}).get("id") and ep_rec.get("instagram", {}).get("id")):
             chosen = (tag, ep_id)

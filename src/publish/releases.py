@@ -34,7 +34,10 @@ def list_buffer_releases() -> list[dict[str, Any]]:
     if res.returncode != 0 or not res.stdout.strip():
         return []
     releases = json.loads(res.stdout)
-    return [r for r in releases if r.get("tagName", "").startswith("buffer-")]
+    return [
+        r for r in releases
+        if not r.get("isDraft") and (r.get("tagName", "").startswith("buffer-") or r.get("tagName", "").startswith("ep-"))
+    ]
 
 
 def cleanup_old_releases(retention_days: int = 30) -> list[str]:
