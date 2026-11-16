@@ -82,40 +82,63 @@ Return JSON: {{"title","category":"{choice['category']}","logline","moral","part
     raise Abort(f"Planner failed validation: {last_err}")
 
 
-def write_scripts(plan: dict[str, Any], quota: Quota | None = None, feedback: str = "") -> dict[str, Any]:
+PANELS_TARGET = 8
+
+
+def _part_prompt(plan: dict[str, Any], n: int, total: int, done: list[dict[str, Any]], feedback: str) -> str:
     s = settings()["story"]
-    total = int(plan["parts"])
     cast = [{"name": c["name"], "voice": c.get("voice")} for c in plan["cast"]]
-    prompt = f"""Write the scripts for ALL {total} parts of this story. Plan: {json.dumps({k: plan[k] for k in ['title','logline','moral','setting','beats']})}
-Cast (refer to characters ONLY by name; never describe their looks, the art system injects that): {json.dumps(cast)}
+    beat = next((b for b in plan["beats"] if int(b["part"]) == n), {})
+    prev = [{"part": p["part"], "title": p["title"], "ends_with": p["panels"][-1]["image_prompt"],
+             "cliffhanger": next((b.get("cliffhanger") for b in plan["beats"] if int(b["part"]) == p["part"]), "")} for p in done]
+    final = n == total
+    prev_ph = '"..."' if n > 1 else "null"
+    moral_ph = '"..."' if final else "null"
+    skeleton = ",".join(f'{{"id":{i},"image_prompt":"...","characters":[],"camera":"...","lighting":"...","emotion":"...",'
+                        f'"narration":"","dialogue":[],"sfx":"","duration":6.5}}' for i in range(1, PANELS_TARGET + 1))
+    return f"""Write the script for PART {n} of {total} of this story.
+Story plan: {json.dumps({k: plan[k] for k in ['title','logline','moral','setting']})}
+This part's beat: {json.dumps(beat)}
+Earlier parts (for continuity): {json.dumps(prev)}
+Cast (refer to characters ONLY by name; never describe their looks): {json.dumps(cast)}
 {SAFETY}
 {WRITING}
-Per part: {s['panels_per_part']['min']}-{s['panels_per_part']['max']} panels, total duration {s['part_seconds']['min']}-{s['part_seconds']['max']}s (sum of panel durations), new image every 4-7s.
-Panel 1 = HOOK: the most dramatic image + a spoken line <= {s['hook_line_max_words']} words (put it in hook_text and as panel 1 dialogue or narration). Never a title or greeting first.
-Parts 2+: 'previously' = one short line; panel 1 pays off the previous cliffhanger in the first 5s.
-Then 3 escalating tension beats, a mini-payoff, then the cliffhanger (non-final). Final part: climax, the moral CHOICE, payoff, and 'moral_card' = the moral in <= {s['moral_max_words']} words.
-Spoken lines <= {s['spoken_line_max_words']} words. Max {s['max_chars_per_panel']} characters per panel; character-free shots (establishing, objects, effects) are encouraged.
-image_prompt: scene, action, camera angle, lighting, emotion; characters by name only. Leave the upper 25% as empty sky/wall.
-title: <= {s['title_max_chars']} chars, curiosity first, a complete phrase, ending with "| Pt X/{total}" e.g. "He Found Gold in His Rickshaw… | Pt 1/{total}".
-caption: hook line + "Part X/{total} — save this so you don't miss the next part" + a question. hashtags: 3-5 relevant.
-{('Judge feedback to fix: ' + feedback) if feedback else ''}
-Return JSON: {{"parts":[{{"part","title","hook_text","previously"(null for part 1),"description","caption","hashtags":[],"moral_card"(final only),
-"panels":[{{"id","image_prompt","characters":[{{"name","position":"left|center|right"}}],"camera","lighting","emotion","narration","dialogue":[{{"speaker","line"}}],"sfx","duration"}}]}}]}}"""
+RULES:
+- EXACTLY {PANELS_TARGET} panels with ids 1..{PANELS_TARGET}; each panel duration 5.5-7 seconds (total {s['part_seconds']['min']}-{s['part_seconds']['max']}s).
+- Panel 1 = HOOK: the most dramatic image; hook_text = a spoken line of at most {s['hook_line_max_words']} words, also used as panel 1's first line. Never a title or greeting first.
+{"- 'previously' = one short recap line; panel 1 pays off the previous cliffhanger." if n > 1 else "- 'previously' = null."}
+- Then 3 escalating tension beats, a mini-payoff, then {"the climax, the moral CHOICE, and the payoff" if final else "the cliffhanger: " + str(beat.get("cliffhanger", ""))}.
+{f"- moral_card = exactly: {plan['moral']}" if final else "- moral_card = null."}
+- Spoken lines <= {s['spoken_line_max_words']} words; speakers must be cast names. Max {s['max_chars_per_panel']} characters per panel (positions left/center/right). Use some character-free shots.
+- image_prompt: scene, action, camera angle, lighting, emotion; characters by name only; upper 25% empty sky/wall.
+- title <= {s['title_max_chars']} chars, curiosity first, complete phrase, ending with "| Pt {n}/{total}".
+- caption: hook line + "Part {n}/{total} — save this so you don't miss the next part" + a question. hashtags: 3-5.
+{('Fix these problems: ' + feedback) if feedback else ''}
+Return JSON exactly in this shape:
+{{"part":{n},"title":"...","hook_text":"...","previously":{prev_ph},"description":"...","caption":"...","hashtags":["..."],"moral_card":{moral_ph},"panels":[{skeleton}]}}"""
+
+
+def write_scripts(plan: dict[str, Any], quota: Quota | None = None, feedback: str = "") -> dict[str, Any]:
+    total = int(plan["parts"])
     names = {c["name"] for c in plan["cast"]}
-    last_err = ""
-    for _ in range(3):
-        out, model = generate_json(prompt + (f"\nFix: {last_err}" if last_err else ""), "scripts", quota=quota)
-        parts = out.get("parts", [])
-        for p in parts:
-            normalize_durations(p)
-        errs = [] if len(parts) == total else [f"expected {total} parts, got {len(parts)}"]
-        for p in parts:
-            errs += validate_part(p, total, names)
-        if not errs:
-            return {"parts": parts, "script_model": model}
-        last_err = "; ".join(errs[:8])
-        print(f"[scripts] rejected: {last_err}", flush=True)
-    raise Abort(f"Scripts failed validation: {last_err}")
+    parts, model = [], ""
+    for n in range(1, total + 1):
+        last_err = ""
+        for _ in range(3):
+            fb = "; ".join(x for x in [feedback, last_err] if x)
+            out, model = generate_json(_part_prompt(plan, n, total, parts, fb), f"scripts_p{n}", quota=quota)
+            part = out.get("parts", [out])[0] if isinstance(out, dict) and "parts" in out else out
+            part["part"] = n
+            normalize_durations(part)
+            errs = validate_part(part, total, names)
+            if not errs:
+                parts.append(part)
+                break
+            last_err = "; ".join(errs[:8])
+            print(f"[scripts] part {n} rejected: {last_err}", flush=True)
+        else:
+            raise Abort(f"Scripts failed validation (part {n}): {last_err}")
+    return {"parts": parts, "script_model": model}
 
 
 CRITERIA = ["hook", "clarity", "tension", "twist", "emotion", "cliffhanger", "moral_payoff", "readability", "safety"]

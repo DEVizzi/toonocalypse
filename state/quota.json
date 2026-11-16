@@ -12,8 +12,8 @@
     }
   },
   "aborts": {
-    "consecutive": 3,
-    "last_reason": "Scripts failed validation: part 1: 6 panels; part 1: duration 41.0s outside 45-60s; part 2: 6 panels; part 2: duration 41.0s outside 45-60s; part 3: 6 panels; part 3: duration 40.9s outside 45-60s; final part has no moral_card",
-    "paused_until": "2026-11-17T08:02:43.408336+00:00"
+    "consecutive": 0,
+    "last_reason": "",
+    "paused_until": null
   }
 }
