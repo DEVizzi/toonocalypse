@@ -51,15 +51,17 @@ def check_page_qa(
                 cli = get_client()
                 models = discover_text_models(client=cli)
                 resp = None
+                cast_slugs = sorted({c for p in script.get("panels", []) for c in p.get("characters", [])})
+                prompt = (
+                    f"Inspect this 2x3 comic page featuring characters {cast_slugs} in setting '{script.get('setting', '')}'. "
+                    "Rate overall panel composition, clean sprite-over-background layering, and visual consistency as anchor_score (0.0-1.0; >=0.80 if panels are clean, legible, and free of glitches). "
+                    'Return ONLY JSON: {"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}'
+                )
                 for model in models:
                     try:
                         resp = cli.models.generate_content(
                             model=model,
-                            contents=[
-                                "Check this 2x3 comic page. Return ONLY JSON: "
-                                '{"anchor_score": 0.0-1.0, "has_text": true/false, "forbidden_found": false, "notes": ""}',
-                                img,
-                            ],
+                            contents=[prompt, img],
                         )
                         qt.spend("vision", 1)
                         break
