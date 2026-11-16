@@ -15,6 +15,15 @@
       "reasons": [
         "anchor_score 0.68 < 0.7"
       ]
+    },
+    {
+      "type": "art_qa",
+      "episode": "ep-20261116-fa247f_pt1",
+      "passed": false,
+      "anchor_score": 0.2,
+      "reasons": [
+        "anchor_score 0.20 < 0.7"
+      ]
     }
   ]
 }
