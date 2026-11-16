@@ -106,6 +106,8 @@ Return JSON: {{"parts":[{{"part","title","hook_text","previously"(null for part 
     for _ in range(3):
         out, model = generate_json(prompt + (f"\nFix: {last_err}" if last_err else ""), "scripts", quota=quota)
         parts = out.get("parts", [])
+        for p in parts:
+            normalize_durations(p)
         errs = [] if len(parts) == total else [f"expected {total} parts, got {len(parts)}"]
         for p in parts:
             errs += validate_part(p, total, names)
@@ -137,9 +139,31 @@ def score_verdict(out: dict[str, Any]) -> dict[str, Any]:
     return {"scores": scores, "avg": avg, "passed": passed, "notes": out.get("notes", "")}
 
 
+def normalize_durations(part: dict[str, Any], lo: float = 4.0, hi: float = 7.0) -> None:
+    """Rescale panel durations (planning targets) into the part window; each panel stays 4-7s."""
+    s = settings()["story"]["part_seconds"]
+    panels = part.get("panels", [])
+    if not panels:
+        return
+    durs = [max(0.5, float(p.get("duration") or lo)) for p in panels]
+    total = sum(durs)
+    target = min(max(total, s["min"] + 3), s["max"] - 3, hi * len(panels))
+    target = max(target, lo * len(panels))
+    for p, d in zip(panels, durs):
+        p["duration"] = round(min(hi, max(lo, d * target / total)), 2)
+
+
 def create_story(seed_title: str | None = None, quota: Quota | None = None) -> dict[str, Any]:
     q = quota or Quota()
-    plan = plan_story(seed_title, quota=q)
+    b = bible()
+    cur = b.get("current")
+    if cur and cur.get("status") == "PLANNED" and (not seed_title or cur.get("title") == seed_title):
+        plan = cur
+        print(f"[planner] resuming saved plan {plan['story_id']} '{plan['title']}'", flush=True)
+    else:
+        plan = plan_story(seed_title, quota=q) | {"status": "PLANNED"}
+        b["current"] = plan
+        save_state("story_bible.json", b)
     feedback = ""
     for attempt in range(settings()["judge"]["max_rewrites"] + 1):
         scripts = write_scripts(plan, quota=q, feedback=feedback)

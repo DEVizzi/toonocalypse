@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -64,30 +65,36 @@ def generate(contents: list[Any] | str, step: str, kind: str = "text", want_json
         if not q.gemini_model_available(model):
             last = f"{model} waiting on retryDelay"
             continue
-        try:
-            resp = client().models.generate_content(model=model, contents=contents, config=cfg)
-            q.gemini_record_call()
-            q.save()
-            text = (resp.text or "").strip()
-            if not text:
-                last = f"{model} returned empty text"
-                continue
-            print(f"[gemini:{step}] served by {model}", flush=True)
-            return text, model
-        except errors.ClientError as e:
-            if e.code == 404:
-                _skipped_this_run.add(model)
-                last = f"{model} 404"
-            elif e.code == 429:
-                q.gemini_rate_limited(model, _retry_seconds(e))
+        for server_try in range(2):
+            try:
+                resp = client().models.generate_content(model=model, contents=contents, config=cfg)
+                q.gemini_record_call()
                 q.save()
-                last = f"{model} 429"
-            else:
-                raise
-            print(f"[gemini:{step}] {last}; next model", flush=True)
-        except errors.ServerError as e:
-            last = f"{model} {e.code}"
-            print(f"[gemini:{step}] {last}; next model", flush=True)
+                text = (resp.text or "").strip()
+                if not text:
+                    last = f"{model} returned empty text"
+                    break
+                print(f"[gemini:{step}] served by {model}", flush=True)
+                return text, model
+            except errors.ClientError as e:
+                if e.code == 404:
+                    _skipped_this_run.add(model)
+                    last = f"{model} 404"
+                elif e.code == 429:
+                    q.gemini_rate_limited(model, _retry_seconds(e))
+                    q.save()
+                    last = f"{model} 429"
+                else:
+                    raise
+                print(f"[gemini:{step}] {last}; next model", flush=True)
+                break
+            except errors.ServerError as e:
+                last = f"{model} {e.code}"
+                if server_try == 0:
+                    print(f"[gemini:{step}] {last}; retrying once in 15s", flush=True)
+                    time.sleep(15)
+                else:
+                    print(f"[gemini:{step}] {last}; next model", flush=True)
     raise Abort(f"Gemini unavailable for {step}: {last}")
 
 

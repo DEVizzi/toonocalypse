@@ -78,3 +78,14 @@ def test_judge_thresholds():
     assert score_verdict({"scores": good | {"safety": 10}})["passed"]
     assert not score_verdict({"scores": good | {"safety": 9}})["passed"]
     assert not score_verdict({"scores": good | {"hook": 7, "safety": 10}})["passed"]
+
+
+def test_normalize_durations_fits_window():
+    from src.story.pipeline import normalize_durations
+    p = {"panels": [{"duration": 4.8} for _ in range(8)]}  # 38.4s -> too short
+    normalize_durations(p)
+    total = sum(x["duration"] for x in p["panels"])
+    assert 45 <= total <= 60 and all(4 <= x["duration"] <= 7 for x in p["panels"])
+    p = {"panels": [{"duration": 10} for _ in range(9)]}  # 90s -> too long
+    normalize_durations(p)
+    assert 45 <= sum(x["duration"] for x in p["panels"]) <= 60
