@@ -29,8 +29,17 @@ Anything not listed here must not be used. Status: ✅ verified · ⏳ to verify
 | `PlayfairDisplay-Regular.ttf` | Playfair Display | SIL OFL 1.1 | Google Fonts |
 | `PlayfairDisplay-VariableFont_wght.ttf` | Playfair Display (variable) | SIL OFL 1.1 | Google Fonts |
 | `DancingScript-VariableFont_wght.ttf` | Dancing Script (variable) | SIL OFL 1.1 | Google Fonts |
+| `Bangers-Regular.ttf` | Bangers (SFX words, covers, moral card) | SIL OFL 1.1 | [google/fonts](https://github.com/google/fonts/tree/main/ofl/bangers) |
+| `ComicNeue-Bold.ttf` | Comic Neue Bold (speech bubbles) | SIL OFL 1.1 | [google/fonts](https://github.com/google/fonts/tree/main/ofl/comicneue) |
+| `Anton-Regular.ttf` | Anton (captions) | SIL OFL 1.1 | [google/fonts](https://github.com/google/fonts/tree/main/ofl/anton) |
 
-A bold comic font for SFX and captions will be added in Phase 4 (OFL only).
+## Libraries used in generation
+| Library | License |
+|---|---|
+| [diffusers](https://github.com/huggingface/diffusers) | Apache-2.0 |
+| [compel](https://github.com/damian0815/compel) (long-prompt encoding) | MIT |
+| [spandrel](https://github.com/chaiNNer-org/spandrel) (loads Real-ESRGAN) | MIT |
+| [transformers](https://github.com/huggingface/transformers) | Apache-2.0 |
 
 ## Music (`assets/music/`)
 | File | Title & artist | License | Source |
@@ -39,7 +48,7 @@ A bold comic font for SFX and captions will be added in Phase 4 (OFL only).
 | `kids-quirky-playful-262598.mp3` | Kids Quirky Playful (leberch) | Pixabay Content License | Pixabay Music ID 262598 |
 | `quirky-fun-comedy-250869.mp3` | Quirky Fun Comedy (leberch) | Pixabay Content License | Pixabay Music ID 250869 |
 
-There are no tracks yet for the epic, mystery, emotional and tech moods (Phase 4).
+**Mood beds (epic, mystery, emotional, tech):** unless a licensed track is placed in `assets/music/<mood>/` and listed here, the renderer synthesizes an original pad in code (`src/audio/mix.py`). That pad is dedicated to the public domain under **CC0 1.0**.
 
-## Sound effects (`assets/sfx/`)
-None yet. They will be synthesized in-repo and dedicated to CC0 1.0 (Phase 4).
+## Sound effects
+Impact, whoosh and chime are synthesized in code (`src/audio/mix.py`) and dedicated to **CC0 1.0**. No external SFX files are used.
