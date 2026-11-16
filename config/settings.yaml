@@ -56,6 +56,7 @@ publish:
   youtube_privacy: "public"
   youtube_category_id: "1"      # Film & Animation
   hashtags: {min: 3, max: 5}
+  instagram_graph_version: "v23.0"
 
 abort:
   consecutive_limit: 3

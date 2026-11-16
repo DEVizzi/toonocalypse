@@ -78,12 +78,11 @@ def test_end_to_end_small_render(tmp_path):
     from src.render import video
 
     tl = timeline.build(part(3, final=True), STORY, VOICES, fake_tts, final=True)
-    colors = ["#335", "#553", "#535", "#355", "#533", "#353", "#444", "#246"]
-    imgs = {str(i): Image.new("RGB", (270, 480), colors[i - 1]) for i in range(1, 9)}
-    for i, im in imgs.items():  # add texture so freezedetect sees motion under Ken Burns
-        arr = np.array(im)
-        arr[::8, :, :] = 255
-        imgs[i] = Image.fromarray(arr)
+    rng = np.random.default_rng(1)
+    imgs = {}
+    for i in range(1, 9):  # textured images so freezedetect sees Ken Burns motion in every direction
+        base = rng.integers(0, 255, (60, 34, 3), dtype=np.uint8)
+        imgs[str(i)] = Image.fromarray(base).resize((270, 480), Image.NEAREST)
     out = video.encode(tl, imgs, "mystery", tmp_path / "t.mp4", w=270, h=480)
     errs = video.render_qa(out, expect_w=270, expect_h=480)
     assert errs == [], errs
