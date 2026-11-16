@@ -38,6 +38,18 @@ def main(argv: list[str] | None = None) -> int:
     if q.is_paused():
         print(f"ABORTED: paused until {q.data['aborts']['paused_until']}")
         return 0
+    from src.common.config import settings
+    from src.common.state import load_state
+    from src.publish.buffer import ready_episode_count
+
+    cur = (load_state("story_bible.json").get("current") or {})
+    if cur.get("status") not in (None, "PLANNED"):
+        print(f"Story {cur.get('story_id')} is in progress ({cur.get('status')}); not planning a new one.")
+        return 0
+    ready = ready_episode_count(load_state("buffer.json", {"stories": []}), load_state("published.json", {"episodes": {}}))
+    if ready >= settings()["buffer"]["target_ready_episodes"]:
+        print(f"Buffer has {ready} ready episodes; not planning.")
+        return 0
     try:
         story = create_story(seed_title=args.seed, quota=q)
     except Abort as e:
