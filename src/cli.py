@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -269,10 +270,13 @@ def cmd_publish(args: argparse.Namespace) -> int:
             record_platform_publish(ep_id, "youtube", yt_id)
 
         if not ep_rec.get("instagram", {}).get("id"):
+            repo_slug = os.environ.get("GITHUB_REPOSITORY", "DEVizzi/toonocalypse")
+            ig_video_url = f"https://github.com/{repo_slug}/releases/download/{tag}/{ig_video.name}"
             ig_id = publish_to_instagram(
                 ig_video,
                 episode_id=ep_id,
                 caption=meta["caption"],
+                video_url=ig_video_url,
             )
             record_platform_publish(ep_id, "instagram", ig_id)
 

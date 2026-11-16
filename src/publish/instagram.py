@@ -31,6 +31,7 @@ def publish_to_instagram(
     episode_id: str,
     caption: str,
     cover_url: str | None = None,
+    video_url: str | None = None,
 ) -> str:
     cfg = load_settings()
     api_ver = cfg.get("instagram_api_version", "v21.0")
@@ -54,21 +55,37 @@ def publish_to_instagram(
     }
     if cover_url:
         init_params["cover_url"] = cover_url
-    init_resp = requests.post(f"https://graph.facebook.com/{api_ver}/{ig_user_id}/media", data=init_params, timeout=30)
-    init_resp.raise_for_status()
+    init_resp = requests.post(f"https://graph.facebook.com/{api_ver}/{ig_user_id}/media", params=init_params, timeout=30)
+    used_video_url = False
+    if not init_resp.ok and video_url:
+        print(f"[instagram] resumable init failed ({init_resp.status_code}: {init_resp.text[:250]}); trying video_url...")
+        url_params = {
+            "media_type": "REELS",
+            "video_url": video_url,
+            "caption": full_caption,
+            "access_token": token,
+        }
+        if cover_url:
+            url_params["cover_url"] = cover_url
+        init_resp = requests.post(f"https://graph.facebook.com/{api_ver}/{ig_user_id}/media", params=url_params, timeout=30)
+        used_video_url = True
+    if not init_resp.ok:
+        raise RuntimeError(f"Instagram media init failed ({init_resp.status_code}): {init_resp.text}")
     init_data = init_resp.json()
     container_id = init_data["id"]
-    upload_uri = init_data["uri"]
 
-    file_size = video_path.stat().st_size
-    with open(video_path, "rb") as f:
-        up_resp = requests.post(
-            upload_uri,
-            headers={"Authorization": f"OAuth {token}", "offset": "0", "file_size": str(file_size)},
-            data=f,
-            timeout=180,
-        )
-    up_resp.raise_for_status()
+    if not used_video_url:
+        upload_uri = init_data["uri"]
+        file_size = video_path.stat().st_size
+        with open(video_path, "rb") as f:
+            up_resp = requests.post(
+                upload_uri,
+                headers={"Authorization": f"OAuth {token}", "offset": "0", "file_size": str(file_size)},
+                data=f,
+                timeout=180,
+            )
+        if not up_resp.ok:
+            raise RuntimeError(f"Instagram upload failed ({up_resp.status_code}): {up_resp.text}")
 
     # Wait briefly for container processing before publishing
     for _ in range(12):
