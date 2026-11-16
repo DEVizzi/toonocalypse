@@ -1,3 +1,11 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "type": "art_qa",
+      "episode": "ep-20261116-75a5d2_pt1",
+      "passed": true,
+      "anchor_score": 0.9,
+      "reasons": []
+    }
+  ]
 }
