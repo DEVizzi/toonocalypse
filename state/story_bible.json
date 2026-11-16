@@ -676,31 +676,149 @@
     "art": {
       "phase": "PORTRAITS",
       "job": {
-        "id": "st-20261116-8f4551-portraits-1794862649",
+        "id": "st-20261116-8f4551-portraits-1794864321",
         "phase": "PORTRAITS",
         "items": [
-          "portrait-bari",
-          "portrait-meera",
           "portrait-seth"
         ],
-        "pushed_at": 1794862651.3210902,
-        "est_hours": 0.52,
-        "version": "4"
+        "pushed_at": 1794864323.4424965,
+        "est_hours": 0.34,
+        "version": "5"
       },
       "session_retries": 0,
-      "portrait_repair": 0,
+      "portrait_repair": 1,
       "repair_round": 0,
       "portraits": {
         "Bari": {
-          "candidates": [],
-          "approved": null,
-          "qa": null,
+          "candidates": [
+            "portrait-bari__s62513327.jpg",
+            "portrait-bari__s62497489.jpg",
+            "portrait-bari__s62489570.jpg"
+          ],
+          "approved": "portrait-bari__s62497489.jpg",
+          "qa": {
+            "model": "gemini-3.5-flash-lite",
+            "results": [
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 7,
+                  "outfit_colors": 8,
+                  "accessory": 8,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.11,
+                "passed": true,
+                "index": 0,
+                "note": "Character features a grey turban instead of the required yellow headband, and has an incorrect shirt layered combination (yellow under red over grey), but otherwise matches skin tone, age, and general color scheme."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 7,
+                  "outfit_colors": 9,
+                  "accessory": 8,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.33,
+                "passed": true,
+                "index": 1,
+                "note": "Wears a grey turban instead of a yellow headband, but correctly features the bright red kurta and grey trousers."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 7,
+                  "outfit_colors": 6,
+                  "accessory": 8,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.0,
+                "passed": false,
+                "index": 2,
+                "note": "Outfit colors are inverted/incorrect (predominantly yellow shirt and trousers instead of bright red kurta and grey trousers). Features a grey turban instead of a yellow headband."
+              }
+            ],
+            "best": 1
+          },
           "failed": false
         },
         "Meera": {
-          "candidates": [],
-          "approved": null,
-          "qa": null,
+          "candidates": [
+            "portrait-meera__s955596268.jpg",
+            "portrait-meera__s955627944.jpg",
+            "portrait-meera__s955612106.jpg"
+          ],
+          "approved": "portrait-meera__s955627944.jpg",
+          "qa": {
+            "model": "gemini-3.5-flash-lite",
+            "results": [
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 10,
+                  "outfit_colors": 8,
+                  "accessory": 10,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 6,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.33,
+                "passed": false,
+                "index": 0,
+                "note": "Anatomy issue with extra arm appearing behind the torso/shoulder. Outfit adds a white undershirt instead of pure navy blue tunic."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 10,
+                  "outfit_colors": 10,
+                  "accessory": 8,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.78,
+                "passed": true,
+                "index": 1,
+                "note": "Very close match, good anatomy, correct hair and outfit colors. Pocket watch is partially obscured."
+              },
+              {
+                "scores": {
+                  "single_character": 10,
+                  "hair": 10,
+                  "outfit_colors": 4,
+                  "accessory": 8,
+                  "skin_tone": 10,
+                  "age": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "safety": 10
+                },
+                "avg": 9.11,
+                "passed": false,
+                "index": 2,
+                "note": "Outfit colors are reversed or incorrect (wearing khaki shirt instead of navy blue tunic over khaki pants)."
+              }
+            ],
+            "best": 1
+          },
           "failed": false
         },
         "Seth": {
@@ -712,7 +830,11 @@
       },
       "panels": {},
       "log": [
-        "2026-11-16T20:57:31Z pushed PORTRAITS job st-20261116-8f4551-portraits-1794862649 (3 items, ~0.52 GPU-h, kernel v4)"
+        "2026-11-16T20:57:31Z pushed PORTRAITS job st-20261116-8f4551-portraits-1794862649 (3 items, ~0.52 GPU-h, kernel v4)",
+        "2026-11-16T21:24:34Z portrait Bari: approved portrait-bari__s62497489.jpg",
+        "2026-11-16T21:25:01Z portrait Meera: approved portrait-meera__s955627944.jpg",
+        "2026-11-16T21:25:21Z portrait Seth: no candidate passed QA",
+        "2026-11-16T21:25:23Z pushed PORTRAITS job st-20261116-8f4551-portraits-1794864321 (1 items, ~0.34 GPU-h, kernel v5)"
       ]
     }
   },
