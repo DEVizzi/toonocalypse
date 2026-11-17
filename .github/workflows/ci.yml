@@ -21,14 +21,8 @@ jobs:
           GITLEAKS_VERSION: "8.21.2"
         run: |
           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
-          # Scan the working tree, plus every commit after the legacy-v1 tag.
-          # TODO(full-history): after .env is purged from history, scan all commits.
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
-          if git rev-parse -q --verify refs/tags/legacy-v1 >/dev/null; then
-            ./gitleaks detect --source . --config .gitleaks.toml --redact --log-opts="legacy-v1..HEAD"
-          else
-            ./gitleaks detect --source . --config .gitleaks.toml --redact
-          fi
+          ./gitleaks detect --source . --config .gitleaks.toml --redact --verbose
 
   tests:
     runs-on: ubuntu-latest
