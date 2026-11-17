@@ -597,10 +597,10 @@
       "judge_model": "gemini-3.5-flash-lite"
     },
     "art": {
-      "phase": "REPAIR",
+      "phase": "PANELS",
       "job": {
-        "id": "st-20261116-0217f9-repair-1794874702",
-        "phase": "REPAIR",
+        "id": "st-20261116-0217f9-panels-1794877134",
+        "phase": "PANELS",
         "items": [
           "p1-2",
           "p1-4",
@@ -623,13 +623,13 @@
           "p3-7",
           "p3-8"
         ],
-        "pushed_at": 1794874704.4270766,
-        "est_hours": 0.92,
-        "version": "10"
+        "pushed_at": 1794877136.994675,
+        "est_hours": 1.14,
+        "version": "11"
       },
       "session_retries": 0,
       "portrait_repair": 0,
-      "repair_round": 1,
+      "repair_round": 0,
       "portraits": {
         "Jian": {
           "candidates": [
@@ -858,46 +858,8 @@
           }
         },
         "p1-2": {
-          "candidates": [
-            "p1-2__s988296544.jpg",
-            "p1-2__s988304463.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-2__s988296544.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 4,
-                "comic_style": 8,
-                "anatomy": 7,
-                "no_text": 10,
-                "empty_top": 4,
-                "composition": 3,
-                "safety": 10
-              },
-              "avg": 6.0,
-              "passed": false,
-              "note": "The generated image is a portrait of Jian standing in an alleyway, completely failing to depict the requested action scene of pedaling a bicycle rickshaw through a wet alleyway with water splashing. The composition is a vertical standing shot instead of a medium action shot, and the upper 25% is just sky rather than a dark wet brick wall.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p1-2__s988304463.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 5,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 3,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.5,
-              "passed": false,
-              "note": "The generated image (Image 2) does not show Jian pedaling a bicycle rickshaw in a wet alleyway with street lamps. Instead, it shows Jian standing in a bright alleyway, completely missing the requested action, setting, and composition.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -981,46 +943,8 @@
           }
         },
         "p1-4": {
-          "candidates": [
-            "p1-4__s988304463.jpg",
-            "p1-4__s988288625.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-4__s988304463.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 8.0,
-              "passed": false,
-              "note": "The image shows a character matching Jian's design in a comic style, but it completely misses the rickshaw, the glowing billboard, wiping sweat, and the medium close-up framing specified in the panel description.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p1-4__s988288625.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 4,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.12,
-              "passed": false,
-              "note": "Lock-card analysis: hair is short black buzz cut (correct in first portrait, longer in second), outfit has bright blue jacket, brown shirt (instead of black), grey pants, and silver bangles/bracelets are present on the wrist. Description mismatch: Jian is not pulling a rickshaw, there is no glowing billboard, and the expression is not tired.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1046,46 +970,8 @@
           }
         },
         "p1-5": {
-          "candidates": [
-            "p1-5__s1738865097.jpg",
-            "p1-5__s1738880935.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-5__s1738865097.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 10,
-                "comic_style": 9,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 3,
-                "safety": 10
-              },
-              "avg": 7.75,
-              "passed": false,
-              "note": "The image shows a street scene with a yellow auto-rickshaw and buildings, completely missing the dark leather pouch close-up described in the prompt.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p1-5__s1738880935.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 2,
-                "composition": 2,
-                "safety": 10
-              },
-              "avg": 7.0,
-              "passed": false,
-              "note": "The image shows an outdoor street scene with a colorful building and a rickshaw, completely ignoring the description of a dark leather pouch on a seat with a dramatic spotlight and empty top.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1111,46 +997,8 @@
           }
         },
         "p1-6": {
-          "candidates": [
-            "p1-6__s988304463.jpg",
-            "p1-6__s988296544.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-6__s988304463.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 10,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.88,
-              "passed": false,
-              "note": "The image provided does not match the requested description (no bike handlebars, no back seat, standing instead of turning, incorrect lighting). However, Jian's character consistency and comic style are well executed.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p1-6__s988296544.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 4,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 3,
-                "safety": 10
-              },
-              "avg": 6.88,
-              "passed": false,
-              "note": "The generated image is a full portrait of Jian standing in an alleyway, completely missing the requested action of turning around from handlebars to look at a back seat, as well as the handlebars, back seat, and dark alley shadow details specified in the description.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1176,46 +1024,8 @@
           }
         },
         "p1-7": {
-          "candidates": [
-            "p1-7__s988304463.jpg",
-            "p1-7__s988288625.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-7__s988304463.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 2,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.75,
-              "passed": false,
-              "note": "The generated image is a full-body portrait of Jian standing outdoors in daylight, completely ignoring the requested extreme close-up of hands untying a pouch inside a rickshaw under moody shadow lighting.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p1-7__s988288625.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 2,
-                "comic_style": 3,
-                "anatomy": 3,
-                "no_text": 10,
-                "empty_top": 3,
-                "composition": 2,
-                "safety": 10
-              },
-              "avg": 4.38,
-              "passed": false,
-              "note": "The provided final image is actually the character portrait, not a panel showing Jian's hands untying a pouch inside a rickshaw. It shows Jian standing full body in an alleyway.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1241,46 +1051,8 @@
           }
         },
         "p1-8": {
-          "candidates": [
-            "p1-8__s988304463.jpg",
-            "p1-8__s988288625.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-8__s988304463.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 4,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 10,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.5,
-              "passed": false,
-              "note": "The generated image is a full body/medium shot rather than the requested close-up, and fails to show Jian gasping with a golden glow shining upward from an open pouch onto his face. Character has buzz cut matching portrait 1 instead of short hair from portrait 2, but overall description and action elements are completely missed.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p1-8__s988288625.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 4,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 3,
-                "safety": 10
-              },
-              "avg": 6.75,
-              "passed": false,
-              "note": "The generated image is a full-body shot instead of a close-up, missing the pouch and glowing light described in the prompt. Hair and outfit elements match the reference reasonably well.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1306,46 +1078,8 @@
           }
         },
         "p2-1": {
-          "candidates": [
-            "p2-1__s1653572489.jpg",
-            "p2-1__s1653588327.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-1__s1653572489.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 8.12,
-              "passed": false,
-              "note": "The image shows an alleyway at night, but it completely misses the close-up shot of a leather pouch spilling glowing coins.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-1__s1653588327.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 4,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 4,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.38,
-              "passed": false,
-              "note": "The image shows a person standing in a neon alleyway instead of a close-up of a leather pouch with glowing coins, and there is a character present contrary to the description.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1371,46 +1105,8 @@
           }
         },
         "p2-2": {
-          "candidates": [
-            "p2-2__s219932689.jpg",
-            "p2-2__s219916851.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-2__s219932689.jpg",
-              "scores": {
-                "matches_description": 6,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 3,
-                "empty_top": 4,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 7.12,
-              "passed": false,
-              "note": "The image features a character (Jian driving a motorized rickshaw/tuk-tuk, not pedaling a rickshaw), has visible text/Chinese characters on the neon signs, and the upper 25% is crowded with buildings and signs instead of being empty sky.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-2__s219916851.jpg",
-              "scores": {
-                "matches_description": 7,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 4,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 8.25,
-              "passed": false,
-              "note": "The image features a character driving an auto-rickshaw despite the description asking for a character-free shot. The top 25% is filled with buildings and power lines rather than open sky, and the style is properly illustrated.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1436,46 +1132,8 @@
           }
         },
         "p2-3": {
-          "candidates": [
-            "p2-3__s357338243.jpg",
-            "p2-3__s357322405.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-3__s357338243.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 3,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 1,
-                "empty_top": 3,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 5.25,
-              "passed": false,
-              "note": "The panel includes a character despite the prompt specifying character-free, features Chinese text on the sign, fails the upper 25% empty sky requirement, and does not show Jian wiping sweat.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-3__s357322405.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 7,
-                "empty_top": 8,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 8.25,
-              "passed": false,
-              "note": "The image shows a street corner noodle shop in a great comic style, but it fails to include the character Jian wiping sweat as requested in the description.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1511,46 +1169,8 @@
           }
         },
         "p2-4": {
-          "candidates": [
-            "p2-4__s111228016.jpg",
-            "p2-4__s111220097.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-4__s111228016.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 4,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 7.88,
-              "passed": false,
-              "note": "Lock-card analysis: Character has long black braid, bright green vest, white shirt, dark trousers, and brown leather satchel. Panel description issues: Background completely misses the wet sidewalk and glowing hotel canopy (shows plain green backdrop instead); upper 25% has umbrella ribs instead of empty space.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-4__s111220097.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 2,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 7.25,
-              "passed": false,
-              "note": "Lock items seen: long black braid (yes, dual braids), bright green vest over white shirt (yes), brown leather satchel (yes). The panel description called for a wet sidewalk outside a luxury hotel, glowing hotel canopy, and full upper 25% empty, but the image just shows Mei against a plain green background with an umbrella.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1641,46 +1261,8 @@
           }
         },
         "p2-6": {
-          "candidates": [
-            "p2-6__s243272985.jpg",
-            "p2-6__s243280904.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-6__s243272985.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 10,
-                "comic_style": 9,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 7,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 8.38,
-              "passed": false,
-              "note": "The image shows a yellow cushioned armchair or seat rather than a tight shot of dark rickshaw cushions with a leather pouch strap, and the top 25% is partially occupied by the top of the chair frame and architectural elements.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-6__s243280904.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 8.0,
-              "passed": false,
-              "note": "The image depicts a motorcycle parked on a street rather than a close-up of a rickshaw seat with a leather pouch strap.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1706,46 +1288,8 @@
           }
         },
         "p2-7": {
-          "candidates": [
-            "p2-7__s988304463.jpg",
-            "p2-7__s988296544.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-7__s988304463.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 5,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.12,
-              "passed": false,
-              "note": "Lock items check: hair is short black buzz cut/styled, outfit is bright blue jacket over brown shirt and grey pants (shirt color differs from lock card black shirt, but consistent with portrait), accessory has bangles. Description failure: requested wet rainy street with dark neon lights and over-the-shoulder shot looking back toward passenger seat, but image shows a daytime alleyway portrait.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-7__s988296544.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 2,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 10,
-                "composition": 3,
-                "safety": 10
-              },
-              "avg": 6.88,
-              "passed": false,
-              "note": "Lock-card analysis: Hair is short black (not a buzz cut), outfit is a blue jacket with a brown shirt and grey pants, accessory is bangles and a patterned glove/cuff. The image completely fails the description: it is an outdoor daytime alleyway shot instead of a wet rainy street with dark neon lights, and it shows a full-body/three-quarters front view of Jian standing instead of an over-the-shoulder shot looking back toward a passenger seat.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1771,46 +1315,8 @@
           }
         },
         "p2-8": {
-          "candidates": [
-            "p2-8__s111220097.jpg",
-            "p2-8__s111228016.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-8__s111220097.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 2,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 7.25,
-              "passed": false,
-              "note": "The image features Mei with correct hair, vest, and satchel, but it fails the description and composition requirements: it's a character portrait against a green background rather than being inside a rickshaw cabin with the upper 25% dark canvas.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-8__s111228016.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 8,
-                "comic_style": 9,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 3,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 7.25,
-              "passed": false,
-              "note": "Hair in the final image shows a single braid over the shoulder instead of two, and the background is a plain green studio backdrop rather than a rickshaw cabin interior with a dark canvas top.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1836,46 +1342,8 @@
           }
         },
         "p3-1": {
-          "candidates": [
-            "p3-1__s988304463.jpg",
-            "p3-1__s988296544.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-1__s988304463.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 3,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 2,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.12,
-              "passed": false,
-              "note": "Image analysis: The character has short hair, a blue jacket, and grey pants, but the setting is completely wrong (daytime alleyway instead of busy neon street at night inside a rickshaw), and Jian is not holding a golden pouch. The top 25% is clear sky/buildings, not a dark wet canvas top.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-1__s988296544.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 7,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 3,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 7.5,
-              "passed": false,
-              "note": "Only two images provided (portrait + panel), so comparing the last as the panel. The panel depicts Jian outdoors in daylight instead of a busy neon street at night inside a rickshaw, missing the golden pouch open and the dark wet canvas top.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -1966,46 +1434,8 @@
           }
         },
         "p3-3": {
-          "candidates": [
-            "p3-3__s370029168.jpg",
-            "p3-3__s370013330.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-3__s370029168.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 4,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.62,
-              "passed": false,
-              "note": "The image shows an exterior view of a colorful rickshaw rather than a low-angle close-up of the wet seat with a golden pouch.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-3__s370013330.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 10,
-                "comic_style": 9,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 8.0,
-              "passed": false,
-              "note": "The image shows a full pink rickshaw in a narrow street, not a low-angle close-up of a wet rickshaw seat with a golden pouch as described.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -2031,46 +1461,8 @@
           }
         },
         "p3-4": {
-          "candidates": [
-            "p3-4__s988304463.jpg",
-            "p3-4__s988296544.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-4__s988304463.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 4,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 2,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.38,
-              "passed": false,
-              "note": "Only two portrait images were provided and no panel image to judge. The images provided are both full-body standing portraits, not a medium close-up shot inside a dark rickshaw cabin with an empty top 25%.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-4__s988296544.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 5,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 2,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 6.75,
-              "passed": false,
-              "note": "Only two images provided (both portraits of Jian, no panel image was included as the LAST image). Evaluated against the second portrait which shows Jian with a short black spiky haircut and brown shirt instead of a black shirt.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -2096,46 +1488,8 @@
           }
         },
         "p3-5": {
-          "candidates": [
-            "p3-5__s988304463.jpg",
-            "p3-5__s988296544.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-5__s988304463.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 6,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.38,
-              "passed": false,
-              "note": "The character does not match the description: he is not holding out a heavy golden pouch towards the passenger seat, there is no rainy sky, and the composition is a portrait rather than the requested action shot. Shirt is also brownish-orange instead of black.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-5__s988296544.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 4,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 4,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.5,
-              "passed": false,
-              "note": "The image fails to show Jian holding out a heavy golden pouch toward a passenger seat, and there is no rainy sky or passenger seat context. The composition is an alleyway shot similar to the character sheet. The character has a buzz cut instead of the hair in the second reference, but wears a blue jacket over a brown/orange shirt and grey pants with bracelets.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -2161,46 +1515,8 @@
           }
         },
         "p3-6": {
-          "candidates": [
-            "p3-6__s111228016.jpg",
-            "p3-6__s111220097.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-6__s111228016.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 7,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 3,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 7.25,
-              "passed": false,
-              "note": "The character has a green vest, white shirt, and satchel, but the golden pouch mentioned in the description is missing, the upper 25% is not empty, and the hair styling differs slightly from the reference portrait.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-6__s111220097.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 3,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 7.38,
-              "passed": false,
-              "note": "The panel shows Mei, but the golden pouch specified in the description is missing, and the top 25% is not empty/dark rainy background as described.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -2226,46 +1542,8 @@
           }
         },
         "p3-7": {
-          "candidates": [
-            "p3-7__s1099500803.jpg",
-            "p3-7__s1099508722.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-7__s1099500803.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 2,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 3,
-                "safety": 10
-              },
-              "avg": 6.5,
-              "passed": false,
-              "note": "The final panel shows a single fused/hybrid character instead of two distinct characters (Jian and Mei) as requested in the description and composition. It fails to show Mei handing a coin to Jian, featuring only one person blending features of both characters.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-7__s1099508722.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 2,
-                "comic_style": 10,
-                "anatomy": 5,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.5,
-              "passed": false,
-              "note": "The panel incorrectly merges Jian and Mei into a single mutated character instead of showing two distinct characters as requested in the description and positions. Both characters' features and outfits are blended together inappropriately.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -2291,46 +1569,8 @@
           }
         },
         "p3-8": {
-          "candidates": [
-            "p3-8__s988304463.jpg",
-            "p3-8__s988296544.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-8__s988304463.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 5,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 7.75,
-              "passed": false,
-              "note": "The image shows a character standing in an alleyway, completely missing the rickshaw, rainy street, neon signs, and sunrise specified in the description. The hair and shirt colors also differ slightly from the lock card.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-8__s988296544.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 7,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 7.62,
-              "passed": false,
-              "note": "The generated image completely missed the requested description (smiling brightly, pulling rickshaw, rainy street, neon signs, sunrise). It only shows a character standing in an alleyway.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
+          "candidates": [],
+          "qa": [],
           "approved": null,
           "status": "pending",
           "prefilter": {
@@ -2385,7 +1625,8 @@
         "2026-11-17T00:17:57Z panel p3-6: all candidates failed QA",
         "2026-11-17T00:18:13Z panel p3-7: all candidates failed QA",
         "2026-11-17T00:18:22Z panel p3-8: all candidates failed QA",
-        "2026-11-17T00:18:24Z pushed REPAIR job st-20261116-0217f9-repair-1794874702 (20 items, ~0.92 GPU-h, kernel v10)"
+        "2026-11-17T00:18:24Z pushed REPAIR job st-20261116-0217f9-repair-1794874702 (20 items, ~0.92 GPU-h, kernel v10)",
+        "2026-11-17T00:58:56Z pushed PANELS job st-20261116-0217f9-panels-1794877134 (20 items, ~1.14 GPU-h, kernel v11)"
       ]
     }
   },
