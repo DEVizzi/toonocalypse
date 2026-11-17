@@ -67,16 +67,25 @@ def portrait_items(story: dict[str, Any], names: list[str] | None = None, salt: 
     return items
 
 
+def short_tag(c: dict[str, Any]) -> str:
+    """Compact look for panel prompts; the IP-Adapter portrait carries the rest of the identity."""
+    who = f"{c.get('age', '')} year old {c.get('gender', '')}".strip()
+    return f"{c['name']} ({who}, {c.get('hair', '')}, {(c.get('anchors') or [c.get('outfit', '')])[0]})"
+
+
 def panel_prompt(panel: dict[str, Any], cast_by_name: dict[str, dict[str, Any]]) -> str:
-    sg = style_guide()
-    chars = "; ".join(f"{c['name']} on the {c['position']}: {cast_by_name[c['name']]['visual_prompt']}"
-                      for c in panel.get("characters", []))
+    # Scene/action first and the prompt kept short: the dry run showed long style + full lock cards drowning the action.
+    chars = ", ".join(f"{short_tag(cast_by_name[c['name']])} on the {c['position']}" for c in panel.get("characters", []))
+    n = len(panel.get("characters", []))
+    if n > 1:
+        chars = f"{n} separate people side by side: {chars}"
     shot = f"{panel.get('camera', '')} shot, {panel.get('lighting', '')} lighting, {panel.get('emotion', '')} mood"
-    return (f"({sg['positive']})1.2, {panel['image_prompt']}. {chars + '. ' if chars else ''}{shot}. "
-            f"Empty sky or plain wall in the upper quarter of the frame.")
+    return (f"{panel['image_prompt']}. {chars + '. ' if chars else ''}{shot}. "
+            f"(comic book panel, bold ink lines, cel shading)1.2, uncluttered sky or dark background at the top.")
 
 
-PANEL_NEGATIVE_EXTRA = "photo, photograph, photorealistic, 3d render, cgi"
+PANEL_NEGATIVE_EXTRA = "photo, photograph, photorealistic, 3d render, cgi, character portrait, plain studio background"
+NO_PEOPLE_NEGATIVE = "person, people, human, man, woman, face, figure, crowd"
 
 
 def panel_items(story: dict[str, Any], only: set[str] | None = None, salt: int = 0, repair: bool = False) -> list[dict[str, Any]]:
@@ -96,7 +105,7 @@ def panel_items(story: dict[str, Any], only: set[str] | None = None, salt: int =
             seed = sum(char_seed(story["story_id"], c["name"], salt) for c in chars) % 2_000_000_000 if chars \
                 else char_seed(story["story_id"], pid, salt)
             items.append(_base_item(id=pid, kind="panel", prompt=panel_prompt(p, cast),
-                                    negative=f"{sg['negative']}, {PANEL_NEGATIVE_EXTRA}",
+                                    negative=f"{sg['negative']}, {PANEL_NEGATIVE_EXTRA}{'' if chars else ', ' + NO_PEOPLE_NEGATIVE}",
                                     seed=seed, n=im["candidates"]["panel"], keep=im["candidates"]["panel_keep"],
                                     clip_text=p["image_prompt"][:300], refs=refs,
                                     ip_scale=im["ip_adapter"]["repair_scale" if repair else "scale"]))

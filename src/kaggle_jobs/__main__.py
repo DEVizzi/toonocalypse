@@ -54,7 +54,7 @@ def smoke(cmd: str, story: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["start", "collect", "smoke", "smoke-collect", "restart-portraits"])
+    ap.add_argument("cmd", choices=["start", "collect", "smoke", "smoke-collect", "restart-portraits", "restart-panels"])
     args = ap.parse_args(argv)
     q = Quota()
     b = load_state("story_bible.json")
@@ -72,6 +72,24 @@ def main(argv: list[str] | None = None) -> int:
         art.update(phase="PORTRAITS", job=None, portrait_repair=0, repair_round=0, session_retries=0, panels={})
         art["portraits"] = {c["name"]: {"candidates": [], "approved": None, "qa": None, "failed": False} for c in story["cast"]}
         machine.push_job(story, "PORTRAITS", jobs.portrait_items(story, salt=7), cli_tools, q)
+        save_state("story_bible.json", b)
+        q.save()
+        return 0
+    if args.cmd == "restart-panels":  # operator tool after a prompt fix: keep approved panels, redo the rest
+        from src.kaggle_jobs import job as jobs
+
+        if cli_tools.status() in ("queued", "running"):
+            print("A Kaggle job is still running; try again after it finishes.")
+            return 0
+        art = story["art"]
+        if art.get("job"):
+            print(f"discarding uncollected job {art['job']['id']} (made with the old prompts)")
+            art["job"] = None
+        todo = {pid for pid, s in art["panels"].items() if s["status"] != "approved"}
+        art.update(phase="PANELS", repair_round=0, session_retries=0)
+        for pid in todo:
+            art["panels"][pid].update(status="pending", candidates=[], qa=[], approved=None)
+        machine.push_job(story, "PANELS", jobs.panel_items(story, todo, salt=11), cli_tools, q)
         save_state("story_bible.json", b)
         q.save()
         return 0

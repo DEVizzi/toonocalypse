@@ -57,12 +57,14 @@ def panel_qa(panel: dict[str, Any], cast: dict[str, dict[str, Any]], image: Path
     chars = panel.get("characters", [])
     refs = [(c["name"], portraits[c["name"]]) for c in chars if c["name"] in portraits]
     locks = {n: {k: cast[n].get(k) for k in ["hair", "outfit", "accessory", "skin_tone", "age", "anchors"]} for n, _ in refs}
-    prompt = (f"You are a strict comic panel QA reviewer. The LAST image is the panel to judge. "
-              f"{'The first images are approved character portraits in this order: ' + str([n for n, _ in refs]) + '. ' if refs else ''}"
+    prompt = (f"You are a strict comic panel QA reviewer. You get {len(refs) + 1} images. "
+              f"{'Images 1-' + str(len(refs)) + ' are approved reference portraits of ' + str([n for n, _ in refs]) + ' (NOT to be judged). ' if refs else ''}"
+              f"Image {len(refs) + 1} (the LAST one) is the PANEL to judge. "
               f"Panel description: {panel['image_prompt']}. Characters and positions: {chars or 'none (character-free shot)'}. "
               f"Lock cards: {locks}. {STRICT}Score 1-10: {PANEL_CRITERIA}. character_consistency=10 if there are no characters; "
-              "otherwise faces, hair, outfit colours and accessory must match the portraits. empty_top: upper 25% is empty sky/wall "
-              "suitable for speech bubbles. no_text=10 only with no letters/logos/watermarks. safety=10 only if fine for ages 10+ "
+              "otherwise faces, hair, outfit colours and accessory must match the portraits. empty_top: the upper 25% is "
+              "uncluttered (sky, wall, ceiling, dark or blurred background) so a speech bubble can sit there without hiding a face. "
+              "no_text=10 only with no letters/logos/watermarks. safety=10 only if fine for ages 10+ "
               '(no gore/blood). Return JSON: {"scores":{...},"note":"short reason"}')
     contents = [prompt, *[_img(p) for _, p in refs], _img(image)]
     out, model = generate_json(contents, "qa_panel", kind="vision", quota=quota)

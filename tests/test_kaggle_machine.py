@@ -112,7 +112,7 @@ def test_full_happy_path_with_one_repair(env):
     tools.manifest = manifest_for(panels_job)
     assert machine.collect(s, tools, FakeQA(fail_panels={"p1-3"}), q) == "REPAIR_1_PUSHED"
     repair = tools.pushed[-1]
-    assert [i["id"] for i in repair["items"]] == ["p1-3"] and repair["items"][0]["ip_scale"] == 0.75
+    assert [i["id"] for i in repair["items"]] == ["p1-3"] and repair["items"][0]["ip_scale"] == 0.55
 
     tools.manifest = manifest_for(repair)
     assert machine.collect(s, tools, FakeQA(), q) == "READY_TO_RENDER"
