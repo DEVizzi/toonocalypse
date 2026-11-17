@@ -25,8 +25,8 @@ image:
     repo: "h94/IP-Adapter"
     weight: "sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors"
     image_encoder: "models/image_encoder"
-    scale: 0.45
-    repair_scale: 0.5
+    scale: 0.22
+    repair_scale: 0.26
   upscaler: "RealESRGAN_x2plus"
   upscaler_url: "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth"
   est_gpu_seconds_per_image: 40       # used for the weekly-quota check before every push
@@ -39,7 +39,7 @@ image:
   prefilter:
     clip_model: "openai/clip-vit-large-patch14"
     dino_model: "facebook/dinov2-base"
-    dino_min_similarity: 0.55
+    dino_min_similarity: 0.35
     reject_if_text: true
 
 tts:

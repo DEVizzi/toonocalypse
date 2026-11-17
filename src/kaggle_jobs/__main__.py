@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
         art.update(phase="PANELS", repair_round=0, session_retries=0)
         for pid in todo:
             art["panels"][pid].update(status="pending", candidates=[], qa=[], approved=None)
-        machine.push_job(story, "PANELS", jobs.panel_items(story, todo, salt=11), cli_tools, q)
+        machine.push_job(story, "PANELS", jobs.panel_items(story, todo, salt=13), cli_tools, q)
         save_state("story_bible.json", b)
         q.save()
         return 0

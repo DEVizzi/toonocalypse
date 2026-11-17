@@ -202,8 +202,12 @@ def prefilter_and_upscale():
             entry["reasons"] = reasons
             (rec["rejected"] if reasons else scored).append(entry)
             entry["_img"] = img
-        # the weakest anchor dominates: a missing accessory / bled colour sinks the candidate
-        scored.sort(key=lambda e: e["clip"] + (e["dino"] or 0) + 3 * e.get("anchor_min", 0), reverse=True)
+        if not scored and rec["rejected"]:  # never return 0 candidates if non-text images exist
+            scored = [e for e in rec["rejected"] if not e["text"]] or list(rec["rejected"])
+            for e in scored:
+                rec["rejected"].remove(e)
+        # CLIP (matches the scene prompt) leads; DINO (portrait similarity) is a tiebreaker; portraits also use anchor_min
+        scored.sort(key=lambda e: 3 * e["clip"] + 0.4 * (e["dino"] or 0) + 3 * e.get("anchor_min", 0), reverse=True)
         for e in scored[: it["keep"]]:
             img = e.pop("_img")
             final = upscale(img) if it["upscale"] else img
