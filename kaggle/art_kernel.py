@@ -58,6 +58,13 @@ def region_mask(where, w, h):
     return m
 
 
+def ref_crop(img):
+    """Head + torso, centre: less background and pose for IP-Adapter to copy."""
+    w, h = img.size
+    return img.crop((int(w * 0.15), 0, int(w * 0.85), int(h * 0.6)))
+
+
+
 # ---------------------------------------------------------------- generation
 def generate_all():
     from compel import Compel, ReturnedEmbeddingsType
@@ -91,7 +98,7 @@ def generate_all():
                       guidance_scale=it["guidance"], width=it["width"], height=it["height"])
         if ip_loaded:
             if refs:
-                imgs = [b64_image(JOB["refs"][r["char"]]) for r in refs]
+                imgs = [ref_crop(b64_image(JOB["refs"][r["char"]])) for r in refs]
                 wheres = [r["where"] for r in refs]
                 scales = [it["ip_scale"]] * len(refs)
                 if len(refs) == 1:

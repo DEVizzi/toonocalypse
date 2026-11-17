@@ -103,8 +103,8 @@ def panel_items(story: dict[str, Any], only: set[str] | None = None, salt: int =
             for c in chars:
                 where = "full" if len(chars) == 1 else ("left" if c["position"] == "left" else "right" if c["position"] == "right" else "center")
                 refs.append({"char": c["name"], "where": where})
-            seed = sum(char_seed(story["story_id"], c["name"], salt) for c in chars) % 2_000_000_000 if chars \
-                else char_seed(story["story_id"], pid, salt)
+            # per-panel seed: identity comes from the IP-Adapter portrait; a per-character seed made every solo panel identical
+            seed = char_seed(story["story_id"], pid, salt)
             items.append(_base_item(id=pid, kind="panel", prompt=panel_prompt(p, cast),
                                     negative=f"{sg['negative']}, {PANEL_NEGATIVE_EXTRA}{'' if chars else ', ' + NO_PEOPLE_NEGATIVE}",
                                     seed=seed, n=im["candidates"]["panel"], keep=im["candidates"]["panel_keep"],
