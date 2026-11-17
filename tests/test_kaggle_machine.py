@@ -90,8 +90,10 @@ def test_job_items_inject_visual_prompt_and_masks():
     assert items["p1-1"]["refs"] == []
     assert items["p1-2"]["refs"] == [{"char": "Jin", "where": "full"}]
     assert items["p1-3"]["refs"] == [{"char": "Jin", "where": "left"}, {"char": "Madam Wong", "where": "right"}]
-    assert "Jin on the left: Jin look" in items["p1-3"]["prompt"]
-    assert "upper quarter" in items["p1-3"]["prompt"]
+    p = items["p1-3"]["prompt"]
+    assert p.startswith("they argue") and "2 separate people side by side: Jin" in p and "Madam Wong" in p and "on the right" in p
+    assert "uncluttered sky" in p
+    assert "person, people" in items["p1-1"]["negative"] and "person, people" not in items["p1-2"]["negative"]
     # fixed seed per character per story
     assert jobs.char_seed(s["story_id"], "Jin") == jobs.char_seed(s["story_id"], "Jin")
     assert jobs.portrait_items(s)[1]["id"] == "portrait-madam-wong"

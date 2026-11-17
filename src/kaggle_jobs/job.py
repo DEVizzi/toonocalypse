@@ -69,8 +69,9 @@ def portrait_items(story: dict[str, Any], names: list[str] | None = None, salt: 
 
 def short_tag(c: dict[str, Any]) -> str:
     """Compact look for panel prompts; the IP-Adapter portrait carries the rest of the identity."""
-    who = f"{c.get('age', '')} year old {c.get('gender', '')}".strip()
-    return f"{c['name']} ({who}, {c.get('hair', '')}, {(c.get('anchors') or [c.get('outfit', '')])[0]})"
+    who = f"{c['age']} year old {c.get('gender', '')}".strip() if c.get("age") else c.get("gender", "")
+    bits = [b for b in [who, c.get("hair"), (c.get("anchors") or [c.get("outfit")])[0]] if b]
+    return f"{c['name']} ({', '.join(bits)})" if bits else c["name"]
 
 
 def panel_prompt(panel: dict[str, Any], cast_by_name: dict[str, dict[str, Any]]) -> str:
