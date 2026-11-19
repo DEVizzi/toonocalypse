@@ -97,19 +97,28 @@ def build_flux():
         raise RuntimeError("no FLUX.1-schnell repo reachable without a token")
     MANIFEST["models"]["flux_schnell"]["repo"] = repo
     dt = torch.float16
-    tr = FluxTransformer2DModel.from_pretrained(repo, subfolder="transformer", torch_dtype=dt, quantization_config=DBnb(
-        load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=dt))
+    # T4 x2: text encoders (CLIP + 8-bit T5) on cuda:1, 4-bit transformer + VAE on cuda:0
     te = T5EncoderModel.from_pretrained(repo, subfolder="text_encoder_2", torch_dtype=dt,
-                                        quantization_config=TBnb(load_in_8bit=True))
-    pipe = FluxPipeline.from_pretrained(repo, transformer=tr, text_encoder_2=te, torch_dtype=dt)
-    pipe.enable_model_cpu_offload()
-    return pipe
+                                        quantization_config=TBnb(load_in_8bit=True), device_map={"": 1})
+    text = FluxPipeline.from_pretrained(repo, transformer=None, vae=None, text_encoder_2=te, torch_dtype=dt)
+    text.text_encoder.to("cuda:1")
+    tr = FluxTransformer2DModel.from_pretrained(repo, subfolder="transformer", torch_dtype=dt, device_map={"": 0},
+                                                quantization_config=DBnb(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                                                                         bnb_4bit_compute_dtype=dt))
+    image = FluxPipeline.from_pretrained(repo, transformer=tr, text_encoder=None, text_encoder_2=None, tokenizer=None,
+                                         tokenizer_2=None, torch_dtype=dt)
+    image.vae.to("cuda:0")
+    return text, image
 
 
-def gen_flux(pipe, prompt, seed):
+def gen_flux(pipes, prompt, seed):
+    text, image = pipes
+    with torch.no_grad():
+        pe, pooled, _ = text.encode_prompt(prompt=prompt, prompt_2=None, device="cuda:1", max_sequence_length=512)
     g = torch.Generator("cpu").manual_seed(seed)
-    return pipe(prompt, width=W, height=H, num_inference_steps=4, guidance_scale=0.0, max_sequence_length=512,
-                generator=g).images[0]
+    out = image(prompt_embeds=pe.to("cuda:0"), pooled_prompt_embeds=pooled.to("cuda:0"), width=W, height=H,
+                num_inference_steps=4, guidance_scale=0.0, generator=g).images[0]
+    return out
 
 
 # ---------------------------------------------------------------- B: DreamShaper XL (SDXL, OpenRAIL++-M) + Compel
