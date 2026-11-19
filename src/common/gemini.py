@@ -31,7 +31,8 @@ def client():
         key = os.environ.get("GOOGLE_API_KEY")
         if not key:
             raise Abort("GOOGLE_API_KEY is not set")
-        _client = genai.Client(api_key=key, http_options=types.HttpOptions(api_version=models()["gemini"]["api_version"]))
+        _client = genai.Client(api_key=key, http_options=types.HttpOptions(api_version=models()["gemini"]["api_version"],
+                                                                          timeout=120_000))
     return _client
 
 
@@ -88,8 +89,10 @@ def generate(contents: list[Any] | str, step: str, kind: str = "text", want_json
                     raise
                 print(f"[gemini:{step}] {last}; next model", flush=True)
                 break
-            except errors.ServerError as e:
-                last = f"{model} {e.code}"
+            except Exception as e:  # ServerError, request timeout, connection reset: retry, then next model
+                if isinstance(e, errors.ClientError):
+                    raise
+                last = f"{model} {getattr(e, 'code', type(e).__name__)}"
                 if server_try < 3:
                     wait = (15, 45, 90)[server_try]
                     print(f"[gemini:{step}] {last}; retrying in {wait}s", flush=True)

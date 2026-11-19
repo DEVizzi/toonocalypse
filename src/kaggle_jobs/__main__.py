@@ -93,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
         save_state("story_bible.json", b)
         q.save()
         return 0
+    cli_tools.checkpoint = lambda: (save_state("story_bible.json", b), q.save())  # per-panel QA progress
     try:
         if args.cmd == "start":
             if not story or story.get("status") != "SCRIPTED":

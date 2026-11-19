@@ -18,6 +18,7 @@ from src.common.retry import Abort
 from src.kaggle_jobs import job as jobs
 
 MAX_SESSION_RETRIES = 2
+QA_BUDGET_S = 40 * 60  # leave room in the 60-min collect job to save state
 
 
 class QuotaWait(Exception):
@@ -119,9 +120,13 @@ def _run_qa(story: dict[str, Any], tools, qa, quota: Quota) -> None:
     if art["phase"] in ("PANELS", "REPAIR"):
         lookup = _panel_lookup(story)
         portraits = None
+        deadline = time.time() + QA_BUDGET_S
         for pid, st in art["panels"].items():
             if st["status"] != "candidates":
                 continue
+            if time.time() > deadline:
+                _log(story, "QA time budget reached; the next collect resumes")
+                return
             if portraits is None:
                 names = {n: v["approved"] for n, v in art["portraits"].items()}
                 got = tools.download_assets(tag, list(names.values()), assets)
@@ -139,6 +144,7 @@ def _run_qa(story: dict[str, Any], tools, qa, quota: Quota) -> None:
             else:
                 st["status"] = "failed"
                 _log(story, f"panel {pid}: all candidates failed QA")
+            getattr(tools, "checkpoint", lambda: None)()
 
 
 def collect(story: dict[str, Any], tools, qa, quota: Quota) -> str:
