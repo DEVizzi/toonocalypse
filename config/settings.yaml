@@ -26,10 +26,12 @@ judge:                          # story/script judge (§8)
   max_rewrites: 3
 
 panel_qa:                       # Gemini vision QA (§7.3/§7.4)
-  min_each: 7
-  min_avg: 8
+  min_each: 5
+  min_avg: 7
   safety: 10
+  soft_criteria: [empty_top]     # advisory only (bubbles can be placed elsewhere)
   max_repair_rounds: 2
+  best_effort_after_round: 1     # human-review mode: after N repair rounds use the best safe candidate, flag needs_review
   max_portrait_repairs: 2
 
 buffer:

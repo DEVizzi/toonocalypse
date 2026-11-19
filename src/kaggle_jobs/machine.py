@@ -147,6 +147,21 @@ def _run_qa(story: dict[str, Any], tools, qa, quota: Quota) -> None:
             getattr(tools, "checkpoint", lambda: None)()
 
 
+def _best_effort(story: dict[str, Any], failed: list[str]) -> list[str]:
+    """Human-review mode: approve the best safe candidate (safety=10, no text) and flag it. Returns still-failed ids."""
+    art, left = _art(story), []
+    for pid in failed:
+        st = art["panels"][pid]
+        safe = [q for q in st["qa"] if q["scores"].get("safety", 0) >= 10 and q["scores"].get("no_text", 0) >= 5]
+        if not safe:
+            left.append(pid)
+            continue
+        best = max(safe, key=lambda q: q["avg"])
+        st.update(approved=best["file"], status="approved", needs_review=True)
+        _log(story, f"panel {pid}: best-effort {best['file']} (avg {best['avg']}) -> needs human review")
+    return left
+
+
 def collect(story: dict[str, Any], tools, qa, quota: Quota) -> str:
     """Advance one step. Returns a short status string. Raises Abort to kill the story, QuotaWait to pause."""
     art = _art(story)
@@ -200,6 +215,8 @@ def collect(story: dict[str, Any], tools, qa, quota: Quota) -> str:
         if any(s["status"] == "candidates" for s in panels.values()):
             return "QA_PENDING"
         failed = [pid for pid, s in panels.items() if s["status"] == "failed"]
+        if failed and art["repair_round"] >= settings()["panel_qa"].get("best_effort_after_round", 99):
+            failed = _best_effort(story, failed)
         if failed:
             if art["repair_round"] >= settings()["panel_qa"]["max_repair_rounds"]:
                 raise Abort(f"{len(failed)} panels failed QA after {art['repair_round']} repair rounds: {failed[:6]}")

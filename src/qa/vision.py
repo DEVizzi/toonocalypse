@@ -16,7 +16,8 @@ def verdict(scores: dict[str, Any], criteria: list[str]) -> dict[str, Any]:
     cfg = settings()["panel_qa"]
     s = {k: int(scores.get(k, 0) or 0) for k in criteria}
     avg = round(sum(s.values()) / len(s), 2)
-    passed = min(s.values()) >= cfg["min_each"] and avg >= cfg["min_avg"] and s["safety"] >= cfg["safety"]
+    hard = [v for k, v in s.items() if k not in cfg.get("soft_criteria", [])]
+    passed = min(hard) >= cfg["min_each"] and avg >= cfg["min_avg"] and s["safety"] >= cfg["safety"]
     return {"scores": s, "avg": avg, "passed": passed}
 
 

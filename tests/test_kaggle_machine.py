@@ -145,6 +145,27 @@ def test_abort_after_repair_rounds_exhausted(env):
             machine.collect(s, tools, FakeQA(fail_panels={"p1-1"}), q)
 
 
+class SafeFailQA(FakeQA):
+    def panel_qa(self, panel, cast, image, portraits, quota=None):
+        r = super().panel_qa(panel, cast, image, portraits, quota)
+        return r | {"scores": {"safety": 10, "no_text": 9}}
+
+
+def test_best_effort_after_repair_flags_for_review(env):
+    tools, q = env
+    s = make_story()
+    machine.start(s, tools, q)
+    tools.state, tools.manifest = "complete", manifest_for(tools.pushed[-1])
+    machine.collect(s, tools, FakeQA(), q)
+    result = None
+    for _ in range(3):
+        tools.manifest = manifest_for(tools.pushed[-1])
+        result = machine.collect(s, tools, SafeFailQA(fail_panels={"p1-1"}), q)
+        if result == "READY_TO_RENDER":
+            break
+    assert result == "READY_TO_RENDER" and s["art"]["panels"]["p1-1"]["needs_review"] is True
+
+
 def test_quota_blocks_push(env, monkeypatch):
     tools, q = env
     q.kaggle_record(25.4)
