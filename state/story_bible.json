@@ -598,31 +598,7 @@
     },
     "art": {
       "phase": "PANELS",
-      "job": {
-        "id": "st-20261116-0217f9-panels-1795083317",
-        "phase": "PANELS",
-        "items": [
-          "p1-2",
-          "p1-4",
-          "p1-6",
-          "p1-7",
-          "p1-8",
-          "p2-2",
-          "p2-3",
-          "p2-7",
-          "p2-8",
-          "p3-1",
-          "p3-3",
-          "p3-4",
-          "p3-5",
-          "p3-6",
-          "p3-7",
-          "p3-8"
-        ],
-        "pushed_at": 1795083320.0746896,
-        "est_hours": 0.96,
-        "version": "15"
-      },
+      "job": null,
       "session_retries": 0,
       "portrait_repair": 0,
       "repair_round": 0,
@@ -854,37 +830,67 @@
           }
         },
         "p1-2": {
-          "candidates": [],
-          "qa": [],
-          "approved": null,
-          "status": "pending",
+          "candidates": [
+            "p1-2__s191514765.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p1-2__s191514765.jpg",
+              "scores": {
+                "matches_description": 8,
+                "character_consistency": 8,
+                "comic_style": 9,
+                "anatomy": 8,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 8,
+                "safety": 10
+              },
+              "avg": 8.62,
+              "passed": true,
+              "note": "Jian is riding a bicycle in an alleyway matching most descriptors, though the rickshaw aspect is interpreted as a standard bike and pants are brownish rather than grey. Comic style, consistency, and safety are solid.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
+          "approved": "p1-2__s191514765.jpg",
+          "status": "approved",
           "prefilter": {
             "kept": [
               {
-                "seed": 191289469,
-                "clip": 0.1337,
-                "dino": 0.7111,
+                "seed": 191514765,
+                "clip": 0.1945,
+                "dino": 0.3599,
                 "text": false,
                 "reasons": [],
-                "file": "p1-2__s191289469.jpg"
-              },
-              {
-                "seed": 191313226,
-                "clip": 0.1375,
-                "dino": 0.6862,
-                "text": false,
-                "reasons": [],
-                "file": "p1-2__s191313226.jpg"
+                "file": "p1-2__s191514765.jpg"
               }
             ],
             "rejected": [
               {
-                "seed": 191305307,
-                "clip": 0.1482,
-                "dino": 0.3174,
+                "seed": 191498927,
+                "clip": 0.2056,
+                "dino": 0.2444,
                 "text": false,
                 "reasons": [
-                  "dino 0.3174 < 0.55"
+                  "dino 0.2444 < 0.35"
+                ]
+              },
+              {
+                "seed": 191506846,
+                "clip": 0.2152,
+                "dino": 0.2839,
+                "text": false,
+                "reasons": [
+                  "dino 0.2839 < 0.35"
+                ]
+              },
+              {
+                "seed": 191522684,
+                "clip": 0.2297,
+                "dino": 0.2753,
+                "text": false,
+                "reasons": [
+                  "dino 0.2753 < 0.35"
                 ]
               }
             ]
@@ -949,27 +955,65 @@
           }
         },
         "p1-4": {
-          "candidates": [],
-          "qa": [],
+          "candidates": [
+            "p1-4__s280546690.jpg",
+            "p1-4__s280530852.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p1-4__s280546690.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 8,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 9,
+                "composition": 7,
+                "safety": 10
+              },
+              "avg": 8.5,
+              "passed": false,
+              "note": "Jian is present with his blue jacket and silver bangle, but the rickshaw pull context, sweat wiping, and glowing billboard described are not clearly visible in the panel.",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p1-4__s280530852.jpg",
+              "scores": {
+                "matches_description": 3,
+                "character_consistency": 3,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 6,
+                "safety": 10
+              },
+              "avg": 7.38,
+              "passed": false,
+              "note": "The character fails multiple lock card checks (hair color is white instead of black, jacket is yellow-green instead of bright blue, missing the silver bangle, and missing grey pants). Rickshaw and glowing billboard from the description are completely missing.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "pending",
+          "status": "failed",
           "prefilter": {
             "kept": [
               {
-                "seed": 280337232,
-                "clip": 0.2098,
-                "dino": 0.7215,
+                "seed": 280546690,
+                "clip": 0.2251,
+                "dino": 0.7213,
                 "text": false,
                 "reasons": [],
-                "file": "p1-4__s280337232.jpg"
+                "file": "p1-4__s280546690.jpg"
               },
               {
-                "seed": 280345151,
-                "clip": 0.1993,
-                "dino": 0.6811,
+                "seed": 280530852,
+                "clip": 0.2323,
+                "dino": 0.5829,
                 "text": false,
                 "reasons": [],
-                "file": "p1-4__s280345151.jpg"
+                "file": "p1-4__s280530852.jpg"
               }
             ],
             "rejected": []
@@ -1024,81 +1068,188 @@
           }
         },
         "p1-6": {
-          "candidates": [],
-          "qa": [],
-          "approved": null,
-          "status": "pending",
+          "candidates": [
+            "p1-6__s274171030.jpg",
+            "p1-6__s274155192.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p1-6__s274171030.jpg",
+              "scores": {
+                "matches_description": 7,
+                "character_consistency": 8,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 7,
+                "safety": 10
+              },
+              "avg": 8.62,
+              "passed": true,
+              "note": "Jian matches character features well with the blue jacket and handlebars present, though the upper area is bright blue sky instead of dark alley shadows, and the hair style is slightly longer on top than the buzz cut reference.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
+          "approved": "p1-6__s274171030.jpg",
+          "status": "approved",
           "prefilter": {
             "kept": [
               {
-                "seed": 273969491,
-                "clip": 0.1448,
-                "dino": 0.7941,
+                "seed": 274171030,
+                "clip": 0.2085,
+                "dino": 0.3985,
                 "text": false,
                 "reasons": [],
-                "file": "p1-6__s273969491.jpg"
+                "file": "p1-6__s274171030.jpg"
               },
               {
-                "seed": 273945734,
-                "clip": 0.1294,
-                "dino": 0.7506,
+                "seed": 274155192,
+                "clip": 0.1632,
+                "dino": 0.7346,
                 "text": false,
                 "reasons": [],
-                "file": "p1-6__s273945734.jpg"
+                "file": "p1-6__s274155192.jpg"
               }
             ],
             "rejected": []
           }
         },
         "p1-7": {
-          "candidates": [],
-          "qa": [],
+          "candidates": [
+            "p1-7__s311044087.jpg",
+            "p1-7__s311028249.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p1-7__s311044087.jpg",
+              "scores": {
+                "matches_description": 3,
+                "character_consistency": 6,
+                "comic_style": 9,
+                "anatomy": 5,
+                "no_text": 10,
+                "empty_top": 4,
+                "composition": 4,
+                "safety": 10
+              },
+              "avg": 6.38,
+              "passed": false,
+              "note": "The panel fails to show Jian untying a thick leather drawstring on a pouch. Anatomy of the hand is awkward with distorted fingers, and the upper 25% is cluttered with fabric folds rather than a dark rickshaw interior.",
+              "model": "gemini-3.6-flash"
+            },
+            {
+              "file": "p1-7__s311028249.jpg",
+              "scores": {
+                "matches_description": 2,
+                "character_consistency": 5,
+                "comic_style": 9,
+                "anatomy": 2,
+                "no_text": 10,
+                "empty_top": 6,
+                "composition": 3,
+                "safety": 10
+              },
+              "avg": 5.88,
+              "passed": false,
+              "note": "The panel fails to show Jian untying a pouch with a leather drawstring as requested. Additionally, the hand anatomy is severely warped with extra/distorted fingers, and the inner shirt is white instead of black.",
+              "model": "gemini-3.6-flash"
+            }
+          ],
           "approved": null,
-          "status": "pending",
+          "status": "failed",
           "prefilter": {
             "kept": [
               {
-                "seed": 310818791,
-                "clip": 0.1678,
-                "dino": 0.7973,
+                "seed": 311044087,
+                "clip": 0.2418,
+                "dino": 0.5564,
                 "text": false,
                 "reasons": [],
-                "file": "p1-7__s310818791.jpg"
+                "file": "p1-7__s311044087.jpg"
               },
               {
-                "seed": 310810872,
-                "clip": 0.181,
-                "dino": 0.7625,
+                "seed": 311028249,
+                "clip": 0.2101,
+                "dino": 0.575,
                 "text": false,
                 "reasons": [],
-                "file": "p1-7__s310810872.jpg"
+                "file": "p1-7__s311028249.jpg"
               }
             ],
-            "rejected": []
+            "rejected": [
+              {
+                "seed": 311036168,
+                "clip": 0.2231,
+                "dino": 0.1798,
+                "text": false,
+                "reasons": [
+                  "dino 0.1798 < 0.35"
+                ]
+              }
+            ]
           }
         },
         "p1-8": {
-          "candidates": [],
-          "qa": [],
+          "candidates": [
+            "p1-8__s422218135.jpg",
+            "p1-8__s422202297.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p1-8__s422218135.jpg",
+              "scores": {
+                "matches_description": 2,
+                "character_consistency": 3,
+                "comic_style": 9,
+                "anatomy": 8,
+                "no_text": 10,
+                "empty_top": 6,
+                "composition": 4,
+                "safety": 10
+              },
+              "avg": 6.5,
+              "passed": false,
+              "note": "The panel fails to portray the prompt's scene: there is no golden glow shining upward from a pouch, no open pouch, and Jian is not gasping with a shocked expression. Furthermore, Jian's hair is a longer style with fringe rather than the specified short black buzz cut, and he has a mustache not present in the reference.",
+              "model": "gemini-3.6-flash"
+            },
+            {
+              "file": "p1-8__s422202297.jpg",
+              "scores": {
+                "matches_description": 3,
+                "character_consistency": 5,
+                "comic_style": 9,
+                "anatomy": 8,
+                "no_text": 10,
+                "empty_top": 7,
+                "composition": 5,
+                "safety": 10
+              },
+              "avg": 7.12,
+              "passed": false,
+              "note": "The panel completely misses the required prompt elements: there is no open pouch, no golden glow shining upward onto Jian's face, and no warm golden light in the upper 25%. Additionally, Jian's outfit (tan jacket over blue hoodie and white t-shirt) does not match the lock card description.",
+              "model": "gemini-3.6-flash"
+            }
+          ],
           "approved": null,
-          "status": "pending",
+          "status": "failed",
           "prefilter": {
             "kept": [
               {
-                "seed": 422000758,
-                "clip": 0.2031,
-                "dino": 0.7498,
+                "seed": 422218135,
+                "clip": 0.2278,
+                "dino": 0.5995,
                 "text": false,
                 "reasons": [],
-                "file": "p1-8__s422000758.jpg"
+                "file": "p1-8__s422218135.jpg"
               },
               {
-                "seed": 422008677,
-                "clip": 0.1863,
-                "dino": 0.7147,
+                "seed": 422202297,
+                "clip": 0.2052,
+                "dino": 0.6453,
                 "text": false,
                 "reasons": [],
-                "file": "p1-8__s422008677.jpg"
+                "file": "p1-8__s422202297.jpg"
               }
             ],
             "rejected": []
@@ -1153,54 +1304,113 @@
           }
         },
         "p2-2": {
-          "candidates": [],
-          "qa": [],
-          "approved": null,
-          "status": "pending",
+          "candidates": [
+            "p2-2__s221294166.jpg",
+            "p2-2__s221286247.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p2-2__s221294166.jpg",
+              "scores": {
+                "matches_description": 8,
+                "character_consistency": 8,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 9,
+                "safety": 10
+              },
+              "avg": 9.0,
+              "passed": true,
+              "note": "The upper 25% features some neon signs and power lines rather than being completely uncluttered, and there is a character in the rickshaw despite the description saying character-free, but it fits the overall scene well with strong comic ink lines and vibrant colors.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
+          "approved": "p2-2__s221294166.jpg",
+          "status": "approved",
           "prefilter": {
             "kept": [
               {
-                "seed": 221092627,
-                "clip": 0.2842,
+                "seed": 221294166,
+                "clip": 0.2932,
                 "dino": null,
                 "text": false,
                 "reasons": [],
-                "file": "p2-2__s221092627.jpg"
+                "file": "p2-2__s221294166.jpg"
               },
               {
-                "seed": 221084708,
-                "clip": 0.2693,
+                "seed": 221286247,
+                "clip": 0.2715,
                 "dino": null,
                 "text": false,
                 "reasons": [],
-                "file": "p2-2__s221084708.jpg"
+                "file": "p2-2__s221286247.jpg"
               }
             ],
             "rejected": []
           }
         },
         "p2-3": {
-          "candidates": [],
-          "qa": [],
+          "candidates": [
+            "p2-3__s358699720.jpg",
+            "p2-3__s358691801.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p2-3__s358699720.jpg",
+              "scores": {
+                "matches_description": 8,
+                "character_consistency": 8,
+                "comic_style": 10,
+                "anatomy": 8,
+                "no_text": 3,
+                "empty_top": 9,
+                "composition": 9,
+                "safety": 10
+              },
+              "avg": 8.12,
+              "passed": false,
+              "note": "The image features a character wiping sweat under a noodle shop sign, contrary to the character-free constraint in the prompt description. There is also stylized text on the noodle sign reducing the no_text score.",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p2-3__s358691801.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 5,
+                "comic_style": 10,
+                "anatomy": 7,
+                "no_text": 4,
+                "empty_top": 8,
+                "composition": 7,
+                "safety": 10
+              },
+              "avg": 7.0,
+              "passed": false,
+              "note": "The image features a character (Jian) viewed from behind standing at the noodle shop, whereas the prompt requested a character-free shot with Jian wiping his sweat from the front (medium shot). Also contains text on the signs.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "pending",
+          "status": "failed",
           "prefilter": {
             "kept": [
               {
-                "seed": 358482343,
-                "clip": 0.2681,
+                "seed": 358699720,
+                "clip": 0.2776,
                 "dino": null,
                 "text": false,
                 "reasons": [],
-                "file": "p2-3__s358482343.jpg"
+                "file": "p2-3__s358699720.jpg"
               },
               {
-                "seed": 358498181,
-                "clip": 0.2554,
+                "seed": 358691801,
+                "clip": 0.2561,
                 "dino": null,
                 "text": false,
                 "reasons": [],
-                "file": "p2-3__s358498181.jpg"
+                "file": "p2-3__s358691801.jpg"
               }
             ],
             "rejected": []
@@ -1404,91 +1614,143 @@
           }
         },
         "p2-7": {
-          "candidates": [],
-          "qa": [],
+          "candidates": [
+            "p2-7__s348886751.jpg",
+            "p2-7__s348870913.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p2-7__s348886751.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 8,
+                "comic_style": 9,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 7,
+                "safety": 10
+              },
+              "avg": 8.25,
+              "passed": false,
+              "note": "Lock items check: hair is short buzz cut (appears bluish tinted from lighting), bright blue jacket and orange shirt present, silver bangle not clearly visible on wrist due to framing. Fails the wet rainy street and dark neon lights description completely, showing a clean daylight car interior instead.",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p2-7__s348870913.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 8,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 6,
+                "safety": 10
+              },
+              "avg": 8.25,
+              "passed": false,
+              "note": "Lock-card check: hair is short buzz cut (white/light instead of black), outfit is bright blue jacket over black shirt, accessory (thick silver bangle) is missing from the wrist. Description mentions wet rainy street, over-the-shoulder shot looking back toward passenger seat, but the panel shows a straight-on medium shot standing outside rather than inside a car looking back.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "pending",
+          "status": "failed",
           "prefilter": {
             "kept": [
               {
-                "seed": 348669374,
-                "clip": 0.194,
-                "dino": 0.8101,
+                "seed": 348886751,
+                "clip": 0.2454,
+                "dino": 0.4527,
                 "text": false,
                 "reasons": [],
-                "file": "p2-7__s348669374.jpg"
+                "file": "p2-7__s348886751.jpg"
               },
               {
-                "seed": 348677293,
-                "clip": 0.2034,
-                "dino": 0.7826,
+                "seed": 348870913,
+                "clip": 0.2251,
+                "dino": 0.5629,
                 "text": false,
                 "reasons": [],
-                "file": "p2-7__s348677293.jpg"
+                "file": "p2-7__s348870913.jpg"
               }
             ],
             "rejected": []
           }
         },
         "p2-8": {
-          "candidates": [],
-          "qa": [],
-          "approved": null,
-          "status": "pending",
+          "candidates": [
+            "p2-8__s459824703.jpg",
+            "p2-8__s459816784.jpg"
+          ],
+          "qa": [
+            {
+              "file": "p2-8__s459824703.jpg",
+              "scores": {
+                "matches_description": 7,
+                "character_consistency": 8,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 8,
+                "safety": 10
+              },
+              "avg": 8.75,
+              "passed": true,
+              "note": "The panel features Mei with her signature green vest and dark hair in braids, rendered in a clean comic style. The upper area is relatively clear green background, though the upper 25% is not strictly a dark canvas as requested in the description.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
+          "approved": "p2-8__s459824703.jpg",
+          "status": "approved",
           "prefilter": {
             "kept": [
               {
-                "seed": 459607326,
-                "clip": 0.2445,
-                "dino": 0.6669,
+                "seed": 459824703,
+                "clip": 0.2578,
+                "dino": 0.5516,
                 "text": false,
                 "reasons": [],
-                "file": "p2-8__s459607326.jpg"
+                "file": "p2-8__s459824703.jpg"
               },
               {
-                "seed": 459615245,
-                "clip": 0.2495,
-                "dino": 0.6606,
+                "seed": 459816784,
+                "clip": 0.244,
+                "dino": 0.6484,
                 "text": false,
                 "reasons": [],
-                "file": "p2-8__s459615245.jpg"
+                "file": "p2-8__s459816784.jpg"
               }
             ],
-            "rejected": [
-              {
-                "seed": 459599407,
-                "clip": 0.2448,
-                "dino": 0.4731,
-                "text": false,
-                "reasons": [
-                  "dino 0.4731 < 0.55"
-                ]
-              }
-            ]
+            "rejected": []
           }
         },
         "p3-1": {
-          "candidates": [],
+          "candidates": [
+            "p3-1__s1667419890.jpg",
+            "p3-1__s1667435728.jpg"
+          ],
           "qa": [],
           "approved": null,
-          "status": "pending",
+          "status": "candidates",
           "prefilter": {
             "kept": [
               {
-                "seed": 1667218351,
-                "clip": 0.1888,
-                "dino": 0.7684,
+                "seed": 1667419890,
+                "clip": 0.2318,
+                "dino": 0.6882,
                 "text": false,
                 "reasons": [],
-                "file": "p3-1__s1667218351.jpg"
+                "file": "p3-1__s1667419890.jpg"
               },
               {
-                "seed": 1667202513,
-                "clip": 0.1616,
-                "dino": 0.7536,
+                "seed": 1667435728,
+                "clip": 0.1959,
+                "dino": 0.5812,
                 "text": false,
                 "reasons": [],
-                "file": "p3-1__s1667202513.jpg"
+                "file": "p3-1__s1667435728.jpg"
               }
             ],
             "rejected": []
@@ -1560,185 +1822,203 @@
           }
         },
         "p3-3": {
-          "candidates": [],
+          "candidates": [
+            "p3-3__s371374807.jpg",
+            "p3-3__s371398564.jpg"
+          ],
           "qa": [],
           "approved": null,
-          "status": "pending",
+          "status": "candidates",
           "prefilter": {
             "kept": [
               {
-                "seed": 371173268,
-                "clip": 0.2729,
+                "seed": 371374807,
+                "clip": 0.2886,
                 "dino": null,
                 "text": false,
                 "reasons": [],
-                "file": "p3-3__s371173268.jpg"
+                "file": "p3-3__s371374807.jpg"
               },
               {
-                "seed": 371165349,
-                "clip": 0.2477,
+                "seed": 371398564,
+                "clip": 0.2803,
                 "dino": null,
                 "text": false,
                 "reasons": [],
-                "file": "p3-3__s371165349.jpg"
+                "file": "p3-3__s371398564.jpg"
               }
             ],
             "rejected": []
           }
         },
         "p3-4": {
-          "candidates": [],
+          "candidates": [
+            "p3-4__s322691958.jpg",
+            "p3-4__s322707796.jpg"
+          ],
           "qa": [],
           "approved": null,
-          "status": "pending",
+          "status": "candidates",
           "prefilter": {
             "kept": [
               {
-                "seed": 322490419,
-                "clip": 0.1627,
-                "dino": 0.7601,
+                "seed": 322691958,
+                "clip": 0.2424,
+                "dino": 0.3975,
                 "text": false,
                 "reasons": [],
-                "file": "p3-4__s322490419.jpg"
+                "file": "p3-4__s322691958.jpg"
               },
               {
-                "seed": 322482500,
-                "clip": 0.1471,
-                "dino": 0.6333,
+                "seed": 322707796,
+                "clip": 0.2205,
+                "dino": 0.4936,
                 "text": false,
                 "reasons": [],
-                "file": "p3-4__s322482500.jpg"
+                "file": "p3-4__s322707796.jpg"
               }
             ],
             "rejected": []
           }
         },
         "p3-5": {
-          "candidates": [],
+          "candidates": [
+            "p3-5__s1681215673.jpg",
+            "p3-5__s1681207754.jpg"
+          ],
           "qa": [],
           "approved": null,
-          "status": "pending",
+          "status": "candidates",
           "prefilter": {
             "kept": [
               {
-                "seed": 1680990377,
-                "clip": 0.1377,
-                "dino": 0.8203,
+                "seed": 1681215673,
+                "clip": 0.1632,
+                "dino": 0.7571,
                 "text": false,
                 "reasons": [],
-                "file": "p3-5__s1680990377.jpg"
+                "file": "p3-5__s1681215673.jpg"
               },
               {
-                "seed": 1681006215,
-                "clip": 0.1418,
-                "dino": 0.7177,
+                "seed": 1681207754,
+                "clip": 0.1743,
+                "dino": 0.592,
                 "text": false,
                 "reasons": [],
-                "file": "p3-5__s1681006215.jpg"
+                "file": "p3-5__s1681207754.jpg"
               }
             ],
             "rejected": []
           }
         },
         "p3-6": {
-          "candidates": [],
+          "candidates": [
+            "p3-6__s248715874.jpg",
+            "p3-6__s248723793.jpg"
+          ],
           "qa": [],
           "approved": null,
-          "status": "pending",
+          "status": "candidates",
           "prefilter": {
             "kept": [
               {
-                "seed": 248514335,
-                "clip": 0.1299,
-                "dino": 0.7399,
+                "seed": 248715874,
+                "clip": 0.1357,
+                "dino": 0.7241,
                 "text": false,
                 "reasons": [],
-                "file": "p3-6__s248514335.jpg"
+                "file": "p3-6__s248715874.jpg"
               },
               {
-                "seed": 248530173,
-                "clip": 0.1383,
-                "dino": 0.7199,
+                "seed": 248723793,
+                "clip": 0.1392,
+                "dino": 0.6974,
                 "text": false,
                 "reasons": [],
-                "file": "p3-6__s248530173.jpg"
+                "file": "p3-6__s248723793.jpg"
               }
             ],
-            "rejected": []
-          }
-        },
-        "p3-7": {
-          "candidates": [],
-          "qa": [],
-          "approved": null,
-          "status": "pending",
-          "prefilter": {
-            "kept": [],
             "rejected": [
               {
-                "seed": 319442078,
-                "clip": 0.1672,
-                "dino": 0.4804,
-                "text": false,
+                "seed": 248731712,
+                "clip": 0.1685,
+                "dino": 0.7595,
+                "text": true,
                 "reasons": [
-                  "dino 0.4804 < 0.55"
-                ]
-              },
-              {
-                "seed": 319449997,
-                "clip": 0.151,
-                "dino": 0.4749,
-                "text": false,
-                "reasons": [
-                  "dino 0.4749 < 0.55"
-                ]
-              },
-              {
-                "seed": 319457916,
-                "clip": 0.1488,
-                "dino": 0.4275,
-                "text": false,
-                "reasons": [
-                  "dino 0.4275 < 0.55"
-                ]
-              },
-              {
-                "seed": 319465835,
-                "clip": 0.1492,
-                "dino": 0.5346,
-                "text": false,
-                "reasons": [
-                  "dino 0.5346 < 0.55"
+                  "text detected"
                 ]
               }
             ]
           }
         },
-        "p3-8": {
-          "candidates": [],
+        "p3-7": {
+          "candidates": [
+            "p3-7__s319675293.jpg",
+            "p3-7__s319659455.jpg"
+          ],
           "qa": [],
           "approved": null,
-          "status": "pending",
+          "status": "candidates",
           "prefilter": {
             "kept": [
               {
-                "seed": 446883117,
-                "clip": 0.1696,
-                "dino": 0.827,
+                "seed": 319675293,
+                "clip": 0.2019,
+                "dino": 0.6521,
                 "text": false,
                 "reasons": [],
-                "file": "p3-8__s446883117.jpg"
+                "file": "p3-7__s319675293.jpg"
               },
               {
-                "seed": 446906874,
-                "clip": 0.1505,
-                "dino": 0.8048,
+                "seed": 319659455,
+                "clip": 0.1816,
+                "dino": 0.5327,
                 "text": false,
                 "reasons": [],
-                "file": "p3-8__s446906874.jpg"
+                "file": "p3-7__s319659455.jpg"
               }
             ],
             "rejected": []
+          }
+        },
+        "p3-8": {
+          "candidates": [
+            "p3-8__s447100494.jpg",
+            "p3-8__s447092575.jpg"
+          ],
+          "qa": [],
+          "approved": null,
+          "status": "candidates",
+          "prefilter": {
+            "kept": [
+              {
+                "seed": 447100494,
+                "clip": 0.2134,
+                "dino": 0.7824,
+                "text": false,
+                "reasons": [],
+                "file": "p3-8__s447100494.jpg"
+              },
+              {
+                "seed": 447092575,
+                "clip": 0.2305,
+                "dino": 0.5472,
+                "text": false,
+                "reasons": [],
+                "file": "p3-8__s447092575.jpg"
+              }
+            ],
+            "rejected": [
+              {
+                "seed": 447116332,
+                "clip": 0.2361,
+                "dino": 0.2982,
+                "text": false,
+                "reasons": [
+                  "dino 0.2982 < 0.35"
+                ]
+              }
+            ]
           }
         }
       },
@@ -1813,7 +2093,17 @@
         "2026-11-17T07:20:43Z panel p3-6: all candidates failed QA",
         "2026-11-17T07:21:28Z panel p3-8: all candidates failed QA",
         "2026-11-17T07:21:30Z pushed REPAIR job st-20261116-0217f9-repair-1794900088 (16 items, ~0.96 GPU-h, kernel v14)",
-        "2026-11-19T10:15:20Z pushed PANELS job st-20261116-0217f9-panels-1795083317 (16 items, ~0.96 GPU-h, kernel v15)"
+        "2026-11-19T10:15:20Z pushed PANELS job st-20261116-0217f9-panels-1795083317 (16 items, ~0.96 GPU-h, kernel v15)",
+        "2026-11-19T13:47:14Z panel p1-2: approved (avg 8.62)",
+        "2026-11-19T14:02:15Z panel p1-4: all candidates failed QA",
+        "2026-11-19T14:10:56Z panel p1-6: approved (avg 8.62)",
+        "2026-11-19T14:13:47Z panel p1-7: all candidates failed QA",
+        "2026-11-19T14:14:57Z panel p1-8: all candidates failed QA",
+        "2026-11-19T14:15:10Z panel p2-2: approved (avg 9.0)",
+        "2026-11-19T14:15:25Z panel p2-3: all candidates failed QA",
+        "2026-11-19T14:19:13Z panel p2-7: all candidates failed QA",
+        "2026-11-19T14:19:56Z panel p2-8: approved (avg 8.75)",
+        "2026-11-19T14:19:56Z QA time budget reached; the next collect resumes"
       ]
     }
   },

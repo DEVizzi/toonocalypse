@@ -1,14 +1,14 @@
 {
   "kaggle": {
     "week_start": "2026-11-16",
-    "gpu_hours_used": 3.9
+    "gpu_hours_used": 4.56
   },
   "gemini": {
     "date": "2026-11-19",
-    "calls": 1,
+    "calls": 15,
     "retry_after": {
-      "gemini-3.8-flash": "2026-11-17T07:59:58.452277+00:00",
-      "gemini-3.6-flash": "2026-11-17T07:58:48.452277+00:00"
+      "gemini-3.8-flash": "2026-11-20T07:27:35.795317+00:00",
+      "gemini-3.6-flash": "2026-11-20T07:23:35.795317+00:00"
     }
   },
   "aborts": {
