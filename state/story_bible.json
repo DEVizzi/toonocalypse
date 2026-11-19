@@ -597,11 +597,30 @@
       "judge_model": "gemini-3.5-flash-lite"
     },
     "art": {
-      "phase": "PANELS",
-      "job": null,
+      "phase": "REPAIR",
+      "job": {
+        "id": "st-20261116-0217f9-repair-1795098428",
+        "phase": "REPAIR",
+        "items": [
+          "p1-4",
+          "p1-7",
+          "p1-8",
+          "p2-3",
+          "p2-7",
+          "p3-1",
+          "p3-3",
+          "p3-4",
+          "p3-5",
+          "p3-6",
+          "p3-7"
+        ],
+        "pushed_at": 1795098431.535558,
+        "est_hours": 0.74,
+        "version": "16"
+      },
       "session_retries": 0,
       "portrait_repair": 0,
-      "repair_round": 0,
+      "repair_round": 1,
       "portraits": {
         "Jian": {
           "candidates": [
@@ -996,7 +1015,7 @@
             }
           ],
           "approved": null,
-          "status": "failed",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1157,7 +1176,7 @@
             }
           ],
           "approved": null,
-          "status": "failed",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1232,7 +1251,7 @@
             }
           ],
           "approved": null,
-          "status": "failed",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1393,7 +1412,7 @@
             }
           ],
           "approved": null,
-          "status": "failed",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1655,7 +1674,7 @@
             }
           ],
           "approved": null,
-          "status": "failed",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1731,9 +1750,44 @@
             "p3-1__s1667419890.jpg",
             "p3-1__s1667435728.jpg"
           ],
-          "qa": [],
+          "qa": [
+            {
+              "file": "p3-1__s1667419890.jpg",
+              "scores": {
+                "matches_description": 4,
+                "character_consistency": 6,
+                "comic_style": 9,
+                "anatomy": 8,
+                "no_text": 10,
+                "empty_top": 4,
+                "composition": 5,
+                "safety": 10
+              },
+              "avg": 7.0,
+              "passed": false,
+              "note": "Lock-card observations: hair is completely bald instead of buzz cut; outfit has blue jacket and brown shirt, grey pants; silver bangle missing from wrist. Description mismatches: not holding a golden pouch, not inside a rickshaw, upper 25% shows clear blue sky instead of dark wet canvas top, and lighting/mood do not match the night neon setting.",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p3-1__s1667435728.jpg",
+              "scores": {
+                "matches_description": 4,
+                "character_consistency": 6,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 5,
+                "safety": 10
+              },
+              "avg": 7.75,
+              "passed": false,
+              "note": "Jian is present with correct hair and jacket, but the golden pouch is missing, the setting is daytime instead of a busy neon street at night, and the upper 25% is not a dark wet canvas top.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "candidates",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1826,9 +1880,44 @@
             "p3-3__s371374807.jpg",
             "p3-3__s371398564.jpg"
           ],
-          "qa": [],
+          "qa": [
+            {
+              "file": "p3-3__s371374807.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 10,
+                "comic_style": 9,
+                "anatomy": 10,
+                "no_text": 10,
+                "empty_top": 5,
+                "composition": 6,
+                "safety": 10
+              },
+              "avg": 8.12,
+              "passed": false,
+              "note": "The image shows a pink rickshaw instead of a close-up of the seat with a golden pouch. The upper 25% contains details of a doorway and umbrellas rather than an uncluttered dark canvas roof.",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p3-3__s371398564.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 10,
+                "comic_style": 10,
+                "anatomy": 10,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 7,
+                "safety": 10
+              },
+              "avg": 8.75,
+              "passed": false,
+              "note": "The golden pouch resting on the cushion specified in the description is missing from the seat.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "candidates",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1856,9 +1945,44 @@
             "p3-4__s322691958.jpg",
             "p3-4__s322707796.jpg"
           ],
-          "qa": [],
+          "qa": [
+            {
+              "file": "p3-4__s322691958.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 4,
+                "comic_style": 9,
+                "anatomy": 6,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 7,
+                "safety": 10
+              },
+              "avg": 7.38,
+              "passed": false,
+              "note": "Lock-card violations: Jian has medium-length dark hair instead of a short black buzz cut, the jacket color has shifted from bright blue to yellowish/tan, and the thick silver bangle is missing. Anatomy of the hand wiping the forehead is also distorted.",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p3-4__s322707796.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 4,
+                "comic_style": 9,
+                "anatomy": 7,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 6,
+                "safety": 10
+              },
+              "avg": 7.38,
+              "passed": false,
+              "note": "Lock-card analysis: hair is longer and styled instead of short buzz cut; jacket colors are inverted (yellowish-brown jacket with blue shirt/inner instead of bright blue jacket over black shirt); silver bangle is missing. Description misses wiping sweat from forehead (hand is near chin/mouth instead), and lighting is bright daylight rather than dim amber inside a dark rickshaw cabin.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "candidates",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1886,9 +2010,44 @@
             "p3-5__s1681215673.jpg",
             "p3-5__s1681207754.jpg"
           ],
-          "qa": [],
+          "qa": [
+            {
+              "file": "p3-5__s1681215673.jpg",
+              "scores": {
+                "matches_description": 3,
+                "character_consistency": 4,
+                "comic_style": 9,
+                "anatomy": 8,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 4,
+                "safety": 10
+              },
+              "avg": 7.0,
+              "passed": false,
+              "note": "Jian is missing the heavy golden pouch entirely, has longer hair instead of a buzz cut, is missing the silver bangle, and the action/pose does not match the description.",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p3-5__s1681207754.jpg",
+              "scores": {
+                "matches_description": 2,
+                "character_consistency": 5,
+                "comic_style": 8,
+                "anatomy": 8,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 5,
+                "safety": 10
+              },
+              "avg": 7.0,
+              "passed": false,
+              "note": "Failed description completely: holding a staff instead of a golden pouch, missing the rainy sky context and passenger seat setting.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "candidates",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1916,9 +2075,44 @@
             "p3-6__s248715874.jpg",
             "p3-6__s248723793.jpg"
           ],
-          "qa": [],
+          "qa": [
+            {
+              "file": "p3-6__s248715874.jpg",
+              "scores": {
+                "matches_description": 4,
+                "character_consistency": 6,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 6,
+                "safety": 10
+              },
+              "avg": 7.88,
+              "passed": false,
+              "note": "The panel fails the description because the golden pouch is missing, the background is bright daylight with clouds instead of a dark rainy background with neon lights, and the hair/outfit details deviate slightly from the lock cards (one braid instead of two, missing satchel).",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p3-6__s248723793.jpg",
+              "scores": {
+                "matches_description": 5,
+                "character_consistency": 6,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 7,
+                "safety": 10
+              },
+              "avg": 8.12,
+              "passed": false,
+              "note": "The golden pouch is missing from the image, the outfit has added white fur lining not in the original reference, and the background is a solid muted tan rather than the requested dark rainy background with soft neon light.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "candidates",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1956,9 +2150,44 @@
             "p3-7__s319675293.jpg",
             "p3-7__s319659455.jpg"
           ],
-          "qa": [],
+          "qa": [
+            {
+              "file": "p3-7__s319675293.jpg",
+              "scores": {
+                "matches_description": 4,
+                "character_consistency": 4,
+                "comic_style": 9,
+                "anatomy": 8,
+                "no_text": 10,
+                "empty_top": 7,
+                "composition": 5,
+                "safety": 10
+              },
+              "avg": 7.12,
+              "passed": false,
+              "note": "Mei is present on the right in her green vest and braid, but Jian is far in the background instead of being on the left in a medium two-shot, and they are not interacting to exchange a coin.",
+              "model": "gemini-3.5-flash-lite"
+            },
+            {
+              "file": "p3-7__s319659455.jpg",
+              "scores": {
+                "matches_description": 3,
+                "character_consistency": 4,
+                "comic_style": 8,
+                "anatomy": 7,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 4,
+                "safety": 10
+              },
+              "avg": 6.75,
+              "passed": false,
+              "note": "Image 3 only shows a single character (Mei-like with blended Jian jacket colors), missing Jian entirely. It shows holding a cup instead of handing a coin, and lacks the rainy atmosphere.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
           "approved": null,
-          "status": "candidates",
+          "status": "pending",
           "prefilter": {
             "kept": [
               {
@@ -1986,9 +2215,27 @@
             "p3-8__s447100494.jpg",
             "p3-8__s447092575.jpg"
           ],
-          "qa": [],
-          "approved": null,
-          "status": "candidates",
+          "qa": [
+            {
+              "file": "p3-8__s447100494.jpg",
+              "scores": {
+                "matches_description": 7,
+                "character_consistency": 8,
+                "comic_style": 10,
+                "anatomy": 9,
+                "no_text": 10,
+                "empty_top": 8,
+                "composition": 8,
+                "safety": 10
+              },
+              "avg": 8.75,
+              "passed": true,
+              "note": "Jian is pulling his rickshaw in a comic style that matches the reference well, featuring the blue jacket and silver bangle, though the rain/neon elements from the prompt are less prominent in this crop.",
+              "model": "gemini-3.5-flash-lite"
+            }
+          ],
+          "approved": "p3-8__s447100494.jpg",
+          "status": "approved",
           "prefilter": {
             "kept": [
               {
@@ -2103,7 +2350,15 @@
         "2026-11-19T14:15:25Z panel p2-3: all candidates failed QA",
         "2026-11-19T14:19:13Z panel p2-7: all candidates failed QA",
         "2026-11-19T14:19:56Z panel p2-8: approved (avg 8.75)",
-        "2026-11-19T14:19:56Z QA time budget reached; the next collect resumes"
+        "2026-11-19T14:19:56Z QA time budget reached; the next collect resumes",
+        "2026-11-19T14:22:45Z panel p3-1: all candidates failed QA",
+        "2026-11-19T14:23:00Z panel p3-3: all candidates failed QA",
+        "2026-11-19T14:23:23Z panel p3-4: all candidates failed QA",
+        "2026-11-19T14:24:08Z panel p3-5: all candidates failed QA",
+        "2026-11-19T14:25:12Z panel p3-6: all candidates failed QA",
+        "2026-11-19T14:25:54Z panel p3-7: all candidates failed QA",
+        "2026-11-19T14:27:08Z panel p3-8: approved (avg 8.75)",
+        "2026-11-19T14:27:11Z pushed REPAIR job st-20261116-0217f9-repair-1795098428 (11 items, ~0.74 GPU-h, kernel v16)"
       ]
     }
   },
