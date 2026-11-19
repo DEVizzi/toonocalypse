@@ -12,7 +12,9 @@ import sys
 import time
 import traceback
 
-subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", "diffusers>=0.32", "transformers>=4.46",
+CHILD = len(sys.argv) > 1 and sys.argv[1] in ("flux_schnell", "dreamshaper_xl", "pixart_sigma")
+if not CHILD:
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", "diffusers>=0.32", "transformers>=4.46",
                 "accelerate", "bitsandbytes>=0.45", "sentencepiece", "protobuf", "compel==2.0.3"], check=False)
 
 import torch  # noqa: E402
@@ -81,12 +83,12 @@ def build_flux():
     from diffusers import BitsAndBytesConfig as DBnb, FluxPipeline, FluxTransformer2DModel
     from transformers import BitsAndBytesConfig as TBnb, T5EncoderModel
 
-    from huggingface_hub import model_info
+    from huggingface_hub import hf_hub_download
 
     repo = None
     for cand in ("black-forest-labs/FLUX.1-schnell", "unsloth/FLUX.1-schnell"):  # mirror = same Apache-2.0 weights
         try:
-            model_info(cand)
+            hf_hub_download(cand, "model_index.json")  # gated repos expose metadata but block files
             repo = cand
             break
         except Exception as e:
@@ -176,9 +178,31 @@ def contact_sheet():
     sheet.save(os.path.join(OUT, "comparison_sheet.jpg"), quality=90)
 
 
-run_model("flux_schnell", "A: FLUX.1-schnell (Apache-2.0)", "Apache-2.0", build_flux, gen_flux)
-run_model("dreamshaper_xl", "B: DreamShaper XL (SDXL, OpenRAIL++-M)", "CreativeML OpenRAIL++-M", build_dreamshaper, gen_sdxl)
-run_model("pixart_sigma", "C: PixArt-Sigma (OpenRAIL++-M)", "CreativeML OpenRAIL++-M", build_pixart, gen_pixart)
+MODELS = {
+    "flux_schnell": ("A: FLUX.1-schnell (Apache-2.0)", "Apache-2.0", build_flux, gen_flux),
+    "dreamshaper_xl": ("B: DreamShaper XL (SDXL, OpenRAIL++-M)", "CreativeML OpenRAIL++-M", build_dreamshaper, gen_sdxl),
+    "pixart_sigma": ("C: PixArt-Sigma (OpenRAIL++-M)", "CreativeML OpenRAIL++-M", build_pixart, gen_pixart),
+}
+
+if CHILD:  # child process: one model, clean GPU, own manifest
+    key = sys.argv[1]
+    run_model(key, *MODELS[key])
+    with open(os.path.join(OUT, f"manifest_{key}.json"), "w") as f:
+        json.dump({"models": MANIFEST["models"], "images": MANIFEST["images"]}, f)
+    sys.exit(0)
+
+script = os.path.abspath(sys.argv[0])
+for key in MODELS:  # each model in its own process so GPU memory is fully released
+    r = subprocess.run([sys.executable, script, key])
+    part = os.path.join(OUT, f"manifest_{key}.json")
+    if os.path.exists(part):
+        d = json.load(open(part))
+        MANIFEST["models"].update(d["models"])
+        MANIFEST["images"] += d["images"]
+        os.remove(part)
+    else:
+        MANIFEST["models"][key] = {"label": MODELS[key][0], "ok": False, "error": f"child exited {r.returncode}"}
+    save_manifest()
 contact_sheet()
 MANIFEST["finished"] = time.time()
 save_manifest()
