@@ -53,3 +53,12 @@ def test_token_expiry_math():
     left = days_left(now + 19.5 * 86400, now)
     assert left == 19.5 and needs_refresh(left, 20)
     assert not needs_refresh(days_left(now + 40 * 86400, now), 20)
+
+
+def test_unapproved_story_is_held_back():
+    from src.publish.buffer import next_episode
+    ep = {"episode_id": "e1", "part": 1}
+    held = {"stories": [{"story_id": "s1", "approved": False, "episodes": [ep]}]}
+    assert next_episode(held, {"episodes": {}}) is None
+    held["stories"][0]["approved"] = True
+    assert next_episode(held, {"episodes": {}})[1] is ep

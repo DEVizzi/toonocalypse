@@ -34,7 +34,9 @@ def qa_report(story: dict) -> dict:
     art = story.get("art", {})
     return {"story_id": story["story_id"], "title": story["title"], "judge": story.get("judge"),
             "portraits": {n: {"approved": p.get("approved"), "qa": p.get("qa")} for n, p in art.get("portraits", {}).items()},
-            "panels": {pid: {"approved": s.get("approved"), "qa": s.get("qa"), "prefilter": s.get("prefilter")}
+            "needs_review": sorted(pid for pid, s in art.get("panels", {}).items() if s.get("needs_review")),
+            "panels": {pid: {"approved": s.get("approved"), "needs_review": bool(s.get("needs_review")),
+                             "qa": s.get("qa"), "prefilter": s.get("prefilter")}
                        for pid, s in art.get("panels", {}).items()},
             "log": art.get("log", [])}
 
@@ -79,7 +81,9 @@ def render_story(story: dict) -> dict:
     report.write_text(json.dumps(qa_report(story), indent=2, ensure_ascii=False))
     cli_tools.upload_assets(tag, uploads + [script, report])
     return {"story_id": story["story_id"], "title": story["title"], "category": story["category"], "logline": story["logline"],
-            "moral": story["moral"], "release_tag": tag, "buffered_at": time.time(), "episodes": episodes}
+            "moral": story["moral"], "release_tag": tag, "buffered_at": time.time(), "episodes": episodes,
+            "approved": not settings()["publish"].get("require_human_approval", False),
+            "needs_review": qa_report(story)["needs_review"]}
 
 
 def main() -> int:

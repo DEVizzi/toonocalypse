@@ -10,6 +10,8 @@ def next_episode(buffer: dict[str, Any], published: dict[str, Any]) -> tuple[dic
     """Return (story, episode, platforms_still_needed) for today's post, or None (skip day)."""
     eps_done = published.get("episodes", {})
     for story in buffer.get("stories", []):
+        if story.get("approved") is False:  # waiting for human review of the draft release
+            continue
         for ep in sorted(story["episodes"], key=lambda e: e["part"]):
             done = eps_done.get(ep["episode_id"], {})
             need = [p for p in PLATFORMS if not done.get(p, {}).get("id")]

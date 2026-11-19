@@ -55,6 +55,7 @@ safe_zone:                      # percentages of frame height/width
   sfx_margin_pct: 6
 
 publish:
+  require_human_approval: true   # drafts wait in the buffer until approved (python -m src.publish approve <story_id>)
   made_for_kids: false
   youtube_privacy: "public"
   youtube_category_id: "1"      # Film & Animation

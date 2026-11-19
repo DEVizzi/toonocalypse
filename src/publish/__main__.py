@@ -14,7 +14,21 @@ from src.publish import buffer as buf
 from src.publish import instagram, youtube
 
 
+def approve(story_id: str) -> int:
+    b = load_state("buffer.json", {"stories": []})
+    for s in b.get("stories", []):
+        if s["story_id"] == story_id:
+            s["approved"] = True
+            save_state("buffer.json", b)
+            print(f"approved {story_id} for publishing")
+            return 0
+    print(f"{story_id} not in buffer")
+    return 1
+
+
 def main() -> int:
+    if len(sys.argv) >= 3 and sys.argv[1] == "approve":
+        return approve(sys.argv[2])
     b = load_state("buffer.json", {"stories": []})
     pub = load_state("published.json", {"episodes": {}, "stories": {}})
     tokens = load_state("tokens.json", {})
