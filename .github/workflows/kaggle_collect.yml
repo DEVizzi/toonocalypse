@@ -71,3 +71,10 @@ jobs:
           git add state/story_bible.json state/quota.json
           git diff --cached --quiet || git commit -m "chore(state): art progress"
           git pull --rebase -q && git push -q
+      - name: Dispatch render when art is done
+        if: always() && steps.gate.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          s=$(python3 -c 'import json; print((json.load(open("state/story_bible.json")).get("current") or {}).get("status"))')
+          if [ "$s" = "READY_TO_RENDER" ]; then gh workflow run render.yml; fi

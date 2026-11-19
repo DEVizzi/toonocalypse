@@ -107,10 +107,7 @@ def main(argv: list[str] | None = None) -> int:
             result = machine.collect(story, cli_tools, vision, q)
             print(f"collect: {result}")
             if result == "READY_TO_RENDER":
-                q.record_success()
-                import subprocess
-
-                subprocess.run(["gh", "workflow", "run", "render.yml"], check=False)
+                q.record_success()  # the workflow dispatches render.yml after the state commit (avoids a stale-state race)
     except machine.QuotaWait as e:
         print(f"WAITING: {e}")
     except Abort as e:
