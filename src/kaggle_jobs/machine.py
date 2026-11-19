@@ -152,11 +152,12 @@ def _best_effort(story: dict[str, Any], failed: list[str]) -> list[str]:
     art, left = _art(story), []
     for pid in failed:
         st = art["panels"][pid]
-        safe = [q for q in st["qa"] if q["scores"].get("safety", 0) >= 10 and q["scores"].get("no_text", 0) >= 5]
+        safe = [q for q in st["qa"] if q["scores"].get("safety", 0) >= 10]
+        clean = [q for q in safe if q["scores"].get("no_text", 0) >= 5]
         if not safe:
             left.append(pid)
             continue
-        best = max(safe, key=lambda q: q["avg"])
+        best = max(clean or safe, key=lambda q: q["avg"])
         st.update(approved=best["file"], status="approved", needs_review=True)
         _log(story, f"panel {pid}: best-effort {best['file']} (avg {best['avg']}) -> needs human review")
     return left
