@@ -66,7 +66,7 @@ def generate(contents: list[Any] | str, step: str, kind: str = "text", want_json
         if not q.gemini_model_available(model):
             last = f"{model} waiting on retryDelay"
             continue
-        for server_try in range(4):
+        for server_try in range(3):
             try:
                 resp = client().models.generate_content(model=model, contents=contents, config=cfg)
                 q.gemini_record_call()
@@ -93,8 +93,8 @@ def generate(contents: list[Any] | str, step: str, kind: str = "text", want_json
                 if isinstance(e, errors.ClientError):
                     raise
                 last = f"{model} {getattr(e, 'code', type(e).__name__)}"
-                if server_try < 3:
-                    wait = (15, 45, 90)[server_try]
+                if server_try < 2:
+                    wait = (10, 30)[server_try]
                     print(f"[gemini:{step}] {last}; retrying in {wait}s", flush=True)
                     time.sleep(wait)
                 else:
