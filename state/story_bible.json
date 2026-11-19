@@ -1,2338 +1,5 @@
 {
-  "current": {
-    "title": "The Golden Rickshaw",
-    "category": "moral_fable",
-    "logline": "A struggling rickshaw driver finds a heavy bag of gold coins and must choose between sudden wealth and his own honesty.",
-    "moral": "Honesty is the richest fare.",
-    "parts": [
-      {
-        "part": 1,
-        "title": "The Golden Rickshaw: A Driver's Choice | Pt 1/3",
-        "hook_text": "A heavy secret waits in the rain.",
-        "previously": null,
-        "description": "Jian pedals through a neon-lit rainy city and discovers a mysterious leather pouch filled with gold coins on his rickshaw seat.",
-        "caption": "A heavy secret waits in the rain. Part 1/3 — save this so you don't miss the next part. What would you do with a bag of gold found in your cab? #Gold #Mystery #StoryTime #RainyNight",
-        "hashtags": [
-          "Gold",
-          "Mystery",
-          "StoryTime",
-          "RainyNight"
-        ],
-        "moral_card": null,
-        "panels": [
-          {
-            "id": 1,
-            "image_prompt": "A futuristic city street at night under heavy rain, neon signs reflecting in puddles, upper 25% empty dark sky, wide cinematic shot, vibrant cyan and magenta lighting, tense mood",
-            "characters": [],
-            "camera": "wide cinematic shot",
-            "lighting": "vibrant cyan and magenta neon glow",
-            "emotion": "tense",
-            "narration": "A heavy secret waits in the rain.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "A heavy secret waits in the rain."
-              }
-            ],
-            "sfx": "Pattering rain and distant traffic hum",
-            "duration": 6.5
-          },
-          {
-            "id": 2,
-            "image_prompt": "Jian pedaling a bicycle rickshaw hard down a wet alleyway, water splashing from wheels, upper 25% dark wet brick wall, medium action shot, moody street lamps, exhausting effort",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "medium action shot",
-            "lighting": "moody street lamps",
-            "emotion": "exhausted",
-            "narration": "Jian pedals through the cold city. The rain falls harder.",
-            "dialogue": [],
-            "sfx": "Heavy panting and squeaking pedals",
-            "duration": 6.0
-          },
-          {
-            "id": 3,
-            "image_prompt": "Neon signs blurred in the rainy night, empty asphalt street, upper 25% dark gloomy sky, low angle close-up, dim amber lighting, lonely atmosphere",
-            "characters": [],
-            "camera": "low angle close-up",
-            "lighting": "dim amber lighting",
-            "emotion": "lonely",
-            "narration": "The streets empty out. Every passenger has gone home.",
-            "dialogue": [],
-            "sfx": "Wind howling",
-            "duration": 6.0
-          },
-          {
-            "id": 4,
-            "image_prompt": "Jian pulling the rickshaw to a stop beneath a glowing billboard, wiping sweat from his brow, upper 25% glowing neon sign, medium close-up, tired expression",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "medium close-up",
-            "lighting": "bright neon sign overhead",
-            "emotion": "tired",
-            "narration": "Jian pulls over to catch his breath.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "Just a few more miles to go."
-              }
-            ],
-            "sfx": "Brakes screeching softly",
-            "duration": 6.5
-          },
-          {
-            "id": 5,
-            "image_prompt": "A dark leather pouch resting on the vinyl seat of the rickshaw, wet drops glistening on the leather, upper 25% dark empty background, close-up shot, dramatic spotlight",
-            "characters": [],
-            "camera": "close-up shot",
-            "lighting": "dramatic spotlight from street lamp",
-            "emotion": "mysterious",
-            "narration": "A heavy leather pouch rests on the back seat.",
-            "dialogue": [],
-            "sfx": "Thud of leather hitting vinyl",
-            "duration": 6.0
-          },
-          {
-            "id": 6,
-            "image_prompt": "Jian turning around from the handlebars to look closely at the back seat, upper 25% dark alley shadows, over-the-shoulder medium shot, cool blue tones, curious expression",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "over-the-shoulder medium shot",
-            "lighting": "cool blue tones",
-            "emotion": "curious",
-            "narration": "Someone left something behind.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "What is this?"
-              }
-            ],
-            "sfx": "Water dripping",
-            "duration": 6.0
-          },
-          {
-            "id": 7,
-            "image_prompt": "Jian's hands untying a thick leather drawstring on the pouch, upper 25% dark interior of the rickshaw, extreme close-up, moody shadow lighting, suspenseful mood",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "extreme close-up",
-            "lighting": "moody shadow lighting",
-            "emotion": "suspenseful",
-            "narration": "Jian's fingers pull the cord.",
-            "dialogue": [],
-            "sfx": "Leather creaking",
-            "duration": 6.5
-          },
-          {
-            "id": 8,
-            "image_prompt": "Jian gasping as a blinding golden glow shines upward from an open pouch onto his face, upper 25% brilliant warm golden light casting shadows, close-up shot, shocked expression",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "close-up shot",
-            "lighting": "blinding golden glow",
-            "emotion": "shocked",
-            "narration": "Jian pulls the drawstring of the pouch and gasps at the blinding glow of pure gold inside.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "It's... real gold."
-              }
-            ],
-            "sfx": "Soft shimmering chime",
-            "duration": 7.0
-          }
-        ]
-      },
-      {
-        "part": 2,
-        "title": "Gold Coins in the Cab | Pt 2/3",
-        "hook_text": "Is this real gold?",
-        "previously": "Jian found a heavy bag of gold coins hidden inside his rickshaw.",
-        "description": "Jian tries to work through the rain while hiding the heavy bag of gold coins, but a sharp passenger boards and starts asking dangerous questions.",
-        "caption": "Is this real gold? Part 2/3 — save this so you don't miss the next part. What would you do with a bag of gold? #story #gold #choices #drama",
-        "hashtags": [
-          "story",
-          "gold",
-          "choices",
-          "drama"
-        ],
-        "moral_card": null,
-        "panels": [
-          {
-            "id": 1,
-            "image_prompt": "Empty neon alleyway at night, upper 25% dark rain clouds, close-up shot of a leather pouch spilling glowing coins, bright warm golden light, shocked",
-            "characters": [],
-            "camera": "close-up shot",
-            "lighting": "bright warm golden light",
-            "emotion": "shocked",
-            "narration": "Jian stares at the bright treasure in his hands.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "Is this real gold?"
-              }
-            ],
-            "sfx": "RAIN POURS",
-            "duration": 6.0
-          },
-          {
-            "id": 2,
-            "image_prompt": "Busy wet city street at night, upper 25% neon signs reflecting in puddles, wide shot of Jian pedaling his rickshaw fast, determined",
-            "characters": [],
-            "camera": "wide shot",
-            "lighting": "neon glow",
-            "emotion": "determined",
-            "narration": "He hides the bag under his seat and pedals into the rain.",
-            "dialogue": [],
-            "sfx": "TIRES SPLASH",
-            "duration": 6.0
-          },
-          {
-            "id": 3,
-            "image_prompt": "Street corner under a glowing noodle shop sign, upper 25% dark sky, medium shot of Jian wiping sweat from his forehead, anxious",
-            "characters": [],
-            "camera": "medium shot",
-            "lighting": "dim streetlamp",
-            "emotion": "anxious",
-            "narration": "Every shadow looks like a thief. His hands shake on the bars.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "Keep moving. Just drive."
-              }
-            ],
-            "sfx": "THUNDER RUMBLES",
-            "duration": 6.0
-          },
-          {
-            "id": 4,
-            "image_prompt": "Wet sidewalk outside a luxury hotel, upper 25% glowing hotel canopy, medium shot of Mei holding a silk umbrella, demanding expression",
-            "characters": [
-              {
-                "name": "Mei",
-                "position": "center"
-              }
-            ],
-            "camera": "medium shot",
-            "lighting": "bright white marquee light",
-            "emotion": "demanding",
-            "narration": "A wealthy passenger steps out from the shadows and signals him down.",
-            "dialogue": [
-              {
-                "speaker": "Mei",
-                "line": "Take me to the station now."
-              }
-            ],
-            "sfx": "HEELS CLICK",
-            "duration": 6.0
-          },
-          {
-            "id": 5,
-            "image_prompt": "Inside the covered rickshaw cabin, upper 25% dark roof canvas, close-up of Mei sitting upright, sharp and suspicious expression",
-            "characters": [
-              {
-                "name": "Mei",
-                "position": "center"
-              }
-            ],
-            "camera": "close-up shot",
-            "lighting": "dim interior light",
-            "emotion": "suspicious",
-            "narration": "Mei climbs inside and the heavy gold bag shifts beneath the seat cushion.",
-            "dialogue": [
-              {
-                "speaker": "Mei",
-                "line": "Drive carefully. I lost something very precious today."
-              }
-            ],
-            "sfx": "FABRICS RUSTLE",
-            "duration": 6.0
-          },
-          {
-            "id": 6,
-            "image_prompt": "Rickshaw seat close-up, upper 25% dark cushions, tight shot of the leather pouch strap sticking out from the cushion, tense",
-            "characters": [],
-            "camera": "tight shot",
-            "lighting": "shadowy",
-            "emotion": "tense",
-            "narration": "The gold bag peeks out. Jian's heart leaps into his throat.",
-            "dialogue": [],
-            "sfx": "HEAVY BREATHING",
-            "duration": 6.0
-          },
-          {
-            "id": 7,
-            "image_prompt": "Wet rainy street, upper 25% dark neon lights, over-the-shoulder shot of Jian looking back toward the passenger seat, nervous",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "left"
-              }
-            ],
-            "camera": "over-the-shoulder shot",
-            "lighting": "neon reflection",
-            "emotion": "nervous",
-            "narration": "He grips the handlebars tighter. Sweat mixes with the rain on his face.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "Did you... lose something important?"
-              }
-            ],
-            "sfx": "RAIN INTENSIFIES",
-            "duration": 6.0
-          },
-          {
-            "id": 8,
-            "image_prompt": "Inside the rickshaw cabin, upper 25% dark canvas, close-up of Mei leaning forward with a piercing gaze, sharp",
-            "characters": [
-              {
-                "name": "Mei",
-                "position": "center"
-              }
-            ],
-            "camera": "close-up shot",
-            "lighting": "sharp neon light",
-            "emotion": "piercing",
-            "narration": "Mei looks right at Jian and asks if he found anything valuable in his cab today.",
-            "dialogue": [
-              {
-                "speaker": "Mei",
-                "line": "Did you find anything valuable in my cab today?"
-              }
-            ],
-            "sfx": "SILENCE FALLS",
-            "duration": 6.5
-          }
-        ]
-      },
-      {
-        "part": 3,
-        "title": "The Golden Rickshaw: The Final Choice | Pt 3/3",
-        "hook_text": "I found your gold right here!",
-        "previously": "Jian stared at a bag of glowing gold coins while Mei turned around to ask if he found anything valuable in his cab.",
-        "description": "Jian battles his temptation, hands the golden pouch back to its rightful owner, and receives an honest fare that warms his heart.",
-        "caption": "I found your gold right here! Part 3/3 — save this so you don't miss the next part. Would you have given the gold back? #Honesty #GoldenRickshaw #StoryTime #GoodDeeds",
-        "hashtags": [
-          "Honesty",
-          "GoldenRickshaw",
-          "StoryTime",
-          "GoodDeeds"
-        ],
-        "moral_card": "Honesty is the richest fare.",
-        "panels": [
-          {
-            "id": 1,
-            "image_prompt": "Busy neon street at night, Jian holding the heavy golden pouch open inside the rickshaw, upper 25% dark wet canvas top, medium eye-level shot, neon glow and warm gold light, nervous tension",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "medium eye-level shot",
-            "neon glow and warm gold light": "neon and gold reflection",
-            "emotion": "nervous tension",
-            "narration": "The heavy pouch felt like a mountain in my hands.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "I found your gold right here!"
-              }
-            ],
-            "sfx": "RAIN POURS",
-            "duration": 6.0
-          },
-          {
-            "id": 2,
-            "image_prompt": "Dark rainy alleyway beside the neon street, Mei turning around with a sharp stare, upper 25% empty dark brick wall, close-up shot, dramatic streetlamp lighting, curious",
-            "characters": [
-              {
-                "name": "Mei",
-                "position": "center"
-              }
-            ],
-            "camera": "close-up shot",
-            "lighting": "dramatic streetlamp lighting",
-            "emotion": "curious",
-            "narration": "Mei turned slowly and stared into the shadows of the cab.",
-            "dialogue": [],
-            "sfx": "THUNDER RUMBLES",
-            "duration": 5.5
-          },
-          {
-            "id": 3,
-            "image_prompt": "Wet rickshaw seat with the heavy golden pouch resting on the cushion, upper 25% dark canvas roof, low angle close-up shot, neon pink reflection, temptation",
-            "characters": [],
-            "camera": "low angle close-up shot",
-            "lighting": "neon pink reflection",
-            "emotion": "temptation",
-            "narration": "Rich overnight. Just like that.",
-            "dialogue": [],
-            "sfx": "COINS CLINK",
-            "duration": 6.0
-          },
-          {
-            "id": 4,
-            "image_prompt": "Jian wiping sweat from his forehead inside the dark rickshaw cabin, upper 25% empty dark roof, medium close-up shot, dim amber light, conflicted",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "medium close-up shot",
-            "lighting": "dim amber light",
-            "emotion": "conflicted",
-            "narration": "My hands shook. The gold could fix all my problems.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "No. This is not mine to keep."
-              }
-            ],
-            "sfx": "HEAVY BREATHING",
-            "duration": 6.5
-          },
-          {
-            "id": 5,
-            "image_prompt": "Jian holding out the heavy golden pouch toward the passenger seat, upper 25% empty rainy sky, medium shot, bright warm gold light on hands, resolute",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "medium shot",
-            "lighting": "bright warm gold light on hands",
-            "emotion": "resolute",
-            "narration": "I pushed the heavy weight away from myself and held it out.",
-            "dialogue": [
-              {
-                "speaker": "Jian",
-                "line": "You dropped this in my cab."
-              }
-            ],
-            "sfx": "FABRICS RUSTLE",
-            "duration": 6.0
-          },
-          {
-            "id": 6,
-            "image_prompt": "Mei taking the golden pouch with a warm smile on her face, upper 25% dark rainy background, close-up shot, soft glowing neon light, relieved",
-            "characters": [
-              {
-                "name": "Mei",
-                "position": "center"
-              }
-            ],
-            "camera": "close-up shot",
-            "lighting": "soft glowing neon light",
-            "emotion": "relieved",
-            "narration": "A wide smile spread across her face like the morning sun.",
-            "dialogue": [
-              {
-                "speaker": "Mei",
-                "line": "Thank you for your honesty."
-              }
-            ],
-            "sfx": "GENTLE SMILE",
-            "duration": 6.0
-          },
-          {
-            "id": 7,
-            "image_prompt": "Mei handing a small coin to Jian in the glowing rain, upper 25% empty wet street, medium two-shot, warm golden streetlamp light, happy",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "left"
-              },
-              {
-                "name": "Mei",
-                "position": "right"
-              }
-            ],
-            "camera": "medium two-shot",
-            "lighting": "warm golden streetlamp light",
-            "emotion": "happy",
-            "narration": "She handed me a fair and honest coin for the ride.",
-            "dialogue": [
-              {
-                "speaker": "Mei",
-                "line": "You earned every bit of this."
-              }
-            ],
-            "sfx": "COIN TINGLE",
-            "duration": 6.0
-          },
-          {
-            "id": 8,
-            "image_prompt": "Jian smiling brightly while pulling his rickshaw down a sparkling rainy street, upper 25% glowing neon signs in the rain, wide angle shot, brilliant warm sunrise light breaking through clouds, peaceful",
-            "characters": [
-              {
-                "name": "Jian",
-                "position": "center"
-              }
-            ],
-            "camera": "wide angle shot",
-            "lighting": "brilliant warm sunrise light breaking through clouds",
-            "emotion": "peaceful",
-            "narration": "My pockets were light, but my heart was richer than gold.",
-            "dialogue": [],
-            "sfx": "RAIN FADES",
-            "duration": 6.5
-          }
-        ]
-      }
-    ],
-    "setting": "Busy rainy streets of a modern neon-lit Asian city",
-    "music_mood": "emotional",
-    "cast": [
-      {
-        "name": "Jian",
-        "age": 35,
-        "gender": "male",
-        "region": "urban Asia",
-        "build": "lean and muscular",
-        "face_shape": "oval face with kind eyes",
-        "eyes": "dark brown",
-        "eyebrows": "thin black",
-        "hair": "short black buzz cut",
-        "skin_tone": "warm tan",
-        "outfit": "bright blue jacket over black shirt and grey pants",
-        "accessory": "thick silver bangle on left wrist",
-        "signature_color": "bright blue",
-        "anchors": [
-          "bright blue jacket",
-          "short black buzz cut",
-          "thick silver bangle"
-        ],
-        "visual_prompt": "35-year-old Asian male, lean build, oval face, dark brown eyes, short black buzz cut, warm tan skin, bright blue jacket, thick silver bangle on wrist.",
-        "voice": "warm and tired narrator"
-      },
-      {
-        "name": "Mei",
-        "age": 40,
-        "gender": "female",
-        "region": "urban Asia",
-        "build": "sturdy",
-        "face_shape": "round face with sharp gaze",
-        "eyes": "black",
-        "eyebrows": "strong black",
-        "hair": "long black braid",
-        "skin_tone": "medium",
-        "outfit": "bright green vest over white shirt and dark trousers",
-        "accessory": "brown leather satchel across chest",
-        "signature_color": "bright green",
-        "anchors": [
-          "bright green vest",
-          "long black braid",
-          "brown leather satchel"
-        ],
-        "visual_prompt": "40-year-old Asian female, sturdy build, round face, black eyes, long black braid, medium skin, bright green vest, brown leather satchel across chest.",
-        "voice": "sharp and demanding"
-      }
-    ],
-    "beats": [
-      {
-        "part": 1,
-        "summary": "Jian pedals his rickshaw through the rain. He finds a heavy leather pouch left behind on the back seat. He opens it to see it is full of gleaming gold coins.",
-        "cliffhanger_type": "reveal",
-        "cliffhanger": "Jian pulls the drawstring of the pouch and gasps at the blinding glow of pure gold inside.",
-        "payoff_next": "Jian stares at the glowing gold coins on his lap while the streetlights hum in the heavy rain."
-      },
-      {
-        "part": 2,
-        "summary": "Jian tries to continue his day, but temptation grows. A wealthy passenger, Mei, boards his rickshaw and drops a subtle hint about a lost reward, testing Jian's resolve.",
-        "cliffhanger_type": "impossible_choice",
-        "cliffhanger": "Mei looks right at Jian and asks if he found anything valuable in his cab today.",
-        "payoff_next": "Jian grips the handlebars tightly, sweating under his bright blue jacket as he faces the passenger."
-      },
-      {
-        "part": 3,
-        "summary": "Jian fights his greed and hands the heavy pouch back to Mei. Mei smiles warmly and gives him a modest, honest fare, leaving Jian with a light heart and true wealth.",
-        "cliffhanger_type": null,
-        "cliffhanger": null,
-        "payoff_next": null
-      }
-    ],
-    "story_id": "st-20261116-0217f9",
-    "planner_model": "gemini-3.5-flash-lite",
-    "status": "READY_TO_RENDER",
-    "script_model": "gemini-3.5-flash-lite",
-    "judge": {
-      "scores": {
-        "hook": 9,
-        "clarity": 10,
-        "tension": 9,
-        "twist": 7,
-        "emotion": 9,
-        "cliffhanger": 9,
-        "moral_payoff": 10,
-        "readability": 10,
-        "safety": 10
-      },
-      "avg": 9.22,
-      "passed": true,
-      "notes": "The story is exceptionally well-paced with strong vertical comic formatting, clear panel descriptions, and high emotional resonance. The moral payoff is delivered naturally without feeling overly preachy. Safety and audience appropriateness are strictly maintained.",
-      "judge_model": "gemini-3.5-flash-lite"
-    },
-    "art": {
-      "phase": "DONE",
-      "job": null,
-      "session_retries": 0,
-      "portrait_repair": 0,
-      "repair_round": 2,
-      "portraits": {
-        "Jian": {
-          "candidates": [
-            "portrait-jian__s988359896.jpg",
-            "portrait-jian__s988312382.jpg",
-            "portrait-jian__s988304463.jpg",
-            "portrait-jian__s988344058.jpg"
-          ],
-          "approved": "portrait-jian__s988344058.jpg",
-          "qa": {
-            "model": "gemini-3.5-flash-lite",
-            "results": [
-              {
-                "scores": {
-                  "single_character": 10,
-                  "comic_style": 10,
-                  "hair": 10,
-                  "outfit_colors": 3,
-                  "accessory": 3,
-                  "skin_tone": 10,
-                  "age": 10,
-                  "anatomy": 10,
-                  "no_text": 10,
-                  "safety": 10
-                },
-                "avg": 8.6,
-                "passed": false,
-                "index": 0,
-                "note": "Jacket is olive green instead of bright blue, and lacks the exact silver bangle."
-              },
-              {
-                "scores": {
-                  "single_character": 10,
-                  "comic_style": 10,
-                  "hair": 6,
-                  "outfit_colors": 10,
-                  "accessory": 3,
-                  "skin_tone": 10,
-                  "age": 10,
-                  "anatomy": 10,
-                  "no_text": 10,
-                  "safety": 10
-                },
-                "avg": 8.9,
-                "passed": false,
-                "index": 1,
-                "note": "Hair has blue dye on top, and has watches instead of the required silver bangle."
-              },
-              {
-                "scores": {
-                  "single_character": 10,
-                  "comic_style": 10,
-                  "hair": 10,
-                  "outfit_colors": 8,
-                  "accessory": 3,
-                  "skin_tone": 10,
-                  "age": 10,
-                  "anatomy": 10,
-                  "no_text": 10,
-                  "safety": 10
-                },
-                "avg": 9.1,
-                "passed": false,
-                "index": 2,
-                "note": "Pants are dark blue instead of grey, and missing the thick silver bangle."
-              },
-              {
-                "scores": {
-                  "single_character": 10,
-                  "comic_style": 10,
-                  "hair": 8,
-                  "outfit_colors": 8,
-                  "accessory": 7,
-                  "skin_tone": 10,
-                  "age": 10,
-                  "anatomy": 10,
-                  "no_text": 10,
-                  "safety": 10
-                },
-                "avg": 9.3,
-                "passed": true,
-                "index": 3,
-                "note": "Shirt is brown instead of black, but close on most other design elements."
-              }
-            ],
-            "best": 3
-          },
-          "failed": false
-        },
-        "Mei": {
-          "candidates": [
-            "portrait-mei__s111330963.jpg",
-            "portrait-mei__s111283449.jpg",
-            "portrait-mei__s111299287.jpg",
-            "portrait-mei__s111323044.jpg"
-          ],
-          "approved": "portrait-mei__s111330963.jpg",
-          "qa": {
-            "model": "gemini-3.5-flash-lite",
-            "results": [
-              {
-                "scores": {
-                  "single_character": 10,
-                  "comic_style": 10,
-                  "hair": 10,
-                  "outfit_colors": 10,
-                  "accessory": 10,
-                  "skin_tone": 10,
-                  "age": 8,
-                  "anatomy": 10,
-                  "no_text": 10,
-                  "safety": 10
-                },
-                "avg": 9.8,
-                "passed": true,
-                "index": 0,
-                "note": "Excellent match to the lock card, featuring the correct twin braids, bright green vest, and brown leather satchel across the chest in a distinct comic ink style."
-              },
-              {
-                "scores": {
-                  "single_character": 10,
-                  "comic_style": 10,
-                  "hair": 3,
-                  "outfit_colors": 10,
-                  "accessory": 4,
-                  "skin_tone": 10,
-                  "age": 8,
-                  "anatomy": 10,
-                  "no_text": 10,
-                  "safety": 10
-                },
-                "avg": 8.5,
-                "passed": false,
-                "index": 1,
-                "note": "Hair is incorrect (bun instead of long black braid) and the accessory is a backpack harness rather than a single brown leather satchel across the chest."
-              },
-              {
-                "scores": {
-                  "single_character": 10,
-                  "comic_style": 10,
-                  "hair": 3,
-                  "outfit_colors": 10,
-                  "accessory": 3,
-                  "skin_tone": 10,
-                  "age": 8,
-                  "anatomy": 10,
-                  "no_text": 10,
-                  "safety": 10
-                },
-                "avg": 8.4,
-                "passed": false,
-                "index": 2,
-                "note": "Fails the hair requirement (loose hair instead of braid) and lacks the required brown leather satchel across the chest."
-              },
-              {
-                "scores": {
-                  "single_character": 10,
-                  "comic_style": 10,
-                  "hair": 6,
-                  "outfit_colors": 10,
-                  "accessory": 5,
-                  "skin_tone": 10,
-                  "age": 8,
-                  "anatomy": 10,
-                  "no_text": 10,
-                  "safety": 10
-                },
-                "avg": 8.9,
-                "passed": false,
-                "index": 3,
-                "note": "Hair is styled into a complex braided updo rather than a straightforward long black braid, and the accessory resembles backpack straps rather than a simple crossbody satchel."
-              }
-            ],
-            "best": 0
-          },
-          "failed": false
-        }
-      },
-      "panels": {
-        "p1-1": {
-          "candidates": [
-            "p1-1__s1623801296.jpg",
-            "p1-1__s1623817134.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-1__s1623801296.jpg",
-              "scores": {
-                "matches_description": 8,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 7,
-                "empty_top": 8,
-                "composition": 9,
-                "safety": 10
-              },
-              "avg": 8.75,
-              "passed": true,
-              "note": "The image features strong comic-book ink lines, vibrant cyan and magenta lighting, and a rainy street scene. However, there is a small figure with an umbrella on the left contrary to the character-free shot description, and some pseudo-text appears on signs.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p1-1__s1623801296.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 1623801296,
-                "clip": 0.2944,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p1-1__s1623801296.jpg"
-              },
-              {
-                "seed": 1623817134,
-                "clip": 0.2893,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p1-1__s1623817134.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p1-2": {
-          "candidates": [
-            "p1-2__s191514765.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-2__s191514765.jpg",
-              "scores": {
-                "matches_description": 8,
-                "character_consistency": 8,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 8,
-                "safety": 10
-              },
-              "avg": 8.62,
-              "passed": true,
-              "note": "Jian is riding a bicycle in an alleyway matching most descriptors, though the rickshaw aspect is interpreted as a standard bike and pants are brownish rather than grey. Comic style, consistency, and safety are solid.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p1-2__s191514765.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 191514765,
-                "clip": 0.1945,
-                "dino": 0.3599,
-                "text": false,
-                "reasons": [],
-                "file": "p1-2__s191514765.jpg"
-              }
-            ],
-            "rejected": [
-              {
-                "seed": 191498927,
-                "clip": 0.2056,
-                "dino": 0.2444,
-                "text": false,
-                "reasons": [
-                  "dino 0.2444 < 0.35"
-                ]
-              },
-              {
-                "seed": 191506846,
-                "clip": 0.2152,
-                "dino": 0.2839,
-                "text": false,
-                "reasons": [
-                  "dino 0.2839 < 0.35"
-                ]
-              },
-              {
-                "seed": 191522684,
-                "clip": 0.2297,
-                "dino": 0.2753,
-                "text": false,
-                "reasons": [
-                  "dino 0.2753 < 0.35"
-                ]
-              }
-            ]
-          }
-        },
-        "p1-3": {
-          "candidates": [
-            "p1-3__s395445978.jpg",
-            "p1-3__s395438059.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-3__s395445978.jpg",
-              "scores": {
-                "matches_description": 9,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 9,
-                "safety": 10
-              },
-              "avg": 9.5,
-              "passed": true,
-              "note": "A moody, illustrated comic-book style rain-soaked street scene with vibrant neon lighting and no visible text.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p1-3__s395445978.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 395445978,
-                "clip": 0.2003,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p1-3__s395445978.jpg"
-              },
-              {
-                "seed": 395438059,
-                "clip": 0.1858,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p1-3__s395438059.jpg"
-              }
-            ],
-            "rejected": [
-              {
-                "seed": 395430140,
-                "clip": 0.2078,
-                "dino": null,
-                "text": true,
-                "reasons": [
-                  "text detected"
-                ]
-              }
-            ]
-          }
-        },
-        "p1-4": {
-          "candidates": [
-            "p1-4__s279282023.jpg",
-            "p1-4__s279297861.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-4__s279282023.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 6,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 8.12,
-              "passed": false,
-              "note": "Hair color changed to blue instead of black, rickshaw and neon sign from prompt are missing, but overall comic style and consistency are decent.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p1-4__s279297861.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 8.5,
-              "passed": false,
-              "note": "Jian is present with correct hair, jacket, and wrist accessory, but the rickshaw, wiping sweat action, and glowing neon sign mentioned in the description are missing or not clearly visible.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p1-4__s279297861.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 279282023,
-                "clip": 0.2399,
-                "dino": 0.659,
-                "text": false,
-                "reasons": [],
-                "file": "p1-4__s279282023.jpg"
-              },
-              {
-                "seed": 279297861,
-                "clip": 0.223,
-                "dino": 0.695,
-                "text": false,
-                "reasons": [],
-                "file": "p1-4__s279297861.jpg"
-              }
-            ],
-            "rejected": []
-          },
-          "needs_review": true
-        },
-        "p1-5": {
-          "candidates": [
-            "p1-5__s1740032954.jpg",
-            "p1-5__s1740040873.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-5__s1740032954.jpg",
-              "scores": {
-                "matches_description": 9,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 9,
-                "safety": 10
-              },
-              "avg": 9.5,
-              "passed": true,
-              "note": "A dark leather pouch on a rickshaw seat with rain effect, well-styled comic art, upper section has some rain streaks but remains relatively dark and uncluttered.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p1-5__s1740032954.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 1740032954,
-                "clip": 0.2446,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p1-5__s1740032954.jpg"
-              },
-              {
-                "seed": 1740040873,
-                "clip": 0.2123,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p1-5__s1740040873.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p1-6": {
-          "candidates": [
-            "p1-6__s274171030.jpg",
-            "p1-6__s274155192.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-6__s274171030.jpg",
-              "scores": {
-                "matches_description": 7,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 8.62,
-              "passed": true,
-              "note": "Jian matches character features well with the blue jacket and handlebars present, though the upper area is bright blue sky instead of dark alley shadows, and the hair style is slightly longer on top than the buzz cut reference.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p1-6__s274171030.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 274171030,
-                "clip": 0.2085,
-                "dino": 0.3985,
-                "text": false,
-                "reasons": [],
-                "file": "p1-6__s274171030.jpg"
-              },
-              {
-                "seed": 274155192,
-                "clip": 0.1632,
-                "dino": 0.7346,
-                "text": false,
-                "reasons": [],
-                "file": "p1-6__s274155192.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p1-7": {
-          "candidates": [
-            "p1-7__s309763582.jpg",
-            "p1-7__s309771501.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-7__s309763582.jpg",
-              "scores": {
-                "matches_description": 9,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 7,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 8,
-                "safety": 10
-              },
-              "avg": 8.88,
-              "passed": true,
-              "note": "The panel shows Jian's hands untying a pouch drawstring with moody lighting and dark interior elements, adhering well to the comic style, though hand anatomy is slightly distorted.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p1-7__s309763582.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 309763582,
-                "clip": 0.2151,
-                "dino": 0.5938,
-                "text": false,
-                "reasons": [],
-                "file": "p1-7__s309763582.jpg"
-              },
-              {
-                "seed": 309771501,
-                "clip": 0.2197,
-                "dino": 0.5027,
-                "text": false,
-                "reasons": [],
-                "file": "p1-7__s309771501.jpg"
-              }
-            ],
-            "rejected": [
-              {
-                "seed": 309779420,
-                "clip": 0.236,
-                "dino": 0.2308,
-                "text": false,
-                "reasons": [
-                  "dino 0.2308 < 0.35"
-                ]
-              }
-            ]
-          }
-        },
-        "p1-8": {
-          "candidates": [
-            "p1-8__s420961387.jpg",
-            "p1-8__s420969306.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p1-8__s420961387.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 4,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 7.75,
-              "passed": false,
-              "note": "Jian has the wrong outfit (tan/brown jacket instead of bright blue) and wrong hair (longer textured hair instead of buzz cut). The glowing pouch and upward lighting described in the prompt are completely missing.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p1-8__s420969306.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 5,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 7.5,
-              "passed": false,
-              "note": "Jian is missing his open pouch and the golden glow shining upward onto his face as described, and instead of a silver bangle he has a thick silver chain necklace. Expression is more neutral/arrogant than shocked, though the comic style and framing are decent.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p1-8__s420961387.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 420961387,
-                "clip": 0.2401,
-                "dino": 0.6057,
-                "text": false,
-                "reasons": [],
-                "file": "p1-8__s420961387.jpg"
-              },
-              {
-                "seed": 420969306,
-                "clip": 0.2341,
-                "dino": 0.4567,
-                "text": false,
-                "reasons": [],
-                "file": "p1-8__s420969306.jpg"
-              }
-            ],
-            "rejected": [
-              {
-                "seed": 420953468,
-                "clip": 0.2073,
-                "dino": 0.2751,
-                "text": false,
-                "reasons": [
-                  "dino 0.2751 < 0.35"
-                ]
-              }
-            ]
-          },
-          "needs_review": true
-        },
-        "p2-1": {
-          "candidates": [
-            "p2-1__s1654724508.jpg",
-            "p2-1__s1654732427.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-1__s1654724508.jpg",
-              "scores": {
-                "matches_description": 7,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 9.0,
-              "passed": true,
-              "note": "The image shows a neon alleyway with glowing coins scattered on the ground instead of a close-up of a spilling pouch, but the comic art style is well executed and clean.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p2-1__s1654724508.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 1654724508,
-                "clip": 0.2377,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p2-1__s1654724508.jpg"
-              },
-              {
-                "seed": 1654732427,
-                "clip": 0.234,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p2-1__s1654732427.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p2-2": {
-          "candidates": [
-            "p2-2__s221294166.jpg",
-            "p2-2__s221286247.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-2__s221294166.jpg",
-              "scores": {
-                "matches_description": 8,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 9,
-                "safety": 10
-              },
-              "avg": 9.0,
-              "passed": true,
-              "note": "The upper 25% features some neon signs and power lines rather than being completely uncluttered, and there is a character in the rickshaw despite the description saying character-free, but it fits the overall scene well with strong comic ink lines and vibrant colors.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p2-2__s221294166.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 221294166,
-                "clip": 0.2932,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p2-2__s221294166.jpg"
-              },
-              {
-                "seed": 221286247,
-                "clip": 0.2715,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p2-2__s221286247.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p2-3": {
-          "candidates": [
-            "p2-3__s357539782.jpg",
-            "p2-3__s357531863.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-3__s357539782.jpg",
-              "scores": {
-                "matches_description": 6,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 3,
-                "empty_top": 5,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 7.12,
-              "passed": false,
-              "note": "The image includes a character wiping sweat (contrary to the character-free prompt specification), and contains stylized gibberish text on the glowing shop sign.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-3__s357531863.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 5,
-                "comic_style": 9,
-                "anatomy": 6,
-                "no_text": 3,
-                "empty_top": 8,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 6.5,
-              "passed": false,
-              "note": "The panel features a character (Jian) wiping sweat/touching his face, contradicting the description stating character-free shot. There is also unintended text on the left signage and structure.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p2-3__s357539782.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 357539782,
-                "clip": 0.2822,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p2-3__s357539782.jpg"
-              },
-              {
-                "seed": 357531863,
-                "clip": 0.2559,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p2-3__s357531863.jpg"
-              }
-            ],
-            "rejected": []
-          },
-          "needs_review": true
-        },
-        "p2-4": {
-          "candidates": [
-            "p2-4__s318188040.jpg",
-            "p2-4__s318203878.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-4__s318188040.jpg",
-              "scores": {
-                "matches_description": 6,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 3,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 7.75,
-              "passed": false,
-              "note": "The character style and clothing match well, but the brown leather satchel is missing from the panel, the framing cuts off too close (missing upper 25% empty space and wet sidewalk/hotel background details), and the umbrella ribs intersect awkwardly.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-4__s318203878.jpg",
-              "scores": {
-                "matches_description": 8,
-                "character_consistency": 9,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 9,
-                "safety": 10
-              },
-              "avg": 9.12,
-              "passed": true,
-              "note": "The panel captures the comic style, character, and outfit well, featuring an umbrella as requested, though the background hotel canopy is somewhat simplified/abstracted.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p2-4__s318203878.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 318188040,
-                "clip": 0.2264,
-                "dino": 0.7166,
-                "text": false,
-                "reasons": [],
-                "file": "p2-4__s318188040.jpg"
-              },
-              {
-                "seed": 318203878,
-                "clip": 0.2502,
-                "dino": 0.5903,
-                "text": false,
-                "reasons": [],
-                "file": "p2-4__s318203878.jpg"
-              }
-            ],
-            "rejected": [
-              {
-                "seed": 318180121,
-                "clip": 0.2561,
-                "dino": 0.5225,
-                "text": false,
-                "reasons": [
-                  "dino 0.5225 < 0.55"
-                ]
-              },
-              {
-                "seed": 318195959,
-                "clip": 0.2438,
-                "dino": 0.5149,
-                "text": false,
-                "reasons": [
-                  "dino 0.5149 < 0.55"
-                ]
-              }
-            ]
-          }
-        },
-        "p2-5": {
-          "candidates": [
-            "p2-5__s111228016.jpg",
-            "p2-5__s111220097.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-5__s111228016.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 3,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 7.38,
-              "passed": false,
-              "note": "The image fails the panel description: it is not inside a covered rickshaw cabin with a dark roof canvas, and the upper 25% is not empty wall/sky suitable for speech bubbles (it shows part of the character's head/hair and a plain green background). Character consistency and art style are well executed.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-5__s111220097.jpg",
-              "scores": {
-                "matches_description": 8,
-                "character_consistency": 9,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 9,
-                "safety": 10
-              },
-              "avg": 9.12,
-              "passed": true,
-              "note": "Mei is present with her green vest, white shirt, and braids inside a rickshaw cabin as described. Upper area has dark roof canvas for context.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p2-5__s111220097.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 111228016,
-                "clip": 0.2324,
-                "dino": 0.9055,
-                "text": false,
-                "reasons": [],
-                "file": "p2-5__s111228016.jpg"
-              },
-              {
-                "seed": 111220097,
-                "clip": 0.1914,
-                "dino": 0.8512,
-                "text": false,
-                "reasons": [],
-                "file": "p2-5__s111220097.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p2-6": {
-          "candidates": [
-            "p2-6__s244432923.jpg",
-            "p2-6__s244425004.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-6__s244432923.jpg",
-              "scores": {
-                "matches_description": 7,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 9,
-                "safety": 10
-              },
-              "avg": 9.25,
-              "passed": true,
-              "note": "The image shows a close-up of a rickshaw seat with dark cushions, rendered in a strong comic ink style. However, the leather pouch strap sticking out from the cushion specified in the prompt is missing.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p2-6__s244432923.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 244432923,
-                "clip": 0.282,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p2-6__s244432923.jpg"
-              },
-              {
-                "seed": 244425004,
-                "clip": 0.2368,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p2-6__s244425004.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p2-7": {
-          "candidates": [
-            "p2-7__s347622084.jpg",
-            "p2-7__s347630003.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-7__s347622084.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.88,
-              "passed": false,
-              "note": "The panel fails to match the scene description: it is not a wet rainy street, has no dark neon lights, and lacks the requested over-the-shoulder shot looking toward a passenger seat. However, character consistency with Jian's reference portrait and the comic art style are well-executed.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p2-7__s347630003.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 5,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 2,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.75,
-              "passed": false,
-              "note": "Image 2 fails several prompt specifications: the scene is daytime with a blue sky instead of a wet rainy street with dark neon lights; the shot is not over-the-shoulder looking toward a passenger seat; the top 25% is cluttered with power lines instead of being dark or empty; and the character's hair is dyed white/silver on top rather than a pure short black buzz cut.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p2-7__s347622084.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 347622084,
-                "clip": 0.2113,
-                "dino": 0.7264,
-                "text": false,
-                "reasons": [],
-                "file": "p2-7__s347622084.jpg"
-              },
-              {
-                "seed": 347630003,
-                "clip": 0.2205,
-                "dino": 0.653,
-                "text": false,
-                "reasons": [],
-                "file": "p2-7__s347630003.jpg"
-              }
-            ],
-            "rejected": []
-          },
-          "needs_review": true
-        },
-        "p2-8": {
-          "candidates": [
-            "p2-8__s459824703.jpg",
-            "p2-8__s459816784.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p2-8__s459824703.jpg",
-              "scores": {
-                "matches_description": 7,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 8,
-                "safety": 10
-              },
-              "avg": 8.75,
-              "passed": true,
-              "note": "The panel features Mei with her signature green vest and dark hair in braids, rendered in a clean comic style. The upper area is relatively clear green background, though the upper 25% is not strictly a dark canvas as requested in the description.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p2-8__s459824703.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 459824703,
-                "clip": 0.2578,
-                "dino": 0.5516,
-                "text": false,
-                "reasons": [],
-                "file": "p2-8__s459824703.jpg"
-              },
-              {
-                "seed": 459816784,
-                "clip": 0.244,
-                "dino": 0.6484,
-                "text": false,
-                "reasons": [],
-                "file": "p2-8__s459816784.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p3-1": {
-          "candidates": [
-            "p3-1__s1666178980.jpg",
-            "p3-1__s1666163142.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-1__s1666178980.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 4,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 7.75,
-              "passed": false,
-              "note": "Lock-card observations for Jian in panel: Hair is styled differently (undercut with longer top rather than buzz cut), shirt is green instead of black, pants are brown instead of grey, and the silver bangle/golden pouch are missing/not visible. Scene lacks the specified night/neon setting and top dark canvas elements from the description.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-1__s1666163142.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 8.38,
-              "passed": true,
-              "note": "Jian has short black buzz cut, bright blue jacket, and silver bangle, matching character constraints well. However, the scene misses the busy neon street at night aesthetic, the golden pouch being held open, and the rickshaw from the description.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p3-1__s1666163142.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 1666178980,
-                "clip": 0.1904,
-                "dino": 0.7974,
-                "text": false,
-                "reasons": [],
-                "file": "p3-1__s1666178980.jpg"
-              },
-              {
-                "seed": 1666163142,
-                "clip": 0.1941,
-                "dino": 0.6966,
-                "text": false,
-                "reasons": [],
-                "file": "p3-1__s1666163142.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p3-2": {
-          "candidates": [
-            "p3-2__s111228016.jpg",
-            "p3-2__s111220097.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-2__s111228016.jpg",
-              "scores": {
-                "matches_description": 8,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 6,
-                "composition": 8,
-                "safety": 10
-              },
-              "avg": 8.88,
-              "passed": false,
-              "note": "The character matches the portrait well with accurate clothing, hair, and accessories. The background does not fully capture the dark rainy alleyway description, and the upper 25% is partially occupied by the top of the wall/environment rather than being fully empty.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-2__s111220097.jpg",
-              "scores": {
-                "matches_description": 9,
-                "character_consistency": 9,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 9,
-                "safety": 10
-              },
-              "avg": 9.5,
-              "passed": true,
-              "note": "The panel perfectly matches the required style and character design, with accurate outfit and hair elements from Mei's portrait.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p3-2__s111220097.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 111228016,
-                "clip": 0.1761,
-                "dino": 0.8796,
-                "text": false,
-                "reasons": [],
-                "file": "p3-2__s111228016.jpg"
-              },
-              {
-                "seed": 111220097,
-                "clip": 0.1257,
-                "dino": 0.8369,
-                "text": false,
-                "reasons": [],
-                "file": "p3-2__s111220097.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p3-3": {
-          "candidates": [
-            "p3-3__s370133897.jpg",
-            "p3-3__s370125978.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-3__s370133897.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 5,
-                "safety": 10
-              },
-              "avg": 8.38,
-              "passed": false,
-              "note": "The image shows a full view of a rickshaw rather than the requested low angle close-up, and the golden pouch is missing from the seat.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-3__s370125978.jpg",
-              "scores": {
-                "matches_description": 7,
-                "character_consistency": 10,
-                "comic_style": 9,
-                "anatomy": 10,
-                "no_text": 10,
-                "empty_top": 6,
-                "composition": 8,
-                "safety": 10
-              },
-              "avg": 8.75,
-              "passed": true,
-              "note": "The image depicts a wet rickshaw with a yellow seat in a vibrant neon style, but the specified golden pouch resting on the cushion is missing. The upper 25% is partially occupied by the canopy structure, reducing empty top space.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p3-3__s370125978.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 370133897,
-                "clip": 0.2798,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p3-3__s370133897.jpg"
-              },
-              {
-                "seed": 370125978,
-                "clip": 0.2791,
-                "dino": null,
-                "text": false,
-                "reasons": [],
-                "file": "p3-3__s370125978.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p3-4": {
-          "candidates": [
-            "p3-4__s321435210.jpg",
-            "p3-4__s321451048.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-4__s321435210.jpg",
-              "scores": {
-                "matches_description": 4,
-                "character_consistency": 6,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 5,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 7.25,
-              "passed": false,
-              "note": "Jian's hair is tinted blue instead of black, the silver bangle is missing, he is not wiping sweat from his forehead as requested, the lighting is bright instead of dim amber, and the upper 25% contains vehicle frame lines.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-4__s321451048.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 6,
-                "comic_style": 9,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 7.88,
-              "passed": true,
-              "note": "Jian is present with a buzz cut and blue jacket, but he is not wiping sweat from his forehead (eyes are closed, hands not visible near head), the lighting is bright daylight rather than dim amber, and the shirt is white instead of black.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p3-4__s321451048.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 321435210,
-                "clip": 0.2183,
-                "dino": 0.5754,
-                "text": false,
-                "reasons": [],
-                "file": "p3-4__s321435210.jpg"
-              },
-              {
-                "seed": 321451048,
-                "clip": 0.2075,
-                "dino": 0.5769,
-                "text": false,
-                "reasons": [],
-                "file": "p3-4__s321451048.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p3-5": {
-          "candidates": [
-            "p3-5__s1679935168.jpg",
-            "p3-5__s1679951006.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-5__s1679935168.jpg",
-              "scores": {
-                "matches_description": 2,
-                "character_consistency": 5,
-                "comic_style": 8,
-                "anatomy": 7,
-                "no_text": 10,
-                "empty_top": 7,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 6.62,
-              "passed": false,
-              "note": "Lock-card analysis: Character is completely bald instead of short black buzz cut. Outfit shows blue jacket over brown shirt/pants. The panel fails to show Jian holding out a heavy golden pouch toward a passenger seat, lacking the action and context described, and lacks the rainy sky.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-5__s1679951006.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 6,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 6,
-                "safety": 10
-              },
-              "avg": 8.0,
-              "passed": true,
-              "note": "Lock-card analysis: Jian has short black/grey buzz cut, blue jacket over white/grey shirt, grey pants, and wrist bangles. In the panel, Jian has a buzz cut, blue and tan jacket with a white shirt, grey pants, and holds a dark bag instead of a golden pouch towards the passenger seat. The upper 25% is clear sky, comic style is well-rendered.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p3-5__s1679951006.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 1679935168,
-                "clip": 0.16,
-                "dino": 0.6358,
-                "text": false,
-                "reasons": [],
-                "file": "p3-5__s1679935168.jpg"
-              },
-              {
-                "seed": 1679951006,
-                "clip": 0.1697,
-                "dino": 0.4723,
-                "text": false,
-                "reasons": [],
-                "file": "p3-5__s1679951006.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p3-6": {
-          "candidates": [
-            "p3-6__s247474964.jpg",
-            "p3-6__s247467045.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-6__s247474964.jpg",
-              "scores": {
-                "matches_description": 5,
-                "character_consistency": 7,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 9,
-                "composition": 7,
-                "safety": 10
-              },
-              "avg": 8.38,
-              "passed": true,
-              "note": "The character is missing the golden pouch and the brown leather satchel from the description, and the hair style has changed from two braids to one.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p3-6__s247474964.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 247474964,
-                "clip": 0.1592,
-                "dino": 0.7276,
-                "text": false,
-                "reasons": [],
-                "file": "p3-6__s247474964.jpg"
-              },
-              {
-                "seed": 247467045,
-                "clip": 0.1361,
-                "dino": 0.6805,
-                "text": false,
-                "reasons": [],
-                "file": "p3-6__s247467045.jpg"
-              }
-            ],
-            "rejected": []
-          }
-        },
-        "p3-7": {
-          "candidates": [
-            "p3-7__s318394788.jpg",
-            "p3-7__s318410626.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-7__s318394788.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 4,
-                "comic_style": 9,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.12,
-              "passed": false,
-              "note": "Only one character is shown (Mei merged with Jian's clothes/bangle), missing Jian completely, failing the two-shot composition, coin handover, and correct character positioning.",
-              "model": "gemini-3.5-flash-lite"
-            },
-            {
-              "file": "p3-7__s318410626.jpg",
-              "scores": {
-                "matches_description": 3,
-                "character_consistency": 4,
-                "comic_style": 9,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 4,
-                "safety": 10
-              },
-              "avg": 7.12,
-              "passed": false,
-              "note": "Only one character (Mei) is present, Jian is missing entirely. Mei is wearing a green jacket instead of a vest over a white shirt, and the action of handing a coin is absent.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p3-7__s318394788.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 318394788,
-                "clip": 0.1827,
-                "dino": 0.6548,
-                "text": false,
-                "reasons": [],
-                "file": "p3-7__s318394788.jpg"
-              },
-              {
-                "seed": 318410626,
-                "clip": 0.1801,
-                "dino": 0.5514,
-                "text": false,
-                "reasons": [],
-                "file": "p3-7__s318410626.jpg"
-              }
-            ],
-            "rejected": []
-          },
-          "needs_review": true
-        },
-        "p3-8": {
-          "candidates": [
-            "p3-8__s447100494.jpg",
-            "p3-8__s447092575.jpg"
-          ],
-          "qa": [
-            {
-              "file": "p3-8__s447100494.jpg",
-              "scores": {
-                "matches_description": 7,
-                "character_consistency": 8,
-                "comic_style": 10,
-                "anatomy": 9,
-                "no_text": 10,
-                "empty_top": 8,
-                "composition": 8,
-                "safety": 10
-              },
-              "avg": 8.75,
-              "passed": true,
-              "note": "Jian is pulling his rickshaw in a comic style that matches the reference well, featuring the blue jacket and silver bangle, though the rain/neon elements from the prompt are less prominent in this crop.",
-              "model": "gemini-3.5-flash-lite"
-            }
-          ],
-          "approved": "p3-8__s447100494.jpg",
-          "status": "approved",
-          "prefilter": {
-            "kept": [
-              {
-                "seed": 447100494,
-                "clip": 0.2134,
-                "dino": 0.7824,
-                "text": false,
-                "reasons": [],
-                "file": "p3-8__s447100494.jpg"
-              },
-              {
-                "seed": 447092575,
-                "clip": 0.2305,
-                "dino": 0.5472,
-                "text": false,
-                "reasons": [],
-                "file": "p3-8__s447092575.jpg"
-              }
-            ],
-            "rejected": [
-              {
-                "seed": 447116332,
-                "clip": 0.2361,
-                "dino": 0.2982,
-                "text": false,
-                "reasons": [
-                  "dino 0.2982 < 0.35"
-                ]
-              }
-            ]
-          }
-        }
-      },
-      "log": [
-        "2026-11-16T22:27:02Z pushed PORTRAITS job st-20261116-0217f9-portraits-1794868020 (2 items, ~0.61 GPU-h, kernel v8)",
-        "2026-11-16T22:51:26Z portrait Jian: approved portrait-jian__s988344058.jpg",
-        "2026-11-16T22:51:57Z portrait Mei: approved portrait-mei__s111330963.jpg",
-        "2026-11-16T22:51:59Z pushed PANELS job st-20261116-0217f9-panels-1794869517 (24 items, ~1.05 GPU-h, kernel v9)",
-        "2026-11-17T00:04:09Z panel p1-1: approved (avg 8.75)",
-        "2026-11-17T00:04:18Z panel p1-2: all candidates failed QA",
-        "2026-11-17T00:04:22Z panel p1-3: approved (avg 9.5)",
-        "2026-11-17T00:04:39Z panel p1-4: all candidates failed QA",
-        "2026-11-17T00:05:07Z panel p1-5: all candidates failed QA",
-        "2026-11-17T00:05:18Z panel p1-6: all candidates failed QA",
-        "2026-11-17T00:05:39Z panel p1-7: all candidates failed QA",
-        "2026-11-17T00:06:17Z panel p1-8: all candidates failed QA",
-        "2026-11-17T00:06:23Z panel p2-1: all candidates failed QA",
-        "2026-11-17T00:07:22Z panel p2-2: all candidates failed QA",
-        "2026-11-17T00:07:28Z panel p2-3: all candidates failed QA",
-        "2026-11-17T00:08:49Z panel p2-4: all candidates failed QA",
-        "2026-11-17T00:09:08Z panel p2-5: approved (avg 9.12)",
-        "2026-11-17T00:09:24Z panel p2-6: all candidates failed QA",
-        "2026-11-17T00:10:48Z panel p2-7: all candidates failed QA",
-        "2026-11-17T00:11:06Z panel p2-8: all candidates failed QA",
-        "2026-11-17T00:11:17Z panel p3-1: all candidates failed QA",
-        "2026-11-17T00:11:25Z panel p3-2: approved (avg 9.5)",
-        "2026-11-17T00:13:10Z panel p3-3: all candidates failed QA",
-        "2026-11-17T00:17:19Z panel p3-4: all candidates failed QA",
-        "2026-11-17T00:17:46Z panel p3-5: all candidates failed QA",
-        "2026-11-17T00:17:57Z panel p3-6: all candidates failed QA",
-        "2026-11-17T00:18:13Z panel p3-7: all candidates failed QA",
-        "2026-11-17T00:18:22Z panel p3-8: all candidates failed QA",
-        "2026-11-17T00:18:24Z pushed REPAIR job st-20261116-0217f9-repair-1794874702 (20 items, ~0.92 GPU-h, kernel v10)",
-        "2026-11-17T00:58:56Z pushed PANELS job st-20261116-0217f9-panels-1794877134 (20 items, ~1.14 GPU-h, kernel v11)",
-        "2026-11-17T02:16:12Z panel p1-2: all candidates failed QA",
-        "2026-11-17T02:16:20Z panel p1-4: all candidates failed QA",
-        "2026-11-17T02:16:42Z panel p1-5: approved (avg 9.5)",
-        "2026-11-17T02:16:53Z panel p1-6: all candidates failed QA",
-        "2026-11-17T02:17:08Z panel p1-7: all candidates failed QA",
-        "2026-11-17T02:17:17Z panel p1-8: all candidates failed QA",
-        "2026-11-17T02:18:11Z panel p2-1: approved (avg 9.0)",
-        "2026-11-17T02:20:04Z panel p2-2: all candidates failed QA",
-        "2026-11-17T02:21:03Z panel p2-3: all candidates failed QA",
-        "2026-11-17T02:21:12Z panel p2-4: all candidates failed QA",
-        "2026-11-17T02:21:52Z panel p2-6: all candidates failed QA",
-        "2026-11-17T02:22:24Z panel p2-7: all candidates failed QA",
-        "2026-11-17T02:23:00Z panel p2-8: all candidates failed QA",
-        "2026-11-17T02:23:20Z panel p3-1: all candidates failed QA",
-        "2026-11-17T02:23:34Z panel p3-3: all candidates failed QA",
-        "2026-11-17T02:23:43Z panel p3-4: all candidates failed QA",
-        "2026-11-17T02:25:44Z panel p3-5: all candidates failed QA",
-        "2026-11-17T02:26:29Z panel p3-6: all candidates failed QA",
-        "2026-11-17T02:26:40Z panel p3-7: all candidates failed QA",
-        "2026-11-17T02:27:09Z panel p3-8: all candidates failed QA",
-        "2026-11-17T02:27:11Z pushed REPAIR job st-20261116-0217f9-repair-1794882429 (18 items, ~1.05 GPU-h, kernel v12)",
-        "2026-11-17T05:57:56Z pushed PANELS job st-20261116-0217f9-panels-1794895074 (18 items, ~1.05 GPU-h, kernel v13)",
-        "2026-11-17T07:16:00Z panel p1-2: all candidates failed QA",
-        "2026-11-17T07:16:09Z panel p1-4: all candidates failed QA",
-        "2026-11-17T07:16:17Z panel p1-6: all candidates failed QA",
-        "2026-11-17T07:16:26Z panel p1-7: all candidates failed QA",
-        "2026-11-17T07:17:30Z panel p1-8: all candidates failed QA",
-        "2026-11-17T07:17:39Z panel p2-2: all candidates failed QA",
-        "2026-11-17T07:17:47Z panel p2-3: all candidates failed QA",
-        "2026-11-17T07:18:12Z panel p2-4: approved (avg 9.12)",
-        "2026-11-17T07:18:35Z panel p2-6: approved (avg 9.25)",
-        "2026-11-17T07:18:58Z panel p2-7: all candidates failed QA",
-        "2026-11-17T07:19:31Z panel p2-8: all candidates failed QA",
-        "2026-11-17T07:19:44Z panel p3-1: all candidates failed QA",
-        "2026-11-17T07:19:52Z panel p3-3: all candidates failed QA",
-        "2026-11-17T07:20:23Z panel p3-4: all candidates failed QA",
-        "2026-11-17T07:20:33Z panel p3-5: all candidates failed QA",
-        "2026-11-17T07:20:43Z panel p3-6: all candidates failed QA",
-        "2026-11-17T07:21:28Z panel p3-8: all candidates failed QA",
-        "2026-11-17T07:21:30Z pushed REPAIR job st-20261116-0217f9-repair-1794900088 (16 items, ~0.96 GPU-h, kernel v14)",
-        "2026-11-19T10:15:20Z pushed PANELS job st-20261116-0217f9-panels-1795083317 (16 items, ~0.96 GPU-h, kernel v15)",
-        "2026-11-19T13:47:14Z panel p1-2: approved (avg 8.62)",
-        "2026-11-19T14:02:15Z panel p1-4: all candidates failed QA",
-        "2026-11-19T14:10:56Z panel p1-6: approved (avg 8.62)",
-        "2026-11-19T14:13:47Z panel p1-7: all candidates failed QA",
-        "2026-11-19T14:14:57Z panel p1-8: all candidates failed QA",
-        "2026-11-19T14:15:10Z panel p2-2: approved (avg 9.0)",
-        "2026-11-19T14:15:25Z panel p2-3: all candidates failed QA",
-        "2026-11-19T14:19:13Z panel p2-7: all candidates failed QA",
-        "2026-11-19T14:19:56Z panel p2-8: approved (avg 8.75)",
-        "2026-11-19T14:19:56Z QA time budget reached; the next collect resumes",
-        "2026-11-19T14:22:45Z panel p3-1: all candidates failed QA",
-        "2026-11-19T14:23:00Z panel p3-3: all candidates failed QA",
-        "2026-11-19T14:23:23Z panel p3-4: all candidates failed QA",
-        "2026-11-19T14:24:08Z panel p3-5: all candidates failed QA",
-        "2026-11-19T14:25:12Z panel p3-6: all candidates failed QA",
-        "2026-11-19T14:25:54Z panel p3-7: all candidates failed QA",
-        "2026-11-19T14:27:08Z panel p3-8: approved (avg 8.75)",
-        "2026-11-19T14:27:11Z pushed REPAIR job st-20261116-0217f9-repair-1795098428 (11 items, ~0.74 GPU-h, kernel v16)",
-        "2026-11-19T15:24:29Z panel p1-4: all candidates failed QA",
-        "2026-11-19T15:24:40Z panel p1-7: approved (avg 8.88)",
-        "2026-11-19T15:28:29Z panel p1-8: all candidates failed QA",
-        "2026-11-19T17:00:49Z panel p2-3: all candidates failed QA",
-        "2026-11-19T17:02:21Z panel p2-7: all candidates failed QA",
-        "2026-11-19T17:03:08Z panel p3-1: approved (avg 8.38)",
-        "2026-11-19T17:04:02Z panel p3-3: approved (avg 8.75)",
-        "2026-11-19T17:07:02Z panel p3-4: approved (avg 7.88)",
-        "2026-11-19T17:08:27Z panel p3-5: approved (avg 8.0)",
-        "2026-11-19T17:08:39Z panel p3-6: approved (avg 8.38)",
-        "2026-11-19T17:10:13Z panel p3-7: all candidates failed QA",
-        "2026-11-19T17:10:13Z panel p1-4: best-effort p1-4__s279297861.jpg (avg 8.5) -> needs human review",
-        "2026-11-19T17:10:13Z panel p1-8: best-effort p1-8__s420961387.jpg (avg 7.75) -> needs human review",
-        "2026-11-19T17:10:13Z panel p2-7: best-effort p2-7__s347622084.jpg (avg 7.88) -> needs human review",
-        "2026-11-19T17:10:13Z panel p3-7: best-effort p3-7__s318394788.jpg (avg 7.12) -> needs human review",
-        "2026-11-19T17:10:16Z pushed REPAIR job st-20261116-0217f9-repair-1795108213 (1 items, ~0.29 GPU-h, kernel v17)",
-        "2026-11-19T17:35:56Z panel p2-3: all candidates failed QA",
-        "2026-11-19T17:35:56Z panel p2-3: best-effort p2-3__s357539782.jpg (avg 7.12) -> needs human review",
-        "2026-11-19T17:35:56Z all portraits and panels approved -> READY_TO_RENDER"
-      ]
-    }
-  },
+  "current": null,
   "history": [
     {
       "story_id": "st-20261116-ab646f",
@@ -2349,15 +16,2365 @@
       "status": "ABORTED",
       "reason": "Cast portraits failed QA after repair: ['Bari', 'Seth']",
       "at": 1794867624.8777056
+    },
+    {
+      "story_id": "st-20261116-0217f9",
+      "title": "The Golden Rickshaw",
+      "category": "moral_fable",
+      "status": "BUFFERED",
+      "at": 1795110591.2434554,
+      "platform_ids": {}
     }
   ],
   "used": {
-    "categories": [],
-    "settings": [],
-    "morals": [],
-    "premises": []
+    "categories": [
+      "moral_fable"
+    ],
+    "settings": [
+      "Busy rainy streets of a modern neon-lit Asian city"
+    ],
+    "morals": [
+      "Honesty is the richest fare."
+    ],
+    "premises": [
+      "A struggling rickshaw driver finds a heavy bag of gold coins and must choose between sudden wealth and his own honesty."
+    ]
   },
   "archive": {
+    "st-20261116-0217f9": {
+      "title": "The Golden Rickshaw",
+      "category": "moral_fable",
+      "logline": "A struggling rickshaw driver finds a heavy bag of gold coins and must choose between sudden wealth and his own honesty.",
+      "moral": "Honesty is the richest fare.",
+      "parts": [
+        {
+          "part": 1,
+          "title": "The Golden Rickshaw: A Driver's Choice | Pt 1/3",
+          "hook_text": "A heavy secret waits in the rain.",
+          "previously": null,
+          "description": "Jian pedals through a neon-lit rainy city and discovers a mysterious leather pouch filled with gold coins on his rickshaw seat.",
+          "caption": "A heavy secret waits in the rain. Part 1/3 — save this so you don't miss the next part. What would you do with a bag of gold found in your cab? #Gold #Mystery #StoryTime #RainyNight",
+          "hashtags": [
+            "Gold",
+            "Mystery",
+            "StoryTime",
+            "RainyNight"
+          ],
+          "moral_card": null,
+          "panels": [
+            {
+              "id": 1,
+              "image_prompt": "A futuristic city street at night under heavy rain, neon signs reflecting in puddles, upper 25% empty dark sky, wide cinematic shot, vibrant cyan and magenta lighting, tense mood",
+              "characters": [],
+              "camera": "wide cinematic shot",
+              "lighting": "vibrant cyan and magenta neon glow",
+              "emotion": "tense",
+              "narration": "A heavy secret waits in the rain.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "A heavy secret waits in the rain."
+                }
+              ],
+              "sfx": "Pattering rain and distant traffic hum",
+              "duration": 6.5
+            },
+            {
+              "id": 2,
+              "image_prompt": "Jian pedaling a bicycle rickshaw hard down a wet alleyway, water splashing from wheels, upper 25% dark wet brick wall, medium action shot, moody street lamps, exhausting effort",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "medium action shot",
+              "lighting": "moody street lamps",
+              "emotion": "exhausted",
+              "narration": "Jian pedals through the cold city. The rain falls harder.",
+              "dialogue": [],
+              "sfx": "Heavy panting and squeaking pedals",
+              "duration": 6.0
+            },
+            {
+              "id": 3,
+              "image_prompt": "Neon signs blurred in the rainy night, empty asphalt street, upper 25% dark gloomy sky, low angle close-up, dim amber lighting, lonely atmosphere",
+              "characters": [],
+              "camera": "low angle close-up",
+              "lighting": "dim amber lighting",
+              "emotion": "lonely",
+              "narration": "The streets empty out. Every passenger has gone home.",
+              "dialogue": [],
+              "sfx": "Wind howling",
+              "duration": 6.0
+            },
+            {
+              "id": 4,
+              "image_prompt": "Jian pulling the rickshaw to a stop beneath a glowing billboard, wiping sweat from his brow, upper 25% glowing neon sign, medium close-up, tired expression",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "medium close-up",
+              "lighting": "bright neon sign overhead",
+              "emotion": "tired",
+              "narration": "Jian pulls over to catch his breath.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "Just a few more miles to go."
+                }
+              ],
+              "sfx": "Brakes screeching softly",
+              "duration": 6.5
+            },
+            {
+              "id": 5,
+              "image_prompt": "A dark leather pouch resting on the vinyl seat of the rickshaw, wet drops glistening on the leather, upper 25% dark empty background, close-up shot, dramatic spotlight",
+              "characters": [],
+              "camera": "close-up shot",
+              "lighting": "dramatic spotlight from street lamp",
+              "emotion": "mysterious",
+              "narration": "A heavy leather pouch rests on the back seat.",
+              "dialogue": [],
+              "sfx": "Thud of leather hitting vinyl",
+              "duration": 6.0
+            },
+            {
+              "id": 6,
+              "image_prompt": "Jian turning around from the handlebars to look closely at the back seat, upper 25% dark alley shadows, over-the-shoulder medium shot, cool blue tones, curious expression",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "over-the-shoulder medium shot",
+              "lighting": "cool blue tones",
+              "emotion": "curious",
+              "narration": "Someone left something behind.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "What is this?"
+                }
+              ],
+              "sfx": "Water dripping",
+              "duration": 6.0
+            },
+            {
+              "id": 7,
+              "image_prompt": "Jian's hands untying a thick leather drawstring on the pouch, upper 25% dark interior of the rickshaw, extreme close-up, moody shadow lighting, suspenseful mood",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "extreme close-up",
+              "lighting": "moody shadow lighting",
+              "emotion": "suspenseful",
+              "narration": "Jian's fingers pull the cord.",
+              "dialogue": [],
+              "sfx": "Leather creaking",
+              "duration": 6.5
+            },
+            {
+              "id": 8,
+              "image_prompt": "Jian gasping as a blinding golden glow shines upward from an open pouch onto his face, upper 25% brilliant warm golden light casting shadows, close-up shot, shocked expression",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "close-up shot",
+              "lighting": "blinding golden glow",
+              "emotion": "shocked",
+              "narration": "Jian pulls the drawstring of the pouch and gasps at the blinding glow of pure gold inside.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "It's... real gold."
+                }
+              ],
+              "sfx": "Soft shimmering chime",
+              "duration": 7.0
+            }
+          ]
+        },
+        {
+          "part": 2,
+          "title": "Gold Coins in the Cab | Pt 2/3",
+          "hook_text": "Is this real gold?",
+          "previously": "Jian found a heavy bag of gold coins hidden inside his rickshaw.",
+          "description": "Jian tries to work through the rain while hiding the heavy bag of gold coins, but a sharp passenger boards and starts asking dangerous questions.",
+          "caption": "Is this real gold? Part 2/3 — save this so you don't miss the next part. What would you do with a bag of gold? #story #gold #choices #drama",
+          "hashtags": [
+            "story",
+            "gold",
+            "choices",
+            "drama"
+          ],
+          "moral_card": null,
+          "panels": [
+            {
+              "id": 1,
+              "image_prompt": "Empty neon alleyway at night, upper 25% dark rain clouds, close-up shot of a leather pouch spilling glowing coins, bright warm golden light, shocked",
+              "characters": [],
+              "camera": "close-up shot",
+              "lighting": "bright warm golden light",
+              "emotion": "shocked",
+              "narration": "Jian stares at the bright treasure in his hands.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "Is this real gold?"
+                }
+              ],
+              "sfx": "RAIN POURS",
+              "duration": 6.0
+            },
+            {
+              "id": 2,
+              "image_prompt": "Busy wet city street at night, upper 25% neon signs reflecting in puddles, wide shot of Jian pedaling his rickshaw fast, determined",
+              "characters": [],
+              "camera": "wide shot",
+              "lighting": "neon glow",
+              "emotion": "determined",
+              "narration": "He hides the bag under his seat and pedals into the rain.",
+              "dialogue": [],
+              "sfx": "TIRES SPLASH",
+              "duration": 6.0
+            },
+            {
+              "id": 3,
+              "image_prompt": "Street corner under a glowing noodle shop sign, upper 25% dark sky, medium shot of Jian wiping sweat from his forehead, anxious",
+              "characters": [],
+              "camera": "medium shot",
+              "lighting": "dim streetlamp",
+              "emotion": "anxious",
+              "narration": "Every shadow looks like a thief. His hands shake on the bars.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "Keep moving. Just drive."
+                }
+              ],
+              "sfx": "THUNDER RUMBLES",
+              "duration": 6.0
+            },
+            {
+              "id": 4,
+              "image_prompt": "Wet sidewalk outside a luxury hotel, upper 25% glowing hotel canopy, medium shot of Mei holding a silk umbrella, demanding expression",
+              "characters": [
+                {
+                  "name": "Mei",
+                  "position": "center"
+                }
+              ],
+              "camera": "medium shot",
+              "lighting": "bright white marquee light",
+              "emotion": "demanding",
+              "narration": "A wealthy passenger steps out from the shadows and signals him down.",
+              "dialogue": [
+                {
+                  "speaker": "Mei",
+                  "line": "Take me to the station now."
+                }
+              ],
+              "sfx": "HEELS CLICK",
+              "duration": 6.0
+            },
+            {
+              "id": 5,
+              "image_prompt": "Inside the covered rickshaw cabin, upper 25% dark roof canvas, close-up of Mei sitting upright, sharp and suspicious expression",
+              "characters": [
+                {
+                  "name": "Mei",
+                  "position": "center"
+                }
+              ],
+              "camera": "close-up shot",
+              "lighting": "dim interior light",
+              "emotion": "suspicious",
+              "narration": "Mei climbs inside and the heavy gold bag shifts beneath the seat cushion.",
+              "dialogue": [
+                {
+                  "speaker": "Mei",
+                  "line": "Drive carefully. I lost something very precious today."
+                }
+              ],
+              "sfx": "FABRICS RUSTLE",
+              "duration": 6.0
+            },
+            {
+              "id": 6,
+              "image_prompt": "Rickshaw seat close-up, upper 25% dark cushions, tight shot of the leather pouch strap sticking out from the cushion, tense",
+              "characters": [],
+              "camera": "tight shot",
+              "lighting": "shadowy",
+              "emotion": "tense",
+              "narration": "The gold bag peeks out. Jian's heart leaps into his throat.",
+              "dialogue": [],
+              "sfx": "HEAVY BREATHING",
+              "duration": 6.0
+            },
+            {
+              "id": 7,
+              "image_prompt": "Wet rainy street, upper 25% dark neon lights, over-the-shoulder shot of Jian looking back toward the passenger seat, nervous",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "left"
+                }
+              ],
+              "camera": "over-the-shoulder shot",
+              "lighting": "neon reflection",
+              "emotion": "nervous",
+              "narration": "He grips the handlebars tighter. Sweat mixes with the rain on his face.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "Did you... lose something important?"
+                }
+              ],
+              "sfx": "RAIN INTENSIFIES",
+              "duration": 6.0
+            },
+            {
+              "id": 8,
+              "image_prompt": "Inside the rickshaw cabin, upper 25% dark canvas, close-up of Mei leaning forward with a piercing gaze, sharp",
+              "characters": [
+                {
+                  "name": "Mei",
+                  "position": "center"
+                }
+              ],
+              "camera": "close-up shot",
+              "lighting": "sharp neon light",
+              "emotion": "piercing",
+              "narration": "Mei looks right at Jian and asks if he found anything valuable in his cab today.",
+              "dialogue": [
+                {
+                  "speaker": "Mei",
+                  "line": "Did you find anything valuable in my cab today?"
+                }
+              ],
+              "sfx": "SILENCE FALLS",
+              "duration": 6.5
+            }
+          ]
+        },
+        {
+          "part": 3,
+          "title": "The Golden Rickshaw: The Final Choice | Pt 3/3",
+          "hook_text": "I found your gold right here!",
+          "previously": "Jian stared at a bag of glowing gold coins while Mei turned around to ask if he found anything valuable in his cab.",
+          "description": "Jian battles his temptation, hands the golden pouch back to its rightful owner, and receives an honest fare that warms his heart.",
+          "caption": "I found your gold right here! Part 3/3 — save this so you don't miss the next part. Would you have given the gold back? #Honesty #GoldenRickshaw #StoryTime #GoodDeeds",
+          "hashtags": [
+            "Honesty",
+            "GoldenRickshaw",
+            "StoryTime",
+            "GoodDeeds"
+          ],
+          "moral_card": "Honesty is the richest fare.",
+          "panels": [
+            {
+              "id": 1,
+              "image_prompt": "Busy neon street at night, Jian holding the heavy golden pouch open inside the rickshaw, upper 25% dark wet canvas top, medium eye-level shot, neon glow and warm gold light, nervous tension",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "medium eye-level shot",
+              "neon glow and warm gold light": "neon and gold reflection",
+              "emotion": "nervous tension",
+              "narration": "The heavy pouch felt like a mountain in my hands.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "I found your gold right here!"
+                }
+              ],
+              "sfx": "RAIN POURS",
+              "duration": 6.0
+            },
+            {
+              "id": 2,
+              "image_prompt": "Dark rainy alleyway beside the neon street, Mei turning around with a sharp stare, upper 25% empty dark brick wall, close-up shot, dramatic streetlamp lighting, curious",
+              "characters": [
+                {
+                  "name": "Mei",
+                  "position": "center"
+                }
+              ],
+              "camera": "close-up shot",
+              "lighting": "dramatic streetlamp lighting",
+              "emotion": "curious",
+              "narration": "Mei turned slowly and stared into the shadows of the cab.",
+              "dialogue": [],
+              "sfx": "THUNDER RUMBLES",
+              "duration": 5.5
+            },
+            {
+              "id": 3,
+              "image_prompt": "Wet rickshaw seat with the heavy golden pouch resting on the cushion, upper 25% dark canvas roof, low angle close-up shot, neon pink reflection, temptation",
+              "characters": [],
+              "camera": "low angle close-up shot",
+              "lighting": "neon pink reflection",
+              "emotion": "temptation",
+              "narration": "Rich overnight. Just like that.",
+              "dialogue": [],
+              "sfx": "COINS CLINK",
+              "duration": 6.0
+            },
+            {
+              "id": 4,
+              "image_prompt": "Jian wiping sweat from his forehead inside the dark rickshaw cabin, upper 25% empty dark roof, medium close-up shot, dim amber light, conflicted",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "medium close-up shot",
+              "lighting": "dim amber light",
+              "emotion": "conflicted",
+              "narration": "My hands shook. The gold could fix all my problems.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "No. This is not mine to keep."
+                }
+              ],
+              "sfx": "HEAVY BREATHING",
+              "duration": 6.5
+            },
+            {
+              "id": 5,
+              "image_prompt": "Jian holding out the heavy golden pouch toward the passenger seat, upper 25% empty rainy sky, medium shot, bright warm gold light on hands, resolute",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "medium shot",
+              "lighting": "bright warm gold light on hands",
+              "emotion": "resolute",
+              "narration": "I pushed the heavy weight away from myself and held it out.",
+              "dialogue": [
+                {
+                  "speaker": "Jian",
+                  "line": "You dropped this in my cab."
+                }
+              ],
+              "sfx": "FABRICS RUSTLE",
+              "duration": 6.0
+            },
+            {
+              "id": 6,
+              "image_prompt": "Mei taking the golden pouch with a warm smile on her face, upper 25% dark rainy background, close-up shot, soft glowing neon light, relieved",
+              "characters": [
+                {
+                  "name": "Mei",
+                  "position": "center"
+                }
+              ],
+              "camera": "close-up shot",
+              "lighting": "soft glowing neon light",
+              "emotion": "relieved",
+              "narration": "A wide smile spread across her face like the morning sun.",
+              "dialogue": [
+                {
+                  "speaker": "Mei",
+                  "line": "Thank you for your honesty."
+                }
+              ],
+              "sfx": "GENTLE SMILE",
+              "duration": 6.0
+            },
+            {
+              "id": 7,
+              "image_prompt": "Mei handing a small coin to Jian in the glowing rain, upper 25% empty wet street, medium two-shot, warm golden streetlamp light, happy",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "left"
+                },
+                {
+                  "name": "Mei",
+                  "position": "right"
+                }
+              ],
+              "camera": "medium two-shot",
+              "lighting": "warm golden streetlamp light",
+              "emotion": "happy",
+              "narration": "She handed me a fair and honest coin for the ride.",
+              "dialogue": [
+                {
+                  "speaker": "Mei",
+                  "line": "You earned every bit of this."
+                }
+              ],
+              "sfx": "COIN TINGLE",
+              "duration": 6.0
+            },
+            {
+              "id": 8,
+              "image_prompt": "Jian smiling brightly while pulling his rickshaw down a sparkling rainy street, upper 25% glowing neon signs in the rain, wide angle shot, brilliant warm sunrise light breaking through clouds, peaceful",
+              "characters": [
+                {
+                  "name": "Jian",
+                  "position": "center"
+                }
+              ],
+              "camera": "wide angle shot",
+              "lighting": "brilliant warm sunrise light breaking through clouds",
+              "emotion": "peaceful",
+              "narration": "My pockets were light, but my heart was richer than gold.",
+              "dialogue": [],
+              "sfx": "RAIN FADES",
+              "duration": 6.5
+            }
+          ]
+        }
+      ],
+      "setting": "Busy rainy streets of a modern neon-lit Asian city",
+      "music_mood": "emotional",
+      "cast": [
+        {
+          "name": "Jian",
+          "age": 35,
+          "gender": "male",
+          "region": "urban Asia",
+          "build": "lean and muscular",
+          "face_shape": "oval face with kind eyes",
+          "eyes": "dark brown",
+          "eyebrows": "thin black",
+          "hair": "short black buzz cut",
+          "skin_tone": "warm tan",
+          "outfit": "bright blue jacket over black shirt and grey pants",
+          "accessory": "thick silver bangle on left wrist",
+          "signature_color": "bright blue",
+          "anchors": [
+            "bright blue jacket",
+            "short black buzz cut",
+            "thick silver bangle"
+          ],
+          "visual_prompt": "35-year-old Asian male, lean build, oval face, dark brown eyes, short black buzz cut, warm tan skin, bright blue jacket, thick silver bangle on wrist.",
+          "voice": "warm and tired narrator"
+        },
+        {
+          "name": "Mei",
+          "age": 40,
+          "gender": "female",
+          "region": "urban Asia",
+          "build": "sturdy",
+          "face_shape": "round face with sharp gaze",
+          "eyes": "black",
+          "eyebrows": "strong black",
+          "hair": "long black braid",
+          "skin_tone": "medium",
+          "outfit": "bright green vest over white shirt and dark trousers",
+          "accessory": "brown leather satchel across chest",
+          "signature_color": "bright green",
+          "anchors": [
+            "bright green vest",
+            "long black braid",
+            "brown leather satchel"
+          ],
+          "visual_prompt": "40-year-old Asian female, sturdy build, round face, black eyes, long black braid, medium skin, bright green vest, brown leather satchel across chest.",
+          "voice": "sharp and demanding"
+        }
+      ],
+      "beats": [
+        {
+          "part": 1,
+          "summary": "Jian pedals his rickshaw through the rain. He finds a heavy leather pouch left behind on the back seat. He opens it to see it is full of gleaming gold coins.",
+          "cliffhanger_type": "reveal",
+          "cliffhanger": "Jian pulls the drawstring of the pouch and gasps at the blinding glow of pure gold inside.",
+          "payoff_next": "Jian stares at the glowing gold coins on his lap while the streetlights hum in the heavy rain."
+        },
+        {
+          "part": 2,
+          "summary": "Jian tries to continue his day, but temptation grows. A wealthy passenger, Mei, boards his rickshaw and drops a subtle hint about a lost reward, testing Jian's resolve.",
+          "cliffhanger_type": "impossible_choice",
+          "cliffhanger": "Mei looks right at Jian and asks if he found anything valuable in his cab today.",
+          "payoff_next": "Jian grips the handlebars tightly, sweating under his bright blue jacket as he faces the passenger."
+        },
+        {
+          "part": 3,
+          "summary": "Jian fights his greed and hands the heavy pouch back to Mei. Mei smiles warmly and gives him a modest, honest fare, leaving Jian with a light heart and true wealth.",
+          "cliffhanger_type": null,
+          "cliffhanger": null,
+          "payoff_next": null
+        }
+      ],
+      "story_id": "st-20261116-0217f9",
+      "planner_model": "gemini-3.5-flash-lite",
+      "status": "BUFFERED",
+      "script_model": "gemini-3.5-flash-lite",
+      "judge": {
+        "scores": {
+          "hook": 9,
+          "clarity": 10,
+          "tension": 9,
+          "twist": 7,
+          "emotion": 9,
+          "cliffhanger": 9,
+          "moral_payoff": 10,
+          "readability": 10,
+          "safety": 10
+        },
+        "avg": 9.22,
+        "passed": true,
+        "notes": "The story is exceptionally well-paced with strong vertical comic formatting, clear panel descriptions, and high emotional resonance. The moral payoff is delivered naturally without feeling overly preachy. Safety and audience appropriateness are strictly maintained.",
+        "judge_model": "gemini-3.5-flash-lite"
+      },
+      "art": {
+        "phase": "DONE",
+        "job": null,
+        "session_retries": 0,
+        "portrait_repair": 0,
+        "repair_round": 2,
+        "portraits": {
+          "Jian": {
+            "candidates": [
+              "portrait-jian__s988359896.jpg",
+              "portrait-jian__s988312382.jpg",
+              "portrait-jian__s988304463.jpg",
+              "portrait-jian__s988344058.jpg"
+            ],
+            "approved": "portrait-jian__s988344058.jpg",
+            "qa": {
+              "model": "gemini-3.5-flash-lite",
+              "results": [
+                {
+                  "scores": {
+                    "single_character": 10,
+                    "comic_style": 10,
+                    "hair": 10,
+                    "outfit_colors": 3,
+                    "accessory": 3,
+                    "skin_tone": 10,
+                    "age": 10,
+                    "anatomy": 10,
+                    "no_text": 10,
+                    "safety": 10
+                  },
+                  "avg": 8.6,
+                  "passed": false,
+                  "index": 0,
+                  "note": "Jacket is olive green instead of bright blue, and lacks the exact silver bangle."
+                },
+                {
+                  "scores": {
+                    "single_character": 10,
+                    "comic_style": 10,
+                    "hair": 6,
+                    "outfit_colors": 10,
+                    "accessory": 3,
+                    "skin_tone": 10,
+                    "age": 10,
+                    "anatomy": 10,
+                    "no_text": 10,
+                    "safety": 10
+                  },
+                  "avg": 8.9,
+                  "passed": false,
+                  "index": 1,
+                  "note": "Hair has blue dye on top, and has watches instead of the required silver bangle."
+                },
+                {
+                  "scores": {
+                    "single_character": 10,
+                    "comic_style": 10,
+                    "hair": 10,
+                    "outfit_colors": 8,
+                    "accessory": 3,
+                    "skin_tone": 10,
+                    "age": 10,
+                    "anatomy": 10,
+                    "no_text": 10,
+                    "safety": 10
+                  },
+                  "avg": 9.1,
+                  "passed": false,
+                  "index": 2,
+                  "note": "Pants are dark blue instead of grey, and missing the thick silver bangle."
+                },
+                {
+                  "scores": {
+                    "single_character": 10,
+                    "comic_style": 10,
+                    "hair": 8,
+                    "outfit_colors": 8,
+                    "accessory": 7,
+                    "skin_tone": 10,
+                    "age": 10,
+                    "anatomy": 10,
+                    "no_text": 10,
+                    "safety": 10
+                  },
+                  "avg": 9.3,
+                  "passed": true,
+                  "index": 3,
+                  "note": "Shirt is brown instead of black, but close on most other design elements."
+                }
+              ],
+              "best": 3
+            },
+            "failed": false
+          },
+          "Mei": {
+            "candidates": [
+              "portrait-mei__s111330963.jpg",
+              "portrait-mei__s111283449.jpg",
+              "portrait-mei__s111299287.jpg",
+              "portrait-mei__s111323044.jpg"
+            ],
+            "approved": "portrait-mei__s111330963.jpg",
+            "qa": {
+              "model": "gemini-3.5-flash-lite",
+              "results": [
+                {
+                  "scores": {
+                    "single_character": 10,
+                    "comic_style": 10,
+                    "hair": 10,
+                    "outfit_colors": 10,
+                    "accessory": 10,
+                    "skin_tone": 10,
+                    "age": 8,
+                    "anatomy": 10,
+                    "no_text": 10,
+                    "safety": 10
+                  },
+                  "avg": 9.8,
+                  "passed": true,
+                  "index": 0,
+                  "note": "Excellent match to the lock card, featuring the correct twin braids, bright green vest, and brown leather satchel across the chest in a distinct comic ink style."
+                },
+                {
+                  "scores": {
+                    "single_character": 10,
+                    "comic_style": 10,
+                    "hair": 3,
+                    "outfit_colors": 10,
+                    "accessory": 4,
+                    "skin_tone": 10,
+                    "age": 8,
+                    "anatomy": 10,
+                    "no_text": 10,
+                    "safety": 10
+                  },
+                  "avg": 8.5,
+                  "passed": false,
+                  "index": 1,
+                  "note": "Hair is incorrect (bun instead of long black braid) and the accessory is a backpack harness rather than a single brown leather satchel across the chest."
+                },
+                {
+                  "scores": {
+                    "single_character": 10,
+                    "comic_style": 10,
+                    "hair": 3,
+                    "outfit_colors": 10,
+                    "accessory": 3,
+                    "skin_tone": 10,
+                    "age": 8,
+                    "anatomy": 10,
+                    "no_text": 10,
+                    "safety": 10
+                  },
+                  "avg": 8.4,
+                  "passed": false,
+                  "index": 2,
+                  "note": "Fails the hair requirement (loose hair instead of braid) and lacks the required brown leather satchel across the chest."
+                },
+                {
+                  "scores": {
+                    "single_character": 10,
+                    "comic_style": 10,
+                    "hair": 6,
+                    "outfit_colors": 10,
+                    "accessory": 5,
+                    "skin_tone": 10,
+                    "age": 8,
+                    "anatomy": 10,
+                    "no_text": 10,
+                    "safety": 10
+                  },
+                  "avg": 8.9,
+                  "passed": false,
+                  "index": 3,
+                  "note": "Hair is styled into a complex braided updo rather than a straightforward long black braid, and the accessory resembles backpack straps rather than a simple crossbody satchel."
+                }
+              ],
+              "best": 0
+            },
+            "failed": false
+          }
+        },
+        "panels": {
+          "p1-1": {
+            "candidates": [
+              "p1-1__s1623801296.jpg",
+              "p1-1__s1623817134.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p1-1__s1623801296.jpg",
+                "scores": {
+                  "matches_description": 8,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 10,
+                  "no_text": 7,
+                  "empty_top": 8,
+                  "composition": 9,
+                  "safety": 10
+                },
+                "avg": 8.75,
+                "passed": true,
+                "note": "The image features strong comic-book ink lines, vibrant cyan and magenta lighting, and a rainy street scene. However, there is a small figure with an umbrella on the left contrary to the character-free shot description, and some pseudo-text appears on signs.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p1-1__s1623801296.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 1623801296,
+                  "clip": 0.2944,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-1__s1623801296.jpg"
+                },
+                {
+                  "seed": 1623817134,
+                  "clip": 0.2893,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-1__s1623817134.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p1-2": {
+            "candidates": [
+              "p1-2__s191514765.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p1-2__s191514765.jpg",
+                "scores": {
+                  "matches_description": 8,
+                  "character_consistency": 8,
+                  "comic_style": 9,
+                  "anatomy": 8,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 8,
+                  "safety": 10
+                },
+                "avg": 8.62,
+                "passed": true,
+                "note": "Jian is riding a bicycle in an alleyway matching most descriptors, though the rickshaw aspect is interpreted as a standard bike and pants are brownish rather than grey. Comic style, consistency, and safety are solid.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p1-2__s191514765.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 191514765,
+                  "clip": 0.1945,
+                  "dino": 0.3599,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-2__s191514765.jpg"
+                }
+              ],
+              "rejected": [
+                {
+                  "seed": 191498927,
+                  "clip": 0.2056,
+                  "dino": 0.2444,
+                  "text": false,
+                  "reasons": [
+                    "dino 0.2444 < 0.35"
+                  ]
+                },
+                {
+                  "seed": 191506846,
+                  "clip": 0.2152,
+                  "dino": 0.2839,
+                  "text": false,
+                  "reasons": [
+                    "dino 0.2839 < 0.35"
+                  ]
+                },
+                {
+                  "seed": 191522684,
+                  "clip": 0.2297,
+                  "dino": 0.2753,
+                  "text": false,
+                  "reasons": [
+                    "dino 0.2753 < 0.35"
+                  ]
+                }
+              ]
+            }
+          },
+          "p1-3": {
+            "candidates": [
+              "p1-3__s395445978.jpg",
+              "p1-3__s395438059.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p1-3__s395445978.jpg",
+                "scores": {
+                  "matches_description": 9,
+                  "character_consistency": 10,
+                  "comic_style": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 9,
+                  "safety": 10
+                },
+                "avg": 9.5,
+                "passed": true,
+                "note": "A moody, illustrated comic-book style rain-soaked street scene with vibrant neon lighting and no visible text.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p1-3__s395445978.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 395445978,
+                  "clip": 0.2003,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-3__s395445978.jpg"
+                },
+                {
+                  "seed": 395438059,
+                  "clip": 0.1858,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-3__s395438059.jpg"
+                }
+              ],
+              "rejected": [
+                {
+                  "seed": 395430140,
+                  "clip": 0.2078,
+                  "dino": null,
+                  "text": true,
+                  "reasons": [
+                    "text detected"
+                  ]
+                }
+              ]
+            }
+          },
+          "p1-4": {
+            "candidates": [
+              "p1-4__s279282023.jpg",
+              "p1-4__s279297861.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p1-4__s279282023.jpg",
+                "scores": {
+                  "matches_description": 5,
+                  "character_consistency": 6,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 8.12,
+                "passed": false,
+                "note": "Hair color changed to blue instead of black, rickshaw and neon sign from prompt are missing, but overall comic style and consistency are decent.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p1-4__s279297861.jpg",
+                "scores": {
+                  "matches_description": 5,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 9,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 8.5,
+                "passed": false,
+                "note": "Jian is present with correct hair, jacket, and wrist accessory, but the rickshaw, wiping sweat action, and glowing neon sign mentioned in the description are missing or not clearly visible.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p1-4__s279297861.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 279282023,
+                  "clip": 0.2399,
+                  "dino": 0.659,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-4__s279282023.jpg"
+                },
+                {
+                  "seed": 279297861,
+                  "clip": 0.223,
+                  "dino": 0.695,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-4__s279297861.jpg"
+                }
+              ],
+              "rejected": []
+            },
+            "needs_review": true
+          },
+          "p1-5": {
+            "candidates": [
+              "p1-5__s1740032954.jpg",
+              "p1-5__s1740040873.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p1-5__s1740032954.jpg",
+                "scores": {
+                  "matches_description": 9,
+                  "character_consistency": 10,
+                  "comic_style": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 9,
+                  "safety": 10
+                },
+                "avg": 9.5,
+                "passed": true,
+                "note": "A dark leather pouch on a rickshaw seat with rain effect, well-styled comic art, upper section has some rain streaks but remains relatively dark and uncluttered.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p1-5__s1740032954.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 1740032954,
+                  "clip": 0.2446,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-5__s1740032954.jpg"
+                },
+                {
+                  "seed": 1740040873,
+                  "clip": 0.2123,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-5__s1740040873.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p1-6": {
+            "candidates": [
+              "p1-6__s274171030.jpg",
+              "p1-6__s274155192.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p1-6__s274171030.jpg",
+                "scores": {
+                  "matches_description": 7,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 8.62,
+                "passed": true,
+                "note": "Jian matches character features well with the blue jacket and handlebars present, though the upper area is bright blue sky instead of dark alley shadows, and the hair style is slightly longer on top than the buzz cut reference.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p1-6__s274171030.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 274171030,
+                  "clip": 0.2085,
+                  "dino": 0.3985,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-6__s274171030.jpg"
+                },
+                {
+                  "seed": 274155192,
+                  "clip": 0.1632,
+                  "dino": 0.7346,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-6__s274155192.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p1-7": {
+            "candidates": [
+              "p1-7__s309763582.jpg",
+              "p1-7__s309771501.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p1-7__s309763582.jpg",
+                "scores": {
+                  "matches_description": 9,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 7,
+                  "no_text": 10,
+                  "empty_top": 9,
+                  "composition": 8,
+                  "safety": 10
+                },
+                "avg": 8.88,
+                "passed": true,
+                "note": "The panel shows Jian's hands untying a pouch drawstring with moody lighting and dark interior elements, adhering well to the comic style, though hand anatomy is slightly distorted.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p1-7__s309763582.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 309763582,
+                  "clip": 0.2151,
+                  "dino": 0.5938,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-7__s309763582.jpg"
+                },
+                {
+                  "seed": 309771501,
+                  "clip": 0.2197,
+                  "dino": 0.5027,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-7__s309771501.jpg"
+                }
+              ],
+              "rejected": [
+                {
+                  "seed": 309779420,
+                  "clip": 0.236,
+                  "dino": 0.2308,
+                  "text": false,
+                  "reasons": [
+                    "dino 0.2308 < 0.35"
+                  ]
+                }
+              ]
+            }
+          },
+          "p1-8": {
+            "candidates": [
+              "p1-8__s420961387.jpg",
+              "p1-8__s420969306.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p1-8__s420961387.jpg",
+                "scores": {
+                  "matches_description": 4,
+                  "character_consistency": 4,
+                  "comic_style": 10,
+                  "anatomy": 8,
+                  "no_text": 10,
+                  "empty_top": 9,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 7.75,
+                "passed": false,
+                "note": "Jian has the wrong outfit (tan/brown jacket instead of bright blue) and wrong hair (longer textured hair instead of buzz cut). The glowing pouch and upward lighting described in the prompt are completely missing.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p1-8__s420969306.jpg",
+                "scores": {
+                  "matches_description": 4,
+                  "character_consistency": 5,
+                  "comic_style": 9,
+                  "anatomy": 8,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 6,
+                  "safety": 10
+                },
+                "avg": 7.5,
+                "passed": false,
+                "note": "Jian is missing his open pouch and the golden glow shining upward onto his face as described, and instead of a silver bangle he has a thick silver chain necklace. Expression is more neutral/arrogant than shocked, though the comic style and framing are decent.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p1-8__s420961387.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 420961387,
+                  "clip": 0.2401,
+                  "dino": 0.6057,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-8__s420961387.jpg"
+                },
+                {
+                  "seed": 420969306,
+                  "clip": 0.2341,
+                  "dino": 0.4567,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p1-8__s420969306.jpg"
+                }
+              ],
+              "rejected": [
+                {
+                  "seed": 420953468,
+                  "clip": 0.2073,
+                  "dino": 0.2751,
+                  "text": false,
+                  "reasons": [
+                    "dino 0.2751 < 0.35"
+                  ]
+                }
+              ]
+            },
+            "needs_review": true
+          },
+          "p2-1": {
+            "candidates": [
+              "p2-1__s1654724508.jpg",
+              "p2-1__s1654732427.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p2-1__s1654724508.jpg",
+                "scores": {
+                  "matches_description": 7,
+                  "character_consistency": 10,
+                  "comic_style": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 9.0,
+                "passed": true,
+                "note": "The image shows a neon alleyway with glowing coins scattered on the ground instead of a close-up of a spilling pouch, but the comic art style is well executed and clean.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p2-1__s1654724508.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 1654724508,
+                  "clip": 0.2377,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-1__s1654724508.jpg"
+                },
+                {
+                  "seed": 1654732427,
+                  "clip": 0.234,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-1__s1654732427.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p2-2": {
+            "candidates": [
+              "p2-2__s221294166.jpg",
+              "p2-2__s221286247.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p2-2__s221294166.jpg",
+                "scores": {
+                  "matches_description": 8,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 9,
+                  "safety": 10
+                },
+                "avg": 9.0,
+                "passed": true,
+                "note": "The upper 25% features some neon signs and power lines rather than being completely uncluttered, and there is a character in the rickshaw despite the description saying character-free, but it fits the overall scene well with strong comic ink lines and vibrant colors.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p2-2__s221294166.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 221294166,
+                  "clip": 0.2932,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-2__s221294166.jpg"
+                },
+                {
+                  "seed": 221286247,
+                  "clip": 0.2715,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-2__s221286247.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p2-3": {
+            "candidates": [
+              "p2-3__s357539782.jpg",
+              "p2-3__s357531863.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p2-3__s357539782.jpg",
+                "scores": {
+                  "matches_description": 6,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 8,
+                  "no_text": 3,
+                  "empty_top": 5,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 7.12,
+                "passed": false,
+                "note": "The image includes a character wiping sweat (contrary to the character-free prompt specification), and contains stylized gibberish text on the glowing shop sign.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p2-3__s357531863.jpg",
+                "scores": {
+                  "matches_description": 5,
+                  "character_consistency": 5,
+                  "comic_style": 9,
+                  "anatomy": 6,
+                  "no_text": 3,
+                  "empty_top": 8,
+                  "composition": 6,
+                  "safety": 10
+                },
+                "avg": 6.5,
+                "passed": false,
+                "note": "The panel features a character (Jian) wiping sweat/touching his face, contradicting the description stating character-free shot. There is also unintended text on the left signage and structure.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p2-3__s357539782.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 357539782,
+                  "clip": 0.2822,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-3__s357539782.jpg"
+                },
+                {
+                  "seed": 357531863,
+                  "clip": 0.2559,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-3__s357531863.jpg"
+                }
+              ],
+              "rejected": []
+            },
+            "needs_review": true
+          },
+          "p2-4": {
+            "candidates": [
+              "p2-4__s318188040.jpg",
+              "p2-4__s318203878.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p2-4__s318188040.jpg",
+                "scores": {
+                  "matches_description": 6,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 3,
+                  "composition": 6,
+                  "safety": 10
+                },
+                "avg": 7.75,
+                "passed": false,
+                "note": "The character style and clothing match well, but the brown leather satchel is missing from the panel, the framing cuts off too close (missing upper 25% empty space and wet sidewalk/hotel background details), and the umbrella ribs intersect awkwardly.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p2-4__s318203878.jpg",
+                "scores": {
+                  "matches_description": 8,
+                  "character_consistency": 9,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 9,
+                  "safety": 10
+                },
+                "avg": 9.12,
+                "passed": true,
+                "note": "The panel captures the comic style, character, and outfit well, featuring an umbrella as requested, though the background hotel canopy is somewhat simplified/abstracted.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p2-4__s318203878.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 318188040,
+                  "clip": 0.2264,
+                  "dino": 0.7166,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-4__s318188040.jpg"
+                },
+                {
+                  "seed": 318203878,
+                  "clip": 0.2502,
+                  "dino": 0.5903,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-4__s318203878.jpg"
+                }
+              ],
+              "rejected": [
+                {
+                  "seed": 318180121,
+                  "clip": 0.2561,
+                  "dino": 0.5225,
+                  "text": false,
+                  "reasons": [
+                    "dino 0.5225 < 0.55"
+                  ]
+                },
+                {
+                  "seed": 318195959,
+                  "clip": 0.2438,
+                  "dino": 0.5149,
+                  "text": false,
+                  "reasons": [
+                    "dino 0.5149 < 0.55"
+                  ]
+                }
+              ]
+            }
+          },
+          "p2-5": {
+            "candidates": [
+              "p2-5__s111228016.jpg",
+              "p2-5__s111220097.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p2-5__s111228016.jpg",
+                "scores": {
+                  "matches_description": 4,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 3,
+                  "composition": 5,
+                  "safety": 10
+                },
+                "avg": 7.38,
+                "passed": false,
+                "note": "The image fails the panel description: it is not inside a covered rickshaw cabin with a dark roof canvas, and the upper 25% is not empty wall/sky suitable for speech bubbles (it shows part of the character's head/hair and a plain green background). Character consistency and art style are well executed.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p2-5__s111220097.jpg",
+                "scores": {
+                  "matches_description": 8,
+                  "character_consistency": 9,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 9,
+                  "safety": 10
+                },
+                "avg": 9.12,
+                "passed": true,
+                "note": "Mei is present with her green vest, white shirt, and braids inside a rickshaw cabin as described. Upper area has dark roof canvas for context.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p2-5__s111220097.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 111228016,
+                  "clip": 0.2324,
+                  "dino": 0.9055,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-5__s111228016.jpg"
+                },
+                {
+                  "seed": 111220097,
+                  "clip": 0.1914,
+                  "dino": 0.8512,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-5__s111220097.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p2-6": {
+            "candidates": [
+              "p2-6__s244432923.jpg",
+              "p2-6__s244425004.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p2-6__s244432923.jpg",
+                "scores": {
+                  "matches_description": 7,
+                  "character_consistency": 10,
+                  "comic_style": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 9,
+                  "safety": 10
+                },
+                "avg": 9.25,
+                "passed": true,
+                "note": "The image shows a close-up of a rickshaw seat with dark cushions, rendered in a strong comic ink style. However, the leather pouch strap sticking out from the cushion specified in the prompt is missing.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p2-6__s244432923.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 244432923,
+                  "clip": 0.282,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-6__s244432923.jpg"
+                },
+                {
+                  "seed": 244425004,
+                  "clip": 0.2368,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-6__s244425004.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p2-7": {
+            "candidates": [
+              "p2-7__s347622084.jpg",
+              "p2-7__s347630003.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p2-7__s347622084.jpg",
+                "scores": {
+                  "matches_description": 3,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 9,
+                  "composition": 4,
+                  "safety": 10
+                },
+                "avg": 7.88,
+                "passed": false,
+                "note": "The panel fails to match the scene description: it is not a wet rainy street, has no dark neon lights, and lacks the requested over-the-shoulder shot looking toward a passenger seat. However, character consistency with Jian's reference portrait and the comic art style are well-executed.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p2-7__s347630003.jpg",
+                "scores": {
+                  "matches_description": 4,
+                  "character_consistency": 5,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 2,
+                  "composition": 4,
+                  "safety": 10
+                },
+                "avg": 6.75,
+                "passed": false,
+                "note": "Image 2 fails several prompt specifications: the scene is daytime with a blue sky instead of a wet rainy street with dark neon lights; the shot is not over-the-shoulder looking toward a passenger seat; the top 25% is cluttered with power lines instead of being dark or empty; and the character's hair is dyed white/silver on top rather than a pure short black buzz cut.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p2-7__s347622084.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 347622084,
+                  "clip": 0.2113,
+                  "dino": 0.7264,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-7__s347622084.jpg"
+                },
+                {
+                  "seed": 347630003,
+                  "clip": 0.2205,
+                  "dino": 0.653,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-7__s347630003.jpg"
+                }
+              ],
+              "rejected": []
+            },
+            "needs_review": true
+          },
+          "p2-8": {
+            "candidates": [
+              "p2-8__s459824703.jpg",
+              "p2-8__s459816784.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p2-8__s459824703.jpg",
+                "scores": {
+                  "matches_description": 7,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 8,
+                  "safety": 10
+                },
+                "avg": 8.75,
+                "passed": true,
+                "note": "The panel features Mei with her signature green vest and dark hair in braids, rendered in a clean comic style. The upper area is relatively clear green background, though the upper 25% is not strictly a dark canvas as requested in the description.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p2-8__s459824703.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 459824703,
+                  "clip": 0.2578,
+                  "dino": 0.5516,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-8__s459824703.jpg"
+                },
+                {
+                  "seed": 459816784,
+                  "clip": 0.244,
+                  "dino": 0.6484,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p2-8__s459816784.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p3-1": {
+            "candidates": [
+              "p3-1__s1666178980.jpg",
+              "p3-1__s1666163142.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p3-1__s1666178980.jpg",
+                "scores": {
+                  "matches_description": 5,
+                  "character_consistency": 4,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 6,
+                  "safety": 10
+                },
+                "avg": 7.75,
+                "passed": false,
+                "note": "Lock-card observations for Jian in panel: Hair is styled differently (undercut with longer top rather than buzz cut), shirt is green instead of black, pants are brown instead of grey, and the silver bangle/golden pouch are missing/not visible. Scene lacks the specified night/neon setting and top dark canvas elements from the description.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p3-1__s1666163142.jpg",
+                "scores": {
+                  "matches_description": 5,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 8.38,
+                "passed": true,
+                "note": "Jian has short black buzz cut, bright blue jacket, and silver bangle, matching character constraints well. However, the scene misses the busy neon street at night aesthetic, the golden pouch being held open, and the rickshaw from the description.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p3-1__s1666163142.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 1666178980,
+                  "clip": 0.1904,
+                  "dino": 0.7974,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-1__s1666178980.jpg"
+                },
+                {
+                  "seed": 1666163142,
+                  "clip": 0.1941,
+                  "dino": 0.6966,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-1__s1666163142.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p3-2": {
+            "candidates": [
+              "p3-2__s111228016.jpg",
+              "p3-2__s111220097.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p3-2__s111228016.jpg",
+                "scores": {
+                  "matches_description": 8,
+                  "character_consistency": 10,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 6,
+                  "composition": 8,
+                  "safety": 10
+                },
+                "avg": 8.88,
+                "passed": false,
+                "note": "The character matches the portrait well with accurate clothing, hair, and accessories. The background does not fully capture the dark rainy alleyway description, and the upper 25% is partially occupied by the top of the wall/environment rather than being fully empty.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p3-2__s111220097.jpg",
+                "scores": {
+                  "matches_description": 9,
+                  "character_consistency": 9,
+                  "comic_style": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "empty_top": 9,
+                  "composition": 9,
+                  "safety": 10
+                },
+                "avg": 9.5,
+                "passed": true,
+                "note": "The panel perfectly matches the required style and character design, with accurate outfit and hair elements from Mei's portrait.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p3-2__s111220097.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 111228016,
+                  "clip": 0.1761,
+                  "dino": 0.8796,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-2__s111228016.jpg"
+                },
+                {
+                  "seed": 111220097,
+                  "clip": 0.1257,
+                  "dino": 0.8369,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-2__s111220097.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p3-3": {
+            "candidates": [
+              "p3-3__s370133897.jpg",
+              "p3-3__s370125978.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p3-3__s370133897.jpg",
+                "scores": {
+                  "matches_description": 4,
+                  "character_consistency": 10,
+                  "comic_style": 10,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 5,
+                  "safety": 10
+                },
+                "avg": 8.38,
+                "passed": false,
+                "note": "The image shows a full view of a rickshaw rather than the requested low angle close-up, and the golden pouch is missing from the seat.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p3-3__s370125978.jpg",
+                "scores": {
+                  "matches_description": 7,
+                  "character_consistency": 10,
+                  "comic_style": 9,
+                  "anatomy": 10,
+                  "no_text": 10,
+                  "empty_top": 6,
+                  "composition": 8,
+                  "safety": 10
+                },
+                "avg": 8.75,
+                "passed": true,
+                "note": "The image depicts a wet rickshaw with a yellow seat in a vibrant neon style, but the specified golden pouch resting on the cushion is missing. The upper 25% is partially occupied by the canopy structure, reducing empty top space.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p3-3__s370125978.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 370133897,
+                  "clip": 0.2798,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-3__s370133897.jpg"
+                },
+                {
+                  "seed": 370125978,
+                  "clip": 0.2791,
+                  "dino": null,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-3__s370125978.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p3-4": {
+            "candidates": [
+              "p3-4__s321435210.jpg",
+              "p3-4__s321451048.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p3-4__s321435210.jpg",
+                "scores": {
+                  "matches_description": 4,
+                  "character_consistency": 6,
+                  "comic_style": 9,
+                  "anatomy": 8,
+                  "no_text": 10,
+                  "empty_top": 5,
+                  "composition": 6,
+                  "safety": 10
+                },
+                "avg": 7.25,
+                "passed": false,
+                "note": "Jian's hair is tinted blue instead of black, the silver bangle is missing, he is not wiping sweat from his forehead as requested, the lighting is bright instead of dim amber, and the upper 25% contains vehicle frame lines.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p3-4__s321451048.jpg",
+                "scores": {
+                  "matches_description": 5,
+                  "character_consistency": 6,
+                  "comic_style": 9,
+                  "anatomy": 8,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 7.88,
+                "passed": true,
+                "note": "Jian is present with a buzz cut and blue jacket, but he is not wiping sweat from his forehead (eyes are closed, hands not visible near head), the lighting is bright daylight rather than dim amber, and the shirt is white instead of black.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p3-4__s321451048.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 321435210,
+                  "clip": 0.2183,
+                  "dino": 0.5754,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-4__s321435210.jpg"
+                },
+                {
+                  "seed": 321451048,
+                  "clip": 0.2075,
+                  "dino": 0.5769,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-4__s321451048.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p3-5": {
+            "candidates": [
+              "p3-5__s1679935168.jpg",
+              "p3-5__s1679951006.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p3-5__s1679935168.jpg",
+                "scores": {
+                  "matches_description": 2,
+                  "character_consistency": 5,
+                  "comic_style": 8,
+                  "anatomy": 7,
+                  "no_text": 10,
+                  "empty_top": 7,
+                  "composition": 4,
+                  "safety": 10
+                },
+                "avg": 6.62,
+                "passed": false,
+                "note": "Lock-card analysis: Character is completely bald instead of short black buzz cut. Outfit shows blue jacket over brown shirt/pants. The panel fails to show Jian holding out a heavy golden pouch toward a passenger seat, lacking the action and context described, and lacks the rainy sky.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p3-5__s1679951006.jpg",
+                "scores": {
+                  "matches_description": 5,
+                  "character_consistency": 6,
+                  "comic_style": 10,
+                  "anatomy": 8,
+                  "no_text": 10,
+                  "empty_top": 9,
+                  "composition": 6,
+                  "safety": 10
+                },
+                "avg": 8.0,
+                "passed": true,
+                "note": "Lock-card analysis: Jian has short black/grey buzz cut, blue jacket over white/grey shirt, grey pants, and wrist bangles. In the panel, Jian has a buzz cut, blue and tan jacket with a white shirt, grey pants, and holds a dark bag instead of a golden pouch towards the passenger seat. The upper 25% is clear sky, comic style is well-rendered.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p3-5__s1679951006.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 1679935168,
+                  "clip": 0.16,
+                  "dino": 0.6358,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-5__s1679935168.jpg"
+                },
+                {
+                  "seed": 1679951006,
+                  "clip": 0.1697,
+                  "dino": 0.4723,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-5__s1679951006.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p3-6": {
+            "candidates": [
+              "p3-6__s247474964.jpg",
+              "p3-6__s247467045.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p3-6__s247474964.jpg",
+                "scores": {
+                  "matches_description": 5,
+                  "character_consistency": 7,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 9,
+                  "composition": 7,
+                  "safety": 10
+                },
+                "avg": 8.38,
+                "passed": true,
+                "note": "The character is missing the golden pouch and the brown leather satchel from the description, and the hair style has changed from two braids to one.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p3-6__s247474964.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 247474964,
+                  "clip": 0.1592,
+                  "dino": 0.7276,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-6__s247474964.jpg"
+                },
+                {
+                  "seed": 247467045,
+                  "clip": 0.1361,
+                  "dino": 0.6805,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-6__s247467045.jpg"
+                }
+              ],
+              "rejected": []
+            }
+          },
+          "p3-7": {
+            "candidates": [
+              "p3-7__s318394788.jpg",
+              "p3-7__s318410626.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p3-7__s318394788.jpg",
+                "scores": {
+                  "matches_description": 3,
+                  "character_consistency": 4,
+                  "comic_style": 9,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 4,
+                  "safety": 10
+                },
+                "avg": 7.12,
+                "passed": false,
+                "note": "Only one character is shown (Mei merged with Jian's clothes/bangle), missing Jian completely, failing the two-shot composition, coin handover, and correct character positioning.",
+                "model": "gemini-3.5-flash-lite"
+              },
+              {
+                "file": "p3-7__s318410626.jpg",
+                "scores": {
+                  "matches_description": 3,
+                  "character_consistency": 4,
+                  "comic_style": 9,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 4,
+                  "safety": 10
+                },
+                "avg": 7.12,
+                "passed": false,
+                "note": "Only one character (Mei) is present, Jian is missing entirely. Mei is wearing a green jacket instead of a vest over a white shirt, and the action of handing a coin is absent.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p3-7__s318394788.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 318394788,
+                  "clip": 0.1827,
+                  "dino": 0.6548,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-7__s318394788.jpg"
+                },
+                {
+                  "seed": 318410626,
+                  "clip": 0.1801,
+                  "dino": 0.5514,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-7__s318410626.jpg"
+                }
+              ],
+              "rejected": []
+            },
+            "needs_review": true
+          },
+          "p3-8": {
+            "candidates": [
+              "p3-8__s447100494.jpg",
+              "p3-8__s447092575.jpg"
+            ],
+            "qa": [
+              {
+                "file": "p3-8__s447100494.jpg",
+                "scores": {
+                  "matches_description": 7,
+                  "character_consistency": 8,
+                  "comic_style": 10,
+                  "anatomy": 9,
+                  "no_text": 10,
+                  "empty_top": 8,
+                  "composition": 8,
+                  "safety": 10
+                },
+                "avg": 8.75,
+                "passed": true,
+                "note": "Jian is pulling his rickshaw in a comic style that matches the reference well, featuring the blue jacket and silver bangle, though the rain/neon elements from the prompt are less prominent in this crop.",
+                "model": "gemini-3.5-flash-lite"
+              }
+            ],
+            "approved": "p3-8__s447100494.jpg",
+            "status": "approved",
+            "prefilter": {
+              "kept": [
+                {
+                  "seed": 447100494,
+                  "clip": 0.2134,
+                  "dino": 0.7824,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-8__s447100494.jpg"
+                },
+                {
+                  "seed": 447092575,
+                  "clip": 0.2305,
+                  "dino": 0.5472,
+                  "text": false,
+                  "reasons": [],
+                  "file": "p3-8__s447092575.jpg"
+                }
+              ],
+              "rejected": [
+                {
+                  "seed": 447116332,
+                  "clip": 0.2361,
+                  "dino": 0.2982,
+                  "text": false,
+                  "reasons": [
+                    "dino 0.2982 < 0.35"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "log": [
+          "2026-11-16T22:27:02Z pushed PORTRAITS job st-20261116-0217f9-portraits-1794868020 (2 items, ~0.61 GPU-h, kernel v8)",
+          "2026-11-16T22:51:26Z portrait Jian: approved portrait-jian__s988344058.jpg",
+          "2026-11-16T22:51:57Z portrait Mei: approved portrait-mei__s111330963.jpg",
+          "2026-11-16T22:51:59Z pushed PANELS job st-20261116-0217f9-panels-1794869517 (24 items, ~1.05 GPU-h, kernel v9)",
+          "2026-11-17T00:04:09Z panel p1-1: approved (avg 8.75)",
+          "2026-11-17T00:04:18Z panel p1-2: all candidates failed QA",
+          "2026-11-17T00:04:22Z panel p1-3: approved (avg 9.5)",
+          "2026-11-17T00:04:39Z panel p1-4: all candidates failed QA",
+          "2026-11-17T00:05:07Z panel p1-5: all candidates failed QA",
+          "2026-11-17T00:05:18Z panel p1-6: all candidates failed QA",
+          "2026-11-17T00:05:39Z panel p1-7: all candidates failed QA",
+          "2026-11-17T00:06:17Z panel p1-8: all candidates failed QA",
+          "2026-11-17T00:06:23Z panel p2-1: all candidates failed QA",
+          "2026-11-17T00:07:22Z panel p2-2: all candidates failed QA",
+          "2026-11-17T00:07:28Z panel p2-3: all candidates failed QA",
+          "2026-11-17T00:08:49Z panel p2-4: all candidates failed QA",
+          "2026-11-17T00:09:08Z panel p2-5: approved (avg 9.12)",
+          "2026-11-17T00:09:24Z panel p2-6: all candidates failed QA",
+          "2026-11-17T00:10:48Z panel p2-7: all candidates failed QA",
+          "2026-11-17T00:11:06Z panel p2-8: all candidates failed QA",
+          "2026-11-17T00:11:17Z panel p3-1: all candidates failed QA",
+          "2026-11-17T00:11:25Z panel p3-2: approved (avg 9.5)",
+          "2026-11-17T00:13:10Z panel p3-3: all candidates failed QA",
+          "2026-11-17T00:17:19Z panel p3-4: all candidates failed QA",
+          "2026-11-17T00:17:46Z panel p3-5: all candidates failed QA",
+          "2026-11-17T00:17:57Z panel p3-6: all candidates failed QA",
+          "2026-11-17T00:18:13Z panel p3-7: all candidates failed QA",
+          "2026-11-17T00:18:22Z panel p3-8: all candidates failed QA",
+          "2026-11-17T00:18:24Z pushed REPAIR job st-20261116-0217f9-repair-1794874702 (20 items, ~0.92 GPU-h, kernel v10)",
+          "2026-11-17T00:58:56Z pushed PANELS job st-20261116-0217f9-panels-1794877134 (20 items, ~1.14 GPU-h, kernel v11)",
+          "2026-11-17T02:16:12Z panel p1-2: all candidates failed QA",
+          "2026-11-17T02:16:20Z panel p1-4: all candidates failed QA",
+          "2026-11-17T02:16:42Z panel p1-5: approved (avg 9.5)",
+          "2026-11-17T02:16:53Z panel p1-6: all candidates failed QA",
+          "2026-11-17T02:17:08Z panel p1-7: all candidates failed QA",
+          "2026-11-17T02:17:17Z panel p1-8: all candidates failed QA",
+          "2026-11-17T02:18:11Z panel p2-1: approved (avg 9.0)",
+          "2026-11-17T02:20:04Z panel p2-2: all candidates failed QA",
+          "2026-11-17T02:21:03Z panel p2-3: all candidates failed QA",
+          "2026-11-17T02:21:12Z panel p2-4: all candidates failed QA",
+          "2026-11-17T02:21:52Z panel p2-6: all candidates failed QA",
+          "2026-11-17T02:22:24Z panel p2-7: all candidates failed QA",
+          "2026-11-17T02:23:00Z panel p2-8: all candidates failed QA",
+          "2026-11-17T02:23:20Z panel p3-1: all candidates failed QA",
+          "2026-11-17T02:23:34Z panel p3-3: all candidates failed QA",
+          "2026-11-17T02:23:43Z panel p3-4: all candidates failed QA",
+          "2026-11-17T02:25:44Z panel p3-5: all candidates failed QA",
+          "2026-11-17T02:26:29Z panel p3-6: all candidates failed QA",
+          "2026-11-17T02:26:40Z panel p3-7: all candidates failed QA",
+          "2026-11-17T02:27:09Z panel p3-8: all candidates failed QA",
+          "2026-11-17T02:27:11Z pushed REPAIR job st-20261116-0217f9-repair-1794882429 (18 items, ~1.05 GPU-h, kernel v12)",
+          "2026-11-17T05:57:56Z pushed PANELS job st-20261116-0217f9-panels-1794895074 (18 items, ~1.05 GPU-h, kernel v13)",
+          "2026-11-17T07:16:00Z panel p1-2: all candidates failed QA",
+          "2026-11-17T07:16:09Z panel p1-4: all candidates failed QA",
+          "2026-11-17T07:16:17Z panel p1-6: all candidates failed QA",
+          "2026-11-17T07:16:26Z panel p1-7: all candidates failed QA",
+          "2026-11-17T07:17:30Z panel p1-8: all candidates failed QA",
+          "2026-11-17T07:17:39Z panel p2-2: all candidates failed QA",
+          "2026-11-17T07:17:47Z panel p2-3: all candidates failed QA",
+          "2026-11-17T07:18:12Z panel p2-4: approved (avg 9.12)",
+          "2026-11-17T07:18:35Z panel p2-6: approved (avg 9.25)",
+          "2026-11-17T07:18:58Z panel p2-7: all candidates failed QA",
+          "2026-11-17T07:19:31Z panel p2-8: all candidates failed QA",
+          "2026-11-17T07:19:44Z panel p3-1: all candidates failed QA",
+          "2026-11-17T07:19:52Z panel p3-3: all candidates failed QA",
+          "2026-11-17T07:20:23Z panel p3-4: all candidates failed QA",
+          "2026-11-17T07:20:33Z panel p3-5: all candidates failed QA",
+          "2026-11-17T07:20:43Z panel p3-6: all candidates failed QA",
+          "2026-11-17T07:21:28Z panel p3-8: all candidates failed QA",
+          "2026-11-17T07:21:30Z pushed REPAIR job st-20261116-0217f9-repair-1794900088 (16 items, ~0.96 GPU-h, kernel v14)",
+          "2026-11-19T10:15:20Z pushed PANELS job st-20261116-0217f9-panels-1795083317 (16 items, ~0.96 GPU-h, kernel v15)",
+          "2026-11-19T13:47:14Z panel p1-2: approved (avg 8.62)",
+          "2026-11-19T14:02:15Z panel p1-4: all candidates failed QA",
+          "2026-11-19T14:10:56Z panel p1-6: approved (avg 8.62)",
+          "2026-11-19T14:13:47Z panel p1-7: all candidates failed QA",
+          "2026-11-19T14:14:57Z panel p1-8: all candidates failed QA",
+          "2026-11-19T14:15:10Z panel p2-2: approved (avg 9.0)",
+          "2026-11-19T14:15:25Z panel p2-3: all candidates failed QA",
+          "2026-11-19T14:19:13Z panel p2-7: all candidates failed QA",
+          "2026-11-19T14:19:56Z panel p2-8: approved (avg 8.75)",
+          "2026-11-19T14:19:56Z QA time budget reached; the next collect resumes",
+          "2026-11-19T14:22:45Z panel p3-1: all candidates failed QA",
+          "2026-11-19T14:23:00Z panel p3-3: all candidates failed QA",
+          "2026-11-19T14:23:23Z panel p3-4: all candidates failed QA",
+          "2026-11-19T14:24:08Z panel p3-5: all candidates failed QA",
+          "2026-11-19T14:25:12Z panel p3-6: all candidates failed QA",
+          "2026-11-19T14:25:54Z panel p3-7: all candidates failed QA",
+          "2026-11-19T14:27:08Z panel p3-8: approved (avg 8.75)",
+          "2026-11-19T14:27:11Z pushed REPAIR job st-20261116-0217f9-repair-1795098428 (11 items, ~0.74 GPU-h, kernel v16)",
+          "2026-11-19T15:24:29Z panel p1-4: all candidates failed QA",
+          "2026-11-19T15:24:40Z panel p1-7: approved (avg 8.88)",
+          "2026-11-19T15:28:29Z panel p1-8: all candidates failed QA",
+          "2026-11-19T17:00:49Z panel p2-3: all candidates failed QA",
+          "2026-11-19T17:02:21Z panel p2-7: all candidates failed QA",
+          "2026-11-19T17:03:08Z panel p3-1: approved (avg 8.38)",
+          "2026-11-19T17:04:02Z panel p3-3: approved (avg 8.75)",
+          "2026-11-19T17:07:02Z panel p3-4: approved (avg 7.88)",
+          "2026-11-19T17:08:27Z panel p3-5: approved (avg 8.0)",
+          "2026-11-19T17:08:39Z panel p3-6: approved (avg 8.38)",
+          "2026-11-19T17:10:13Z panel p3-7: all candidates failed QA",
+          "2026-11-19T17:10:13Z panel p1-4: best-effort p1-4__s279297861.jpg (avg 8.5) -> needs human review",
+          "2026-11-19T17:10:13Z panel p1-8: best-effort p1-8__s420961387.jpg (avg 7.75) -> needs human review",
+          "2026-11-19T17:10:13Z panel p2-7: best-effort p2-7__s347622084.jpg (avg 7.88) -> needs human review",
+          "2026-11-19T17:10:13Z panel p3-7: best-effort p3-7__s318394788.jpg (avg 7.12) -> needs human review",
+          "2026-11-19T17:10:16Z pushed REPAIR job st-20261116-0217f9-repair-1795108213 (1 items, ~0.29 GPU-h, kernel v17)",
+          "2026-11-19T17:35:56Z panel p2-3: all candidates failed QA",
+          "2026-11-19T17:35:56Z panel p2-3: best-effort p2-3__s357539782.jpg (avg 7.12) -> needs human review",
+          "2026-11-19T17:35:56Z all portraits and panels approved -> READY_TO_RENDER"
+        ]
+      }
+    },
     "st-20261116-8f4551": {
       "title": "The Golden Rickshaw",
       "category": "moral_fable",
