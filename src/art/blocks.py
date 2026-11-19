@@ -20,7 +20,7 @@ def character_block(card: dict[str, Any]) -> str:
     if missing:
         raise ValueError(f"lock card {card.get('name', '?')} missing {missing}")
     c = {k: " ".join(str(card[k]).split()) for k in CHARACTER_FIELDS}
-    hair = c["hair"] if c["hair"].lower().endswith("hair") or "bald" in c["hair"].lower() else f"{c['hair']} hair"
+    hair = c["hair"] if "hair" in c["hair"].lower() or "bald" in c["hair"].lower() else f"{c['hair']} hair"
     return (f"{c['name']}, a {c['age']} year old {c['gender']}, {c['build']}, {c['face_shape']}, {hair}, "
             f"{c['eye_colour']} eyes, {c['skin_tone']} skin, wearing {c['outfit']}, {c['accessory']}")
 

@@ -26,7 +26,7 @@ CAST = [
      "outfit": "a faded mustard-yellow kurta and rolled-up grey trousers", "accessory": "a red cotton scarf around his neck",
      "home_side": "left"},
     {"name": "Neela Varsi", "age": 64, "gender": "woman", "build": "small plump build", "face_shape": "round face",
-     "hair": "silver-white, in a tight bun,", "eye_colour": "hazel", "skin_tone": "light brown",
+     "hair": "silver-white hair in a tight bun", "eye_colour": "hazel", "skin_tone": "light brown",
      "outfit": "a deep blue sari with a thin gold border", "accessory": "round gold-rimmed spectacles",
      "home_side": "right"},
 ]
