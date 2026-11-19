@@ -56,7 +56,7 @@ def main() -> int:
     work.mkdir(parents=True, exist_ok=True)
     from src.common.ids import make_episode_id
 
-    total = int(story["parts"])
+    total = len(story["parts"]) if isinstance(story["parts"], list) else int(story["parts"])
     names = [f"{make_episode_id(story['story_id'], i, total)}.mp4" for i in range(1, total + 1)]
     files = cli_tools.download_assets(story["story_id"], names, work)
     pieces = [card(story["title"], work / "title.mp4")]

@@ -20,7 +20,7 @@ from src.render import frames, timeline, video
 
 
 def build_part_timeline(story: dict, part: dict, voices: dict[str, str]) -> timeline.Timeline:
-    total = int(story["parts"])
+    total = len(story["parts"]) if isinstance(story["parts"], list) else int(story["parts"])
     cap = settings()["story"]["part_seconds"]["hard_cap"]
     for speed in (1.0, 1.08, 1.15):
         tl = timeline.build(part, story, voices, tts.synth, speed=speed, final=part["part"] == total)
@@ -50,7 +50,7 @@ def render_story(story: dict) -> dict:
     files = cli_tools.download_assets(tag, names, ROOT / "work" / story["story_id"] / "assets")
     voices = tts.assign_voices(story["cast"]) | {"Narrator": tts.pick_voice(None)}
     mood = story.get("music_mood") or categories()["categories"][story["category"]]["music_mood"]
-    total = int(story["parts"])
+    total = len(story["parts"]) if isinstance(story["parts"], list) else int(story["parts"])
     episodes, uploads = [], []
     for part in story["parts"]:
         imgs = {str(x["id"]): Image.open(files[art[panel_id(part["part"], int(x["id"]))]["approved"]]) for x in part["panels"]}
