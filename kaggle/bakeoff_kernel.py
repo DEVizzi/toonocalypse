@@ -46,13 +46,6 @@ def save_manifest():
         json.dump(MANIFEST, f, indent=2)
 
 
-def free(*objs):
-    for o in objs:
-        del o
-    gc.collect()
-    torch.cuda.empty_cache()
-
-
 def run_model(key, label, license_name, build, gen):
     rec = MANIFEST["models"][key] = {"label": label, "license": license_name, "ok": False, "seconds": {}}
     save_manifest()
@@ -71,13 +64,15 @@ def run_model(key, label, license_name, build, gen):
                 print(f"[{key}] {name} in {rec['seconds'][name]}s", flush=True)
                 save_manifest()
         rec["ok"] = True
-        free(pipe)
+        del pipe
     except Exception as e:  # keep going with the next model
         rec["error"] = f"{type(e).__name__}: {e}"[:800]
         rec["trace"] = traceback.format_exc()[-2000:]
         print(f"[{key}] FAILED {rec['error']}", flush=True)
-        gc.collect()
-        torch.cuda.empty_cache()
+    pipe = None
+    gc.collect()
+    torch.cuda.empty_cache()
+    rec["gpu_free_gb"] = round(torch.cuda.mem_get_info()[0] / 2**30, 2)
     save_manifest()
 
 
@@ -86,7 +81,19 @@ def build_flux():
     from diffusers import BitsAndBytesConfig as DBnb, FluxPipeline, FluxTransformer2DModel
     from transformers import BitsAndBytesConfig as TBnb, T5EncoderModel
 
-    repo = "black-forest-labs/FLUX.1-schnell"
+    from huggingface_hub import model_info
+
+    repo = None
+    for cand in ("black-forest-labs/FLUX.1-schnell", "unsloth/FLUX.1-schnell"):  # mirror = same Apache-2.0 weights
+        try:
+            model_info(cand)
+            repo = cand
+            break
+        except Exception as e:
+            print(f"[flux] {cand} unavailable: {type(e).__name__}", flush=True)
+    if repo is None:
+        raise RuntimeError("no FLUX.1-schnell repo reachable without a token")
+    MANIFEST["models"]["flux_schnell"]["repo"] = repo
     dt = torch.float16
     tr = FluxTransformer2DModel.from_pretrained(repo, subfolder="transformer", torch_dtype=dt, quantization_config=DBnb(
         load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=dt))
@@ -132,8 +139,12 @@ def gen_sdxl(pipe, prompt, seed):
 # ---------------------------------------------------------------- C: PixArt-Sigma (OpenRAIL++-M), T5 300 tokens
 def build_pixart():
     from diffusers import PixArtSigmaPipeline
+    from transformers import BitsAndBytesConfig as TBnb, T5EncoderModel
 
-    pipe = PixArtSigmaPipeline.from_pretrained("PixArt-alpha/PixArt-Sigma-XL-2-1024-MS", torch_dtype=torch.float16)
+    repo = "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS"
+    te = T5EncoderModel.from_pretrained(repo, subfolder="text_encoder", torch_dtype=torch.float16,
+                                        quantization_config=TBnb(load_in_8bit=True))
+    pipe = PixArtSigmaPipeline.from_pretrained(repo, text_encoder=te, torch_dtype=torch.float16)
     pipe.enable_model_cpu_offload()
     return pipe
 
