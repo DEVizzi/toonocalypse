@@ -1,0 +1,66 @@
+name: TEST5 consistency proof
+
+# Proof 1: 2 characters x 5 panels on FLUX.1-schnell (Kaggle T4 x2) + Gemini QA + contact sheet -> draft Release.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kaggle
+  cancel-in-progress: false
+
+jobs:
+  test5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -q -r requirements.txt "kaggle>=1.7" six
+      - name: Build job + print prompts
+        run: python -m src.art.test5 job work/kernel
+      - name: Kaggle credentials (runner only)
+        run: |
+          mkdir -p ~/.kaggle
+          python3 -c 'import json,os; json.dump({"username":os.environ["KAGGLE_USERNAME"],"key":os.environ["KAGGLE_API_TOKEN"]}, open(os.path.expanduser("~/.kaggle/kaggle.json"),"w"))'
+          chmod 600 ~/.kaggle/kaggle.json
+          kaggle kernels list --mine --page-size 1 >/dev/null
+      - name: Push kernel and wait (max ~100 min)
+        run: |
+          kaggle kernels push -p work/kernel
+          ref="$KAGGLE_USERNAME/$(python3 -c 'import json;print(json.load(open("work/kernel/kernel-metadata.json"))["id"].split("/")[1])')"
+          for i in $(seq 1 100); do
+            s=$(kaggle kernels status "$ref" 2>&1 | tr 'A-Z' 'a-z'); echo "$(date -u +%H:%M) $s"
+            case "$s" in *complete*|*error*|*cancel*) break;; esac
+            sleep 60
+          done
+          mkdir -p work/kout && kaggle kernels output "$ref" -p work/kout
+          python3 -c 'import json; m=json.load(open("work/kout/manifest.json")); print("repo", m.get("repo"), "load", m.get("load_s"), "errors", m["errors"])'
+      - name: Remove Kaggle credentials
+        if: always()
+        run: rm -rf ~/.kaggle
+      - name: Gemini QA + contact sheet
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: python -m src.art.test5 report work/kout work/report
+      - name: Draft release
+        if: always()
+        run: |
+          shopt -s nullglob
+          tag="test5-$(date -u +%Y%m%d-%H%M)"
+          cp work/job.json work/report/ 2>/dev/null || true
+          gh release create "$tag" --draft --title "TEST5 consistency proof ($tag)" \
+            --notes "FLUX.1-schnell, 2 characters x 5 panels. See qa.json for prompts, token counts, seeds and QA scores." \
+            work/report/* work/kout/*.png work/kout/manifest.json
+          echo "release: $tag"
+          gh release view "$tag" --json assets -q '.assets[] | select(.name | test("contact_sheet|qa.json|job.json")) | .url'

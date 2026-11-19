@@ -1,0 +1,17 @@
+# All model choices live here. Licences: see LICENSES.md.
+image:
+  family: "flux-schnell"
+  repos: ["black-forest-labs/FLUX.1-schnell", "unsloth/FLUX.1-schnell"]  # official first, then ungated Apache-2.0 mirror
+  width: 768
+  height: 1344
+  steps: 4
+  guidance: 0.0
+  max_t5_tokens: 512
+  quantization: {transformer: "nf4", t5: "int8"}
+kaggle:
+  kernel_slug: "toonocalypse-art"
+  machine_shape: "NvidiaTeslaT4"
+gemini:
+  api_version: "v1beta"
+  vision: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
+  text: ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
