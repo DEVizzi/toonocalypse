@@ -1,0 +1,78 @@
+name: Model bake-off
+
+# One-off: clean old Kaggle kernels, run kaggle/bakeoff_kernel.py on Kaggle GPU (T4 x2),
+# publish the images to the 'model-bakeoff' pre-release so they can be viewed by link.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kaggle
+  cancel-in-progress: false
+
+jobs:
+  bakeoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SLUG: toonocalypse-bakeoff
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -q "kaggle>=1.7" six
+      - name: Kaggle credentials (runner only)
+        run: |
+          mkdir -p ~/.kaggle
+          python3 -c 'import json,os; json.dump({"username":os.environ["KAGGLE_USERNAME"],"key":os.environ["KAGGLE_API_TOKEN"]}, open(os.path.expanduser("~/.kaggle/kaggle.json"),"w"))'
+          chmod 600 ~/.kaggle/kaggle.json
+          kaggle kernels list --mine --page-size 20
+      - name: Delete old Kaggle kernels
+        continue-on-error: true
+        run: |
+          for k in toonocalypse-art "$SLUG"; do
+            kaggle kernels delete "$KAGGLE_USERNAME/$k" -y 2>&1 | tail -2 || true
+          done
+          kaggle kernels list --mine --page-size 20
+      - name: Push bake-off kernel
+        run: |
+          mkdir -p kdir && cp kaggle/bakeoff_kernel.py kdir/
+          cat > kdir/kernel-metadata.json <<EOF
+          {"id": "$KAGGLE_USERNAME/$SLUG", "title": "$SLUG", "code_file": "bakeoff_kernel.py",
+           "language": "python", "kernel_type": "script", "is_private": true, "enable_gpu": true,
+           "enable_internet": true, "machine_shape": "NvidiaTeslaT4",
+           "dataset_sources": [], "competition_sources": [], "kernel_sources": [], "model_sources": []}
+          EOF
+          kaggle kernels push -p kdir
+      - name: Wait for Kaggle (max ~130 min)
+        run: |
+          for i in $(seq 1 130); do
+            s=$(kaggle kernels status "$KAGGLE_USERNAME/$SLUG" 2>&1 | tr 'A-Z' 'a-z')
+            echo "$(date -u +%H:%M) $s"
+            case "$s" in *complete*|*error*|*cancel*) break;; esac
+            sleep 60
+          done
+      - name: Download output
+        if: always()
+        run: |
+          mkdir -p out && kaggle kernels output "$KAGGLE_USERNAME/$SLUG" -p out || true
+          ls -la out; cat out/manifest.json 2>/dev/null | python3 -c 'import json,sys; m=json.load(sys.stdin); print(json.dumps({k:{x:v.get(x) for x in ("ok","error","load_s")} for k,v in m["models"].items()}, indent=1)); print(m.get("gpus"))' || true
+          tail -40 out/*.log 2>/dev/null || true
+      - name: Remove Kaggle credentials
+        if: always()
+        run: rm -rf ~/.kaggle
+      - name: Publish images to the model-bakeoff pre-release
+        if: always()
+        run: |
+          shopt -s nullglob
+          files=(out/*.png out/*.jpg out/manifest.json)
+          [ ${#files[@]} -eq 0 ] && { echo "no images"; exit 1; }
+          gh release view model-bakeoff >/dev/null 2>&1 || gh release create model-bakeoff --prerelease --title "Model bake-off" --notes "Same prompts and seeds on 3 commercial-safe models. Pick one."
+          gh release upload model-bakeoff "${files[@]}" --clobber
+          for f in "${files[@]}"; do echo "https://github.com/${GITHUB_REPOSITORY}/releases/download/model-bakeoff/$(basename "$f")"; done
