@@ -577,7 +577,7 @@
     ],
     "story_id": "st-20261116-0217f9",
     "planner_model": "gemini-3.5-flash-lite",
-    "status": "ART_IN_PROGRESS",
+    "status": "READY_TO_RENDER",
     "script_model": "gemini-3.5-flash-lite",
     "judge": {
       "scores": {
@@ -597,17 +597,8 @@
       "judge_model": "gemini-3.5-flash-lite"
     },
     "art": {
-      "phase": "REPAIR",
-      "job": {
-        "id": "st-20261116-0217f9-repair-1795108213",
-        "phase": "REPAIR",
-        "items": [
-          "p2-3"
-        ],
-        "pushed_at": 1795108216.2557926,
-        "est_hours": 0.29,
-        "version": "17"
-      },
+      "phase": "DONE",
+      "job": null,
       "session_retries": 0,
       "portrait_repair": 0,
       "repair_round": 2,
@@ -1357,68 +1348,69 @@
         },
         "p2-3": {
           "candidates": [
-            "p2-3__s357435053.jpg",
-            "p2-3__s357427134.jpg"
+            "p2-3__s357539782.jpg",
+            "p2-3__s357531863.jpg"
           ],
           "qa": [
             {
-              "file": "p2-3__s357435053.jpg",
+              "file": "p2-3__s357539782.jpg",
               "scores": {
                 "matches_description": 6,
                 "character_consistency": 8,
                 "comic_style": 10,
                 "anatomy": 8,
-                "no_text": 1,
-                "empty_top": 8,
+                "no_text": 3,
+                "empty_top": 5,
                 "composition": 7,
                 "safety": 10
               },
-              "avg": 7.25,
+              "avg": 7.12,
               "passed": false,
-              "note": "The image features distinct comic style and an uncluttered dark sky in the upper 25%, but contains Asian characters on the signs, leading to a low no_text score. Description requested character-free shot, but a character is present.",
+              "note": "The image includes a character wiping sweat (contrary to the character-free prompt specification), and contains stylized gibberish text on the glowing shop sign.",
               "model": "gemini-3.5-flash-lite"
             },
             {
-              "file": "p2-3__s357427134.jpg",
+              "file": "p2-3__s357531863.jpg",
               "scores": {
-                "matches_description": 6,
-                "character_consistency": 10,
-                "comic_style": 10,
-                "anatomy": 8,
-                "no_text": 1,
-                "empty_top": 2,
-                "composition": 7,
+                "matches_description": 5,
+                "character_consistency": 5,
+                "comic_style": 9,
+                "anatomy": 6,
+                "no_text": 3,
+                "empty_top": 8,
+                "composition": 6,
                 "safety": 10
               },
-              "avg": 6.75,
+              "avg": 6.5,
               "passed": false,
-              "note": "The panel features a character (Jian) despite the description stating 'character-free shot'. The upper 25% is cluttered with shop signage rather than being dark sky, and there is extensive stylized text present on the signs.",
+              "note": "The panel features a character (Jian) wiping sweat/touching his face, contradicting the description stating character-free shot. There is also unintended text on the left signage and structure.",
               "model": "gemini-3.5-flash-lite"
             }
           ],
-          "approved": null,
-          "status": "pending",
+          "approved": "p2-3__s357539782.jpg",
+          "status": "approved",
           "prefilter": {
             "kept": [
               {
-                "seed": 357435053,
-                "clip": 0.3005,
+                "seed": 357539782,
+                "clip": 0.2822,
                 "dino": null,
                 "text": false,
                 "reasons": [],
-                "file": "p2-3__s357435053.jpg"
+                "file": "p2-3__s357539782.jpg"
               },
               {
-                "seed": 357427134,
-                "clip": 0.281,
+                "seed": 357531863,
+                "clip": 0.2559,
                 "dino": null,
                 "text": false,
                 "reasons": [],
-                "file": "p2-3__s357427134.jpg"
+                "file": "p2-3__s357531863.jpg"
               }
             ],
             "rejected": []
-          }
+          },
+          "needs_review": true
         },
         "p2-4": {
           "candidates": [
@@ -2334,7 +2326,10 @@
         "2026-11-19T17:10:13Z panel p1-8: best-effort p1-8__s420961387.jpg (avg 7.75) -> needs human review",
         "2026-11-19T17:10:13Z panel p2-7: best-effort p2-7__s347622084.jpg (avg 7.88) -> needs human review",
         "2026-11-19T17:10:13Z panel p3-7: best-effort p3-7__s318394788.jpg (avg 7.12) -> needs human review",
-        "2026-11-19T17:10:16Z pushed REPAIR job st-20261116-0217f9-repair-1795108213 (1 items, ~0.29 GPU-h, kernel v17)"
+        "2026-11-19T17:10:16Z pushed REPAIR job st-20261116-0217f9-repair-1795108213 (1 items, ~0.29 GPU-h, kernel v17)",
+        "2026-11-19T17:35:56Z panel p2-3: all candidates failed QA",
+        "2026-11-19T17:35:56Z panel p2-3: best-effort p2-3__s357539782.jpg (avg 7.12) -> needs human review",
+        "2026-11-19T17:35:56Z all portraits and panels approved -> READY_TO_RENDER"
       ]
     }
   },
