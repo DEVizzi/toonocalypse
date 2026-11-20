@@ -1,15 +1,18 @@
+# secrets — credentials only ever come from os.environ
+.env
+*.env
+*key*.json
+*credential*.json
+client_secret*.json
+*service*account*.json
+kaggle.json
+# generated
+output/
+cache/
+work/
+*.wav
+*.mp4
 __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
-.env
-.env.*
-*.tmp
-# Kaggle credentials and job output (never committed)
-.kaggle/
-access_token
-kaggle.json
-kaggle/job.json
-kaggle_out/
-work/
-state/models_cache.json
