@@ -102,8 +102,9 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
     card_t = card_i / FPS
     replay_t = replay_i / FPS
     video_len = len(shots) / FPS
-    pair = _prompt_pair(ep.prompt, r.heroes)
     league_ctx = getattr(ep, "league_ctx", None) or {}
+    cta = list(league_ctx.get("cta_heroes") or [])
+    pair = tuple(cta) if len(cta) in (2, 3) else _prompt_pair(ep.prompt, r.heroes)   # v4.3.1 bracket-aware CTA
 
     # ------------------------------------------------------------------ 1. Narration & Natural Native-Pitch Timing
     beats = script.build_beats(r, to_out, video_len, replay_t, card_t, pair, league_ctx=league_ctx)
@@ -185,7 +186,7 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
 
         # Anti-Dead-Air Filler Pass: eliminate any >= 3.2s silent stretch during active gameplay
         win_start_bound = min((s["t0"] for s in speech if s["kind"].startswith(("winner", "multi_ko"))), default=card_t - 0.45)
-        for _pass in range(4):
+        for _pass in range(10):          # v4.3.1: enough passes to clear every >= 3 s gap (incl. Grand Final)
             placed_sorted = sorted(placed)
             # Check silent stretches inside [0.20, win_start_bound]
             anchors_gp = [(0.0, 0.20)] + [p for p in placed_sorted if p[0] < win_start_bound] + [(win_start_bound, win_start_bound + 0.1)]
@@ -319,7 +320,7 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
     # v4.3 comedic accent SFX tucked right under the punchline of each voiced line
     for s in speech:
         k = s["kind"]
-        if k == "betrayal":
+        if k in ("betrayal", "squash"):
             add(s["t1"] - 0.10, 5, sfx.comic_bonk(), -7.5)
         elif k in ("dummy", "hero_fall", "self_ko"):
             add(s["t1"] - 0.08, 5, sfx.sad_slide_whistle(), -10.0)

@@ -1900,50 +1900,63 @@ class Renderer:
         return self.frame
 
     def _draw_glitch_blinks(self, cam: Cam, fi: int, play_t: float) -> None:
-        """v4.3 Glitch Micro Lag-Blink juice: 3 fading cyan/magenta wireframe pixel ghosts bridging old -> new position,
-        a 0.16 s horizontal RGB slice tear over Glitch's body, and neon pixel sparks."""
+        """v4.3.1 HIGH-VISIBILITY Glitch Micro Lag-Blink (mobile-first): 3 bold cyan/magenta wireframe ghosts bridging
+        old -> new position (alpha 0.90 -> 0.0 over 0.38 s, black-backed for contrast), a crisp 0.18 s horizontal RGB
+        slice flash over Glitch's body, and neon pixel sparks."""
+        GHOST_S, TEAR_S = 0.38, 0.18
         for e in self.glitch_blinks:
             age = play_t - e.t
-            if age < 0.0 or age > 0.42:
+            if age < 0.0 or age > GHOST_S:
                 continue
             src, dst = e.data.get("src") or e.pos, e.data.get("dst") or e.pos
             if src is None or dst is None:
                 continue
             k = e.actors[0] if e.actors else "glitch"
             rad = (HERO_BY_KEY[k].radius if k in HERO_BY_KEY else 24.0) * cam.zoom
-            fade = 1.0 - age / 0.42
+            fade = max(0.0, 1.0 - age / GHOST_S)
+            a = int(255 * 0.90 * fade)
+            lw = max(3, int(5 * cam.zoom))
             layer = pygame.Surface((W, H), pygame.SRCALPHA)
             if e.data.get("moved"):
                 for gi, u in enumerate((0.0, 0.34, 0.67)):
                     gx, gy = cam.to_screen(src[0] + (dst[0] - src[0]) * u, src[1] + (dst[1] - src[1]) * u)
-                    col = (0, 240, 255) if gi % 2 == 0 else (255, 46, 210)
-                    a = int(220 * fade * (0.45 + 0.55 * u))
-                    off = (gi - 1) * 4
-                    pygame.draw.circle(layer, (*col, a), (gx + off, gy), rad, max(2, int(3 * cam.zoom)))
-                    step = max(4, int(rad / 3))
-                    for yy in range(int(gy - rad), int(gy + rad), step):          # pixel scan-lines (wireframe)
+                    col = (0, 255, 255) if gi % 2 == 0 else (255, 0, 220)
+                    off = (gi - 1) * 5
+                    pygame.draw.circle(layer, (10, 10, 20, int(a * 0.8)), (gx + off, gy), rad + 2, lw + 4)   # contrast
+                    pygame.draw.circle(layer, (*col, int(a * 0.22)), (gx + off, gy), rad)                    # glow fill
+                    pygame.draw.circle(layer, (*col, a), (gx + off, gy), rad, lw)
+                    step = max(4, int(rad / 3.2))
+                    for yy in range(int(gy - rad) + step // 2, int(gy + rad), step):        # pixel scan-lines
                         hw_ = math.sqrt(max(0.0, rad * rad - (yy - gy) ** 2))
-                        pygame.draw.line(layer, (*col, a // 2), (gx - hw_ + off, yy), (gx + hw_ + off, yy), 1)
+                        pygame.draw.line(layer, (*col, int(a * 0.7)), (gx - hw_ + off, yy), (gx + hw_ + off, yy), 2)
+                # streak connecting the ghosts
+                s0, s1 = cam.to_screen(*src), cam.to_screen(*dst)
+                pygame.draw.line(layer, (255, 255, 255, int(a * 0.6)), s0, s1, max(2, int(3 * cam.zoom)))
             cx, cy = cam.to_screen(*dst)
             rng = random.Random(int(e.t * 1000))
-            for _ in range(10):                                                    # neon pixel sparks
+            for _ in range(14):                                                    # neon pixel sparks
                 ang = rng.uniform(0, 2 * math.pi)
-                d = rad * (1.0 + 1.6 * age / 0.42) * rng.uniform(0.8, 1.3)
-                sz = max(3, int(6 * cam.zoom))
-                col = (0, 240, 255) if rng.random() < 0.5 else (255, 46, 210)
+                d = rad * (1.0 + 1.8 * age / GHOST_S) * rng.uniform(0.8, 1.3)
+                sz = max(4, int(8 * cam.zoom))
+                col = (0, 255, 255) if rng.random() < 0.5 else (255, 0, 220)
                 pygame.draw.rect(layer, (*col, int(255 * fade)), (cx + math.cos(ang) * d, cy + math.sin(ang) * d, sz, sz))
             self.frame.blit(layer, (0, 0))
-            if age <= 0.16:                                                        # horizontal RGB slice tear
-                box = pygame.Rect(int(cx - rad * 1.5), int(cy - rad * 1.2), int(rad * 3), int(rad * 2.4))
+            if age <= TEAR_S:                                                      # crisp horizontal RGB slice flash
+                kf = 1.0 - age / TEAR_S
+                box = pygame.Rect(int(cx - rad * 1.8), int(cy - rad * 1.3), int(rad * 3.6), int(rad * 2.6))
                 box = box.clip(self.frame.get_rect())
                 if box.width > 4 and box.height > 4:
                     snap = self.frame.subsurface(box).copy()
-                    sl_h = max(4, box.height // 7)
+                    sl_h = max(4, box.height // 8)
                     for si, yy in enumerate(range(0, box.height, sl_h)):
-                        shift = int((rng.uniform(-1, 1)) * rad * 0.55 * (1.0 - age / 0.16))
-                        strip = snap.subsurface(pygame.Rect(0, yy, box.width, min(sl_h, box.height - yy))).copy()
-                        tint = (0, 230, 255) if si % 2 == 0 else (255, 40, 200)
+                        shift = int(rng.uniform(-1, 1) * rad * 0.8 * kf)
+                        h_ = min(sl_h, box.height - yy)
+                        strip = snap.subsurface(pygame.Rect(0, yy, box.width, h_)).copy()
+                        tint = (0, 255, 255) if si % 2 == 0 else (255, 0, 220)
                         self.frame.blit(strip, (box.left + shift, box.top + yy))
+                        band = pygame.Surface((box.width, h_), pygame.SRCALPHA)
+                        band.fill((*tint, int(110 * kf)))
+                        self.frame.blit(band, (box.left + shift, box.top + yy))
                         pygame.draw.line(self.frame, tint, (box.left + shift, box.top + yy),
                                          (box.left + shift + box.width, box.top + yy), 2)
 

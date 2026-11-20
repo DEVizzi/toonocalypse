@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -109,6 +110,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Toon Toon Castle v4.0 IPL Season League pipeline")
     ap.add_argument("--dry-run", action="store_true", help="render only: no uploads, no state/ mutation")
     ap.add_argument("--commit-state", action="store_true", help="git pull --rebase + commit + push state/ after run")
+    ap.add_argument("--commit-state-dry-run", action="store_true",
+                    help="pull --rebase + local commit + `git push --dry-run` (verifies the state step, remote untouched)")
+    ap.add_argument("--publish", action="store_true", help="upload to YouTube after the ffprobe gate passes")
+    ap.add_argument("--privacy", choices=["public", "unlisted", "private"], default="public")
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--season", type=int, default=None, help="override season number (synthesizes mock table in --dry-run)")
     ap.add_argument("--race", type=int, default=None, help="override race number 1..30 (synthesizes mock table in --dry-run)")
@@ -232,6 +237,16 @@ def main(argv: list[str] | None = None) -> int:
         "recent_line_ids": sorted(recent_ids),
         "recent_cliches": sorted(recent_cliches),
     }
+    # v4.3.1 bracket-aware playoff CTA (Ep 27 -> Q1 pair, Ep 28 -> Q2 pair, Ep 29 -> 3 Grand Finalists)
+    cta_keys = league.cta_heroes(next_state, outcome.stage)
+    cta_names = [HERO_BY_KEY[k].name for k in cta_keys]
+    league_ctx["cta_heroes"] = cta_names
+    if len(cta_names) == 3:
+        cta_prompt = f"{cta_names[0]}, {cta_names[1]}, or {cta_names[2]} for the crown tomorrow?"
+    elif len(cta_names) == 2:
+        cta_prompt = f"{cta_names[0]} or {cta_names[1]} tomorrow? Drop your pick!"
+    else:
+        cta_prompt = comment_prompt(list(HEROES), outcome.winner_key, rng)
 
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -254,6 +269,7 @@ def main(argv: list[str] | None = None) -> int:
         "top4": outcome.top4,
         "ko_bonus": outcome.ko_bonus_key,
         "lead_changed": outcome.lead_changed,
+        "cta_heroes": cta_keys,
         "resolved_at": trace.meta["resolved_at"],
         "candidates": report,
     }
@@ -268,7 +284,7 @@ def main(argv: list[str] | None = None) -> int:
             trace,
             ep_label,
             season_line=outcome.winner_points_pill,
-            prompt=comment_prompt(list(HEROES), outcome.winner_key, rng),
+            prompt=cta_prompt,
             flash_event=flash_event(trace),
             outcome=outcome,
             league_ctx=league_ctx,
@@ -290,6 +306,38 @@ def main(argv: list[str] | None = None) -> int:
             sound=info.get("sound"),
         )
     if not a.dry_run:
+        if not a.no_render:
+            # v4.3.1 ffprobe audio/video validation gate — FAIL CLOSED (no upload, no league advance)
+            from src.publish import validate as gate
+
+            try:
+                fails = gate.validate(str(out))
+            except (ValueError, FileNotFoundError, RuntimeError, subprocess.TimeoutExpired) as exc:
+                fails = [str(exc)]
+            summary["ffprobe_gate"] = "PASS" if not fails else fails
+            if fails:
+                for f in fails:
+                    print(f"[FFPROBE GATE FAIL] {f}")
+                out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
+                return 3
+            print("[FFPROBE GATE PASS]")
+            if a.publish:
+                from src.publish import youtube
+
+                w_name = HERO_BY_KEY[outcome.winner_key].name if outcome.winner_key in HERO_BY_KEY else "Somebody"
+                title = f"{w_name} WINS! {outcome.ribbon_text} | Toon Toon Castle #Shorts"
+                table = "\n".join(f"#{i + 1} {HERO_BY_KEY[k].name} — {p} pts" for i, (k, p) in enumerate(outcome.top3))
+                desc = (f"{outcome.ribbon_text} — {recipe.arena.replace('_', ' ').title()}\n\n"
+                        f"Season {outcome.season_number} standings:\n{table}\n\n{ep.prompt}\n\n#Shorts #ToonToonCastle")
+                try:
+                    vid = youtube.upload_short(out, title, desc, ["toon toon castle", "marble race", "shorts",
+                                                                   "ball race", "cartoon"], privacy=a.privacy)
+                except Exception as exc:          # noqa: BLE001 - generic message only, never leak tokens
+                    print(f"[PUBLISH FAIL] {type(exc).__name__}: {str(exc)[:160]}")
+                    out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
+                    return 4
+                summary["youtube_id"] = vid
+                print(f"[PUBLISHED] https://youtube.com/shorts/{vid}")
         entry = recipe_generator.history_entry(recipe, day)
         entry.update({
             "season": outcome.season_number,
@@ -299,14 +347,19 @@ def main(argv: list[str] | None = None) -> int:
             "line_ids": list(line_ids),
             "cliches": list(cliches),
         })
+        if summary.get("youtube_id"):
+            entry["youtube_id"] = summary["youtube_id"]
         entries.append(entry)
         league.save_all_state(next_state, next_hof, entries, state_dir=STATE)
-        if a.commit_state:
+        if a.commit_state or a.commit_state_dry_run:
             ok = league.git_commit_state_safe(
                 f"chore(league): S{outcome.season_number} R{outcome.race_number}/30 ({outcome.winner_key} wins)",
-                ROOT,
+                ROOT, dry_run=a.commit_state_dry_run,
             )
             print(f"git_commit_state_safe: {ok}")
+            if not ok:
+                out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
+                return 5
 
     out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
     return 0

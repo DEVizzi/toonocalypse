@@ -1,0 +1,94 @@
+name: Daily Episode
+
+# v4.3.1 production pipeline: OAuth check -> render today's league race -> ffprobe gate -> (publish) -> state commit.
+#   mode=dry-run : full pipeline on the REAL league state, NO YouTube upload, state step = pull --rebase + local
+#                  commit + `git push --dry-run` (remote untouched). Use this to verify before launch.
+#   mode=live    : uploads the Short and commits state/ with `git pull --rebase` (what the cron runs).
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run (no upload, push --dry-run) or live (upload + commit state)"
+        type: choice
+        default: dry-run
+        options: [dry-run, live]
+      privacy:
+        description: "YouTube privacy for live uploads"
+        type: choice
+        default: public
+        options: [public, unlisted, private]
+  # 6-MONTH AUTOPILOT — enable ONLY after owner sign-off (one episode per day, 15:30 UTC = 21:00 IST):
+  # schedule:
+  #   - cron: "30 15 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-episode          # never two episodes racing on state/
+  cancel-in-progress: false
+
+jobs:
+  episode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+      MODE: ${{ inputs.mode || 'live' }}
+      PRIVACY: ${{ inputs.privacy || 'public' }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: ffmpeg (with retries — apt mirrors occasionally stall)
+        timeout-minutes: 12
+        run: |
+          if which ffmpeg && which ffprobe; then ffmpeg -version | head -1; exit 0; fi
+          for i in 1 2 3; do
+            timeout 300 bash -c "sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg" && break
+            echo "apt attempt $i failed; retrying in 20s"; sleep 20
+          done
+          ffmpeg -version | head -1 && ffprobe -version | head -1
+      - run: pip install -r requirements.txt
+      - name: git identity
+        run: |
+          git config user.name "toon-toon-castle-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: OAuth refresh-token check (fails closed in live mode)
+        id: oauth
+        continue-on-error: ${{ inputs.mode == 'dry-run' }}
+        run: python -m src.publish.oauth
+      - name: Render -> ffprobe gate -> publish -> state commit
+        run: |
+          case "$MODE" in
+            live)    python -m src.main --out output/episode.mp4 --stills 4 --publish --privacy "$PRIVACY" --commit-state ;;
+            dry-run) python -m src.main --out output/episode.mp4 --stills 4 --commit-state-dry-run ;;
+            *)       echo "unknown mode"; exit 2 ;;
+          esac
+      - name: Standalone ffprobe gate (belt & braces)
+        run: python -m src.publish.validate output/episode.mp4
+      - name: Dry-run verdict (OAuth must also be healthy)
+        if: steps.oauth.outcome == 'failure'
+        run: |
+          echo "::error::OAuth refresh-token check FAILED — uploads would fail. Fix YOUTUBE_REFRESH_TOKEN before going live."
+          exit 1
+      - name: Keep the episode as a build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: episode-${{ github.run_number }}
+          path: |
+            output/episode.mp4
+            output/episode.json
+            output/episode_f*.png
+          retention-days: 14
+          if-no-files-found: warn

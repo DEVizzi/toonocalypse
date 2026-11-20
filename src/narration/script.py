@@ -114,6 +114,8 @@ BANK: dict[str, list[str]] = {
     "winner_carnage": ["Last-second carnage—{winner} walks away!", "Everyone else exploded—{winner} wins!"],
     # Outro CTA (<= 9 words) — Episodes 1-29 only ("next race"/"tomorrow", NEVER "next season")
     "outro": ["{a} or {b} next? Comment below!", "{a} or {b} tomorrow? Pick one!", "Team {a} or Team {b}? Comment!"],
+    # v4.3.1 Qualifier 2 (Ep 29): tease the three Grand Finalists
+    "outro_q2": ["{a}, {b}, or {c} for the crown tomorrow?", "{a}, {b} or {c}—who's your champ? Comment!"],
     # v4.3 Grand Final: winner-only championship tribute (8-12 words, ZERO comment CTA)
     "outro_final": ["Bow to your Season {season} king—{winner} owns the castle!",
                     "All hail {winner}, Season {season} champion! Season {next_season} starts tomorrow!",
@@ -130,6 +132,16 @@ BANK: dict[str, list[str]] = {
     ],
     "filler_lead": ["{L}'s title lead is on the line!", "{L} needs this one badly!"],
     "filler_disc": ["Disc is the size of a coaster now!", "That floor's shrinking like cheap jeans!"],
+    # v4.3.1 deeper anti-dead-air pool (each family is still used at most once per episode)
+    "filler_hero": ["{X} needs this one badly!", "Eyes on {X}—still rolling, still dangerous!",
+                    "{X} smells blood in the water!"],
+    "filler_b": ["Hold onto your hats, it's getting rowdy!", "Nobody's safe in this castle!",
+                 "The crowd is losing its mind!", "Every bounce could be the last!"],
+    "filler_c": ["Absolute scenes in the castle!", "My heart rate's through the roof!",
+                 "Who needs a referee anyway?"],
+    "filler_final": ["One trophy, zero mercy—keep rolling!", "Grand Final nerves everywhere!",
+                     "Legacy on the line right now!"],
+    "filler_ot": ["Overtime chaos—nobody's safe now!", "Sudden death, sweaty palms everywhere!"],
 }
 
 # v4.3 strict cross-episode cliché cooldown: each may be spoken at most once every 7 episodes
@@ -306,15 +318,30 @@ def verify_ko(r, e) -> bool:
 
 
 def pick_filler(r, gameplay_t: float, picker: Picker, league_ctx: dict | None = None) -> Beat | None:
-    """Title-race suspense filler for any >= 3.0 s silent stretch."""
+    """Anti-dead-air filler for any >= 3.0 s silent stretch (ALL stages incl. the Grand Final).
+    v4.3.1: lines that name a hero only ever name one who is ALIVE (and on camera) at that moment."""
     league_ctx = league_ctx or {}
-    fams = []
-    if league_ctx.get("pre_leader_name") and int(league_ctx.get("points_gap", 99)) <= 14:
+    fi = _frame_of(r, gameplay_t)
+    stage = str(league_ctx.get("stage") or "league")
+    alive_h = [k for k in r.tr.meta.get("heroes", []) if _alive(r, k, fi) and _alive(r, k, _frame_of(r, gameplay_t + 0.8))]
+    fams: list[str] = []
+    ctx: dict = {"_gp": gameplay_t}
+    lead_key = league_ctx.get("pre_leader")
+    if (stage == "league" and league_ctx.get("pre_leader_name") and int(league_ctx.get("points_gap", 99)) <= 14
+            and lead_key in alive_h):
         fams.append("filler_lead")
+        ctx["L"] = league_ctx.get("pre_leader_name")
+    seen = [k for k in alive_h if _on_camera(r, gameplay_t, _pos(r, k, fi))]
+    if seen:
+        fams.append("filler_hero")
+        ctx["X"] = _name(seen[int(gameplay_t * 7) % len(seen)])
+    if any(e.kind == "escalation" and e.data.get("overtime") and e.t <= gameplay_t for e in r.tr.events):
+        fams.append("filler_ot")
+    if stage == "grand_final":
+        fams.append("filler_final")
     if r.tr.mode == "TOP_DOWN" and gameplay_t > 8.0:
         fams.append("filler_disc")
-    fams.append("filler")
-    ctx = {"L": league_ctx.get("pre_leader_name") or "The leader"}
+    fams += ["filler", "filler_b", "filler_c"]
     got = picker.pick(fams, ctx, max_words=7)
     if got is None:
         return None
@@ -398,7 +425,7 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
 
     for e in ev:
         if e.kind == "escalation" and e.data.get("overtime"):
-            react(e.t, "overtime", 7, ["overtime"], {})
+            react(e.t, "overtime", 9, ["overtime"], {})       # v4.3.1: OVERTIME CHAOS! callout in every episode
         elif e.kind == "escalation" and "SPEED" in str(e.data.get("banner", "")):
             react(e.t, "speed", 5, ["speed"], {})
         elif e.kind == "twist":
@@ -407,7 +434,7 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
         elif e.kind == "crush_hit" and e.data.get("hero") and e.actors:
             ak = e.actors[0]
             if _alive(r, ak, _frame_of(r, e.t)) and _on_camera(r, e.t, e.pos):
-                react(e.t, "self_ko", 5, ["squash"], {"B": _name(ak)})
+                react(e.t, "squash", 5, ["squash"], {"B": _name(ak)})   # STUN only: the hero is still alive
         elif e.kind == "glitch_blink" and e.data.get("moved") and e.actors:
             if _alive(r, e.actors[0], _frame_of(r, e.t)) and _on_camera(r, e.t, e.pos):
                 react(e.t, "blink", 4, ["blink"], {"name": _name(e.actors[0])})
@@ -456,7 +483,12 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
         add(card_t + 0.55, "outro_final", 10, ["outro_final"],
             {"winner": winner, "season": season_num, "next_season": season_num + 1}, card_t + 0.55, mw=12)
     else:
-        add(card_t + 0.55, "outro", 10, ["outro"], {"a": prompt_pair[0], "b": prompt_pair[1]}, card_t + 0.55, mw=9)
+        if len(prompt_pair) >= 3:                       # Ep 29: tease all 3 Grand Finalists
+            add(card_t + 0.55, "outro", 10, ["outro_q2"],
+                {"a": prompt_pair[0], "b": prompt_pair[1], "c": prompt_pair[2]}, card_t + 0.55, mw=10)
+        else:
+            add(card_t + 0.55, "outro", 10, ["outro"], {"a": prompt_pair[0], "b": prompt_pair[1]}, card_t + 0.55,
+                mw=9)
 
     # Thin out: >= 1.55 s apart; same kind >= 4.0 s apart
     kept: list[Beat] = []
@@ -493,11 +525,14 @@ _SAFE = re.compile(r"^[A-Za-z0-9 ,.!?'\-:—]+$")
 def _valid_llm_line(b: Beat, ln: str, blocked_cliches: set[str] | None = None) -> bool:
     low = f" {ln.lower()} "
     words = ln.split()
-    max_allow = 12 if b.kind == "outro_final" else (9 if b.kind.startswith("outro") else (b.max_words + 1))
+    max_allow = 12 if b.kind == "outro_final" else ((10 if b.ctx.get("c") else 9) if b.kind.startswith("outro")
+                                                    else (b.max_words + 1))
     if not (2 <= len(words) <= max_allow) or not _SAFE.match(ln):
         return False
     if any(p in low for p in BANNED_PHRASES) or _DOWN_TO_N.search(ln) or _STIFF_DOUBLE_ADJ.search(ln):
         return False
+    if b.kind not in ELIM_KINDS and b.kind != "ironic" and b.ctx.get("_gp") is not None and _ELIM_WORDS.search(ln):
+        return False                                          # v4.3.1: no KO language on non-KO beats (stuns etc.)
     if _LEAGUE_N.search(ln):                                  # "league twelve" -> must be "race twelve"
         return False
     if _NEXT_SEASON.search(ln) and b.kind != "outro_final":   # Episodes 1-29 never say "next season"
@@ -536,8 +571,10 @@ def _valid_llm_line(b: Beat, ln: str, blocked_cliches: set[str] | None = None) -
         if any(re.search(rf"\b{re.escape(o)}\b", ln, re.IGNORECASE) for o in others):
             return False
     if b.kind == "outro":
-        a, bb = b.ctx.get("a", "").lower(), b.ctx.get("b", "").lower()
-        if (a and a not in low) or (bb and bb not in low):
+        names = [str(b.ctx.get(k, "")).lower() for k in ("a", "b", "c")]
+        if any(n and n not in low for n in names):
+            return False
+        if b.ctx.get("c") and len(words) > 10:
             return False
     if b.kind == "outro_final":
         if len(words) < 7 or b.ctx.get("winner", "").lower() not in low:
@@ -710,6 +747,26 @@ def punch_up(beats: list[Beat], league_ctx: dict | None = None, log=print) -> in
     return n
 
 
+# v4.3.1 strict alive/eliminated guardrails
+_ELIM_WORDS = re.compile(
+    r"\b(self[- ]?destruct\w*|binned|bins? it|eliminated|elimination|knocked out|ko'?d|dead|toast|rip|bye|"
+    r"game over|done for|deleted|evicted|wiped out|roadkill|sent home|heading home|gone|out of (here|the race)|"
+    r"is out|exit\w*|retire\w*|history|bites the dust|left the building)\b", re.IGNORECASE)
+ELIM_KINDS = ("first_hero", "betrayal", "torched", "hero_fall", "dummy", "multi", "multi_ko")
+
+
+def _bank_fallback(b: Beat) -> str | None:
+    """Deterministic clean BANK line for this beat's family (used when an LLM line breaks a guardrail)."""
+    for tpl in BANK.get(b.family, []):
+        try:
+            txt = tpl.format(**b.ctx)
+        except (KeyError, IndexError):
+            continue
+        if not _ELIM_WORDS.search(txt):
+            return txt
+    return None
+
+
 def apply_guards(beats: list[Beat], r, league_ctx: dict | None = None, log=print) -> int:
     """v4.3 action-aware guardrails (run AFTER the LLM punch-up, before TTS):
     - never call a hero 'showboating'/'cruising'/... while they're falling (vy > 280) or within 0.8 s of their death:
@@ -746,6 +803,22 @@ def apply_guards(beats: list[Beat], r, league_ctx: dict | None = None, log=print
                     b.line_id = "ironic:" + str(BANK["ironic"].index(tpl))
                     swaps += 1
                     break
+        # v4.3.1 alive/eliminated guardrail (only for in-race beats tied to a gameplay moment)
+        if gp is not None and b.kind not in ELIM_KINDS and b.kind != "ironic":
+            gpf = float(gp)
+            named = [k for k, h in HERO_BY_KEY.items() if re.search(rf"\b{re.escape(h.name)}\b", b.text or "", re.I)]
+            fi_now, fi_soon = _frame_of(r, gpf), _frame_of(r, gpf + 0.8)
+            dead_named = [k for k in named if not _alive(r, k, fi_now)]
+            alive_named = [k for k in named if _alive(r, k, fi_now) and _alive(r, k, fi_soon)]
+            if dead_named:
+                swaps += 1
+                continue                                  # hype/filler about a hero who is already OUT -> drop
+            if alive_named and _ELIM_WORDS.search(b.text or ""):
+                fb = _bank_fallback(b)                    # e.g. crusher STUN called "self-destructed"
+                swaps += 1
+                if fb is None:
+                    continue
+                b.text = fb
         bad = (_LEAGUE_N.search(b.text or "") or (_NEXT_SEASON.search(b.text or "") and b.kind != "outro_final")
                or any(c in blocked for c in cliches_in([b.text])))
         if bad:

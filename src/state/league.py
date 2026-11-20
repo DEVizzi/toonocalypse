@@ -106,6 +106,29 @@ def assert_standings_sorted(points: list[int]) -> None:
             raise AssertionError(f"standings out of order at row {i + 1}: {points[i]} < {points[i + 1]} ({points})")
 
 
+def cta_heroes(next_state: dict[str, Any], stage: str) -> list[str]:
+    """v4.3.1 bracket-aware outro CTA heroes, read from the POST-race bracket (tomorrow's actual matchup):
+    - Play-In (Ep 27)     -> Qualifier 1: seed #1 vs seed #2
+    - Qualifier 1 (Ep 28) -> Qualifier 2: Q1 loser vs seed #3 (the Play-In wildcard #4 joins them)
+    - Qualifier 2 (Ep 29) -> the 3 Grand Finalists
+    Returns [] for league races / the Grand Final (callers fall back to the regular rival-pick CTA)."""
+    po = next_state.get("playoff") or {}
+    table = [k for k, _ in sorted_standings(next_state.get("stats") or {})]
+    seeds = [k for k in (po.get("seeds") or table[:3]) if k in HERO_BY_KEY]
+    out: list[str] = []
+    if stage == "play_in":
+        out = seeds[:2]
+    elif stage == "qualifier_1":
+        q1l = po.get("q1_loser")
+        third = seeds[2] if len(seeds) > 2 else po.get("wildcard_winner")
+        out = [k for k in (q1l, third) if k]
+    elif stage == "qualifier_2":
+        out = list(po.get("finalists") or [])[:3]
+    out = [k for k in dict.fromkeys(out) if k in HERO_BY_KEY]
+    need = 3 if stage == "qualifier_2" else 2
+    return out if len(out) == need else []
+
+
 def stage_for_race(race_number: int) -> str:
     if race_number <= LEAGUE_RACES:
         return "league"
@@ -433,16 +456,38 @@ def save_all_state(state: dict[str, Any], hall_of_fame: dict[str, Any], history_
     atomic_write_json(state_dir / "episode_history.json", {"entries": history_entries})
 
 
-def git_commit_state_safe(message: str, repo_dir: Path) -> bool:
-    """Pulls with `--rebase` before committing `state/` so 180+ scheduled CI runs never conflict."""
+def git_commit_state_safe(message: str, repo_dir: Path, dry_run: bool = False, log=print) -> bool:
+    """Commits `state/`, then `git pull --rebase` onto the latest remote, then pushes, so 180+ scheduled CI runs
+    never conflict. (Committing FIRST matters: git refuses to rebase over a dirty working tree.)
+    dry_run=True exercises the full path (local commit, real pull --rebase, authenticated `git push --dry-run`)
+    without changing the remote."""
+    def run(*cmd: str, check: bool = True) -> subprocess.CompletedProcess:
+        return subprocess.run(list(cmd), cwd=repo_dir, check=check, capture_output=True, text=True)
+
+    step = "add"
     try:
-        subprocess.run(["git", "pull", "--rebase"], cwd=repo_dir, check=True, capture_output=True)
-        subprocess.run(["git", "add", "state/"], cwd=repo_dir, check=True, capture_output=True)
-        diff = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=repo_dir, check=False)
+        run("git", "add", "state/")
+        diff = run("git", "diff", "--cached", "--quiet", check=False)
         if diff.returncode == 0:
+            log("  [STATE] nothing to commit")
             return True
-        subprocess.run(["git", "commit", "-m", message], cwd=repo_dir, check=True, capture_output=True)
-        subprocess.run(["git", "push"], cwd=repo_dir, check=True, capture_output=True)
+        step = "commit"
+        run("git", "commit", "-m", message)
+        log(f"  [STATE] committed: {message}")
+        step = "pull --rebase"
+        run("git", "pull", "--rebase", "--autostash")
+        log("  [STATE] git pull --rebase OK")
+        step = "push"
+        if dry_run:
+            run("git", "push", "--dry-run")
+            log("  [STATE] git push --dry-run OK (remote untouched)")
+        else:
+            run("git", "push")
+            log("  [STATE] pushed")
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as exc:
+        err = (exc.stderr or "").strip().splitlines()[-1:] or [""]
+        log(f"  [STATE FAIL] git {step} failed: {err[0][:160]}")
+        if step == "pull --rebase":
+            run("git", "rebase", "--abort", check=False)
         return False
