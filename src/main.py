@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-from src.characters.roster import HEROES, make_extras
+from src.characters.roster import HERO_BY_KEY, HEROES, make_extras
 from src.config import settings
 from src.games import recipe_generator
 from src.games.base import Recipe
@@ -151,6 +151,25 @@ def main(argv: list[str] | None = None) -> int:
     day = int(season_state.get("total_day") or ((entries[-1]["day"] + 1) if entries else 1))
 
     heroes, extras, is_grand_final = league.select_cast_for_race(season_state, rng)
+    pre_table = [k for k, _ in league.sorted_standings(season_state["stats"])]
+    pre_rank = {k: i + 1 for i, k in enumerate(pre_table)}
+    cast_sorted = sorted([h.key for h in heroes], key=lambda k: pre_rank.get(k, 99))
+    prev_winner = next((e.get("winner") for e in reversed(entries) if isinstance(e, dict) and e.get("winner")), None)
+    wild_pool = [k for k in cast_sorted[2:]]
+    wildcard = prev_winner if prev_winner in wild_pool else (rng.choice(wild_pool) if wild_pool else None)
+    spotlights = []
+    if cast_sorted:
+        spotlights.append({"key": cast_sorted[0], "kind": "leader",
+                           "label": f"#{pre_rank.get(cast_sorted[0], 1)} {HERO_BY_KEY[cast_sorted[0]].name.upper()}"})
+    if len(cast_sorted) > 1:
+        spotlights.append({"key": cast_sorted[1], "kind": "rival",
+                           "label": f"#{pre_rank.get(cast_sorted[1], 2)} {HERO_BY_KEY[cast_sorted[1]].name.upper()}"})
+    if wildcard:
+        spotlights.append({"key": wildcard, "kind": "wildcard", "label": f"WILDCARD: {HERO_BY_KEY[wildcard].name.upper()}"})
+    recent_ids: set[str] = set()
+    for e in entries:
+        if isinstance(e, dict) and int(e.get("day", -999)) > day - 7:
+            recent_ids.update(e.get("line_ids") or [])
     recipe, relaxed = recipe_generator.generate(
         entries,
         day,
@@ -202,24 +221,13 @@ def main(argv: list[str] | None = None) -> int:
         "points_gap": outcome.points_gap,
         "races_remaining": outcome.races_remaining,
         "lead_changed": outcome.lead_changed,
+        "pre_leader": cast_sorted[0] if cast_sorted else None,
+        "pre_leader_name": HERO_BY_KEY[cast_sorted[0]].name if cast_sorted else "",
+        "rival_name": HERO_BY_KEY[cast_sorted[1]].name if len(cast_sorted) > 1 else "",
+        "spotlights": spotlights,
+        "finalists": [h.key for h in heroes] if is_grand_final else [],
+        "recent_line_ids": sorted(recent_ids),
     }
-
-    if not a.dry_run:
-        entry = recipe_generator.history_entry(recipe, day)
-        entry.update({
-            "season": outcome.season_number,
-            "race": outcome.race_number,
-            "stage": outcome.stage,
-            "winner": outcome.winner_key,
-        })
-        entries.append(entry)
-        league.save_all_state(next_state, next_hof, entries, state_dir=STATE)
-        if a.commit_state:
-            ok = league.git_commit_state_safe(
-                f"chore(league): S{outcome.season_number} R{outcome.race_number}/30 ({outcome.winner_key} wins)",
-                ROOT,
-            )
-            print(f"git_commit_state_safe: {ok}")
 
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -244,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
         "resolved_at": trace.meta["resolved_at"],
         "candidates": report,
     }
+    line_ids: list[str] = []
     if not a.no_render:
         from src.rendering import pipeline
 
@@ -263,6 +272,7 @@ def main(argv: list[str] | None = None) -> int:
         info["render_s"] = round(time.time() - t0, 1)
         print(f"rendered {out} frames={info['frames']} duration={info['duration']:.1f}s in {info['render_s']}s")
         if info.get("sound"):
+            line_ids = list(info["sound"].get("line_ids") or [])
             print(f"sound: {info['sound']}")
         summary.update(
             video=str(out),
@@ -272,6 +282,24 @@ def main(argv: list[str] | None = None) -> int:
             prompt_cta=ep.prompt,
             sound=info.get("sound"),
         )
+    if not a.dry_run:
+        entry = recipe_generator.history_entry(recipe, day)
+        entry.update({
+            "season": outcome.season_number,
+            "race": outcome.race_number,
+            "stage": outcome.stage,
+            "winner": outcome.winner_key,
+            "line_ids": list(line_ids),
+        })
+        entries.append(entry)
+        league.save_all_state(next_state, next_hof, entries, state_dir=STATE)
+        if a.commit_state:
+            ok = league.git_commit_state_safe(
+                f"chore(league): S{outcome.season_number} R{outcome.race_number}/30 ({outcome.winner_key} wins)",
+                ROOT,
+            )
+            print(f"git_commit_state_safe: {ok}")
+
     out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
     return 0
 

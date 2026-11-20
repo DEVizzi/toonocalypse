@@ -478,8 +478,11 @@ class Sim:
         hard = max_gameplay or TIMELINE.hard_stop_s
         start = time.time()
         brain = ai.Brain(self)
-        pre = int(round(TIMELINE.cold_open_s * FPS))       # cold open: contestants bouncing at the closed gate
+        # v4.2 live starting-gate spotlight: 1.5 s (1.6 s Grand Final VS clash) of real motion behind the gate
+        open_s = 1.6 if getattr(self.recipe, "finale", False) else TIMELINE.cold_open_s
+        pre = int(round(open_s * FPS))
         self.trace.meta["preroll_frames"] = pre
+        spin_up = self.mode != SIDE and self.arena.key == "rotating_disc"
         for i in range(pre):
             self.t = (i - pre) / FPS
             if self.mode == SIDE:
@@ -490,6 +493,9 @@ class Sim:
                         c.squash = 0.6
             for _ in range(self.cfg["substeps"]):
                 self._apply_drives()
+                if spin_up:
+                    for h in self.hooks_step:
+                        h(self.dt)
                 self.space.step(self.dt)
             self._record()
         self.arena.open_gate()
@@ -637,7 +643,7 @@ class Sim:
         if self.mode == SIDE and self.finish_x is not None and self.t > 3.0 and not vert_tower:
             esc_units = sum(TIMELINE.speed_at(3.0 + i * 0.1) * 0.1 for i in range(int((self.cfg["pacing"]["chase_finish_s"] - 3.0) * 10)))
             k = min(self.cfg["pacing"]["chase_max"], max(self.cfg["pacing"]["chase_min"], self.pressure))
-            self.chase_x += (self.finish_x / esc_units) * self.speed_mult * k * dt
+            self.chase_x += (self.finish_x / esc_units) * self.speed_mult * k * dt * float(getattr(self.arena, "chase_scale", 1.0))
             if self.overtime:
                 alive_x = [c.pos[0] for c in alive]
                 if alive_x:

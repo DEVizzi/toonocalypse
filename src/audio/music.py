@@ -182,3 +182,139 @@ def funk_bgm(duration: float, bpm: float = 126.0, intense_from: float = 1e9, see
 
 # Backwards-compatible alias
 chiptune = funk_bgm
+
+
+# ---------------------------------------------------------------------------------------------- v4.2 multi-track BGM
+def _lead(buf: np.ndarray, start: float, dur: float, semi: float, kind: str, amp: float) -> None:
+    i0 = int(start * SR)
+    n = min(int(dur * SR), buf.size - i0)
+    if n <= 0 or i0 < 0:
+        return
+    t = np.arange(n, dtype=np.float32) / SR
+    f = _hz(semi)
+    if kind == "saw":            # synthwave detuned saw lead
+        ph = 2.0 * np.pi * f * t
+        sig = (_osc(ph, "saw") + _osc(ph * 1.007, "saw")) * 0.5
+        sig = smooth(sig.astype(np.float32), 3)
+        env = _env(n, a=0.01, r=max(0.05, dur * 0.8), curve=1.6)
+    elif kind == "square":       # bouncy candy chiptune
+        sig = _osc(2.0 * np.pi * f * t, "pulse")
+        env = _env(n, a=0.002, r=max(0.04, dur * 0.6), curve=2.4)
+    elif kind == "bell":         # icy celesta bell
+        sig = np.sin(2.0 * np.pi * f * t) + 0.5 * np.sin(2.0 * np.pi * f * 2.76 * t) * np.exp(-t * 9.0)
+        env = _env(n, a=0.001, r=max(0.08, dur * 0.95), curve=2.0)
+    elif kind == "theremin":     # spooky wobbly theremin
+        vib = 0.018 * np.sin(2.0 * np.pi * 5.5 * t)
+        sig = np.sin(2.0 * np.pi * np.cumsum(f * (1.0 + vib)) / SR)
+        env = _env(n, a=0.04, r=max(0.08, dur * 0.85), curve=1.4)
+    elif kind == "brass":
+        sig = np.zeros(n, np.float32)
+        _brass_stab(buf, start, dur, (int(semi) - 12,), amp=amp * 1.6)
+        return
+    else:                        # marimba
+        _marimba(buf, start, dur, semi, amp=amp)
+        return
+    buf[i0:i0 + n] += np.asarray(sig, np.float32) * env * amp
+
+
+# style: bpm, key offset, A progression, B progression (chord tones relative to root), lead, bass groove, drum feel
+STYLES: dict[str, dict] = {
+    "gameshow_funk": dict(bpm=126, key=5, A=[0, 3, 5, 7], B=[5, 3, 0, 7], q=(0, 4, 7, 10), lead="marimba", drums="funk"),
+    "frost_bells":   dict(bpm=120, key=2, A=[0, 9, 5, 7], B=[5, 7, 9, 7], q=(0, 4, 7, 11), lead="bell", drums="funk"),
+    "brass_hype":    dict(bpm=138, key=0, A=[0, 0, 3, 5], B=[8, 10, 0, 7], q=(0, 3, 7, 10), lead="brass", drums="march"),
+    "desert_brass":  dict(bpm=132, key=4, A=[0, 1, 0, 1], B=[5, 3, 1, 0], q=(0, 4, 7, 10), lead="brass", drums="march"),
+    "synthwave":     dict(bpm=118, key=9, A=[0, 8, 3, 10], B=[5, 3, 8, 7], q=(0, 3, 7, 10), lead="saw", drums="four"),
+    "spooky_bass":   dict(bpm=112, key=4, A=[0, 1, 0, 6], B=[3, 1, 6, 7], q=(0, 3, 6, 10), lead="theremin", drums="swing"),
+    "storm_drive":   dict(bpm=134, key=7, A=[0, 10, 8, 10], B=[5, 3, 8, 7], q=(0, 3, 7, 10), lead="saw", drums="four"),
+    "candy_bounce":  dict(bpm=130, key=0, A=[0, 5, 9, 7], B=[2, 7, 0, 7], q=(0, 4, 7, 9), lead="square", drums="funk"),
+}
+THEME_TRACK: dict[str, str] = {
+    "royal_classic": "gameshow_funk",
+    "frostbite_siege": "frost_bells",
+    "volcanic_foundry": "brass_hype",
+    "cyber_neon_keep": "synthwave",
+    "monsoon_storm": "storm_drive",
+    "haunted_castle": "spooky_bass",
+    "desert_mirage": "desert_brass",
+    "candy_chaos": "candy_bounce",
+}
+
+
+def track_for_theme(theme_key: str) -> str:
+    return THEME_TRACK.get(theme_key, "gameshow_funk")
+
+
+def theme_bgm(duration: float, track: str = "gameshow_funk", intense_from: float = 1e9, seed: int = 0) -> np.ndarray:
+    """Procedural CC0 BGM with A/A/B/A' 4-bar sections and a fresh seeded melody each bar (no short loops)."""
+    st = STYLES.get(track, STYLES["gameshow_funk"])
+    bpm = float(st["bpm"])
+    buf = np.zeros(int(duration * SR) + SR, np.float32)
+    beat = 60.0 / bpm
+    s16 = beat / 4.0
+    bar = beat * 4.0
+    rng = np.random.default_rng(seed + sum(ord(ch) * (i + 1) for i, ch in enumerate(track)) % 9973)
+    key = int(st["key"])
+    q = st["q"]
+    nbars = int(duration / bar) + 2
+    for b in range(nbars):
+        t0 = b * bar
+        if t0 > duration:
+            break
+        section = (b // 4) % 4                     # A, A, B, A' (16-bar song form)
+        prog = st["B"] if section == 2 else st["A"]
+        root = key + prog[b % 4]
+        hot = t0 >= intense_from
+        swing = (0.05 if st["drums"] == "swing" else 0.012) * beat
+
+        # Bass: root/fifth pattern varies by section
+        pat = [(0, 2, 0), (3, 1, 12), (6, 2, 7), (8, 2, 0), (11, 1, 10), (14, 2, 7)] if section != 2 else \
+              [(0, 3, 0), (4, 2, 7), (8, 3, 0), (12, 2, 12)]
+        for s, ln, off in pat:
+            _slap_bass(buf, t0 + s * s16, ln * s16 * 0.9, _hz(root + off), pop_oct=(off == 12), amp=0.44 if not hot else 0.52)
+
+        # Pads / stabs
+        chord = tuple(root + x for x in q)
+        stab_steps = (2, 6, 10, 14) if st["drums"] != "four" else (0, 8)
+        for s in stab_steps:
+            _brass_stab(buf, t0 + s * s16, (2.0 if st["drums"] == "four" else 1.3) * s16, chord,
+                        amp=(0.10 if st["lead"] in ("saw", "theremin") else 0.16) * (1.25 if hot else 1.0))
+
+        # Seeded melody: random walk over chord tones, new every bar, denser in B / overtime
+        n_notes = int(rng.integers(4, 7)) + (2 if section == 2 or hot else 0)
+        steps = sorted(rng.choice(16, size=min(16, n_notes), replace=False).tolist())
+        deg = int(rng.integers(0, len(q)))
+        for s in steps:
+            deg = max(0, min(len(q) * 2 - 1, deg + int(rng.choice([-1, 0, 1, 1, 2]))))
+            semi = root + q[deg % len(q)] + 12 * (deg // len(q)) + (24 if not hot else 36)
+            _lead(buf, t0 + s * s16 + (swing if s % 2 else 0.0), s16 * float(rng.choice([1.2, 1.8, 2.6])),
+                  semi, st["lead"], amp=0.13 if not hot else 0.16)
+
+        # Drums
+        if st["drums"] == "four":
+            kicks, snares = (0, 4, 8, 12), (4, 12)
+        elif st["drums"] == "march":
+            kicks, snares = (0, 6, 8, 11), (4, 12, 14)
+        elif st["drums"] == "swing":
+            kicks, snares = (0, 10), (4, 12)
+        else:
+            kicks, snares = (0, 3, 8, 10), (4, 12)
+        if hot:
+            kicks = tuple(sorted(set(kicks) | {6, 14}))
+        for s in kicks:
+            _kick(buf, t0 + s * s16 + (swing if s % 2 else 0.0), amp=0.74 if s in (0, 8) else 0.55)
+        for s in snares:
+            _snare(buf, t0 + s * s16, amp=0.44)
+        if section == 3 and b % 4 == 3:            # fill into next phrase
+            for s in (13, 14, 15):
+                _snare(buf, t0 + s * s16, amp=0.3)
+        for s in range(16):
+            if s % 2 == 1 and not hot and st["drums"] != "four":
+                continue
+            _hat(buf, t0 + s * s16 + (swing if s % 2 else 0.0), open_hat=(s in (6, 14)), amp=0.12 if s % 2 == 0 else 0.08)
+
+    out = buf[: int(duration * SR)]
+    fade = min(out.size, int(0.18 * SR))
+    if fade > 1:
+        out[:fade] *= np.linspace(0.0, 1.0, fade, dtype=np.float32)
+    m = float(np.max(np.abs(out))) or 1.0
+    return (out / m * 0.90).astype(np.float32)

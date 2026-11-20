@@ -81,8 +81,8 @@ GOAL_ARENA_EXCLUDE = {
 }
 ARENA_HAZARD_EXCLUDE = {
     "collapse_tower": {"lava_floor", "rolling_boulders", "falling_floor_tiles"},
-    "crumbling_bridge": {"falling_floor_tiles", "lava_floor"},
-    "crusher_gauntlet": {"rolling_boulders", "lava_floor", "spinning_bars"},
+    "crumbling_bridge": {"falling_floor_tiles", "lava_floor", "wind_gusts", "cannon_balls", "swinging_hammers"},
+    "crusher_gauntlet": {"rolling_boulders", "lava_floor", "spinning_bars", "wind_gusts", "cannon_balls", "swinging_hammers"},
     "rotating_disc": {"moving_walls", "falling_floor_tiles", "spinning_bars"},
     "sumo_pool_pit": {"moving_walls", "falling_floor_tiles", "spinning_bars"},
 }
@@ -95,7 +95,7 @@ def fits(kind_mode: str, mode: str) -> bool:
 def twist_fits(twist: str, mode: str, arena: str) -> bool:
     if twist == "random_teleport_pads" and arena in {"collapse_tower", "rotating_disc", "sumo_pool_pit"}:
         return False
-    if twist == "reversed_controls" and arena in {"collapse_tower", "crusher_gauntlet"}:
+    if twist in ("reversed_controls", "low_gravity") and arena in {"collapse_tower", "crusher_gauntlet"}:
         return False
     return fits(TWISTS[twist], mode) or arena in TWIST_ARENA_EXTRA.get(twist, set())
 

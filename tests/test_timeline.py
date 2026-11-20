@@ -5,7 +5,7 @@ from src.config import TIMELINE, settings
 
 def test_segments_inside_limits():
     t = TIMELINE
-    assert t.cold_open_s == 0.8 and t.flash_forward_s <= 1.5
+    assert t.cold_open_s == 1.5 and t.flash_forward_s <= 1.5
     assert t.gameplay_target_min_s < t.gameplay_target_max_s <= t.forced_resolution_s <= t.hard_stop_s
     starts = [e[0] for e in t.escalation]
     assert starts == sorted(starts) and starts[0] == 0 and starts[-1] < t.forced_resolution_s
@@ -21,7 +21,7 @@ def test_total_duration_range():
             total = ff + t.cold_open_s + gameplay + t.tail_s()
             assert v["duration_min_s"] <= total <= v["duration_max_s"]
     for gameplay in (t.gameplay_target_min_s, t.gameplay_target_max_s):
-        assert 20 <= t.cold_open_s + gameplay + t.tail_s() <= 28.5
+        assert 20 <= t.cold_open_s + gameplay + t.tail_s() <= 29.5
 
 
 def test_two_stage_fits():

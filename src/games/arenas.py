@@ -677,6 +677,7 @@ class CrumblingBridge(Course):
     """v4.0: High-altitude segmented castle suspension bridge where each stone/timber tile shakes for 0.45 s once
     touched and then drops into the abyss, paired with overhead swinging hammers and bouncy spring launch pads."""
     key = "crumbling_bridge"
+    chase_scale = 0.9        # holes open behind the pack; give stragglers a fair shot before the wall arrives
 
     def __init__(self, sim):
         super().__init__(sim)
@@ -686,53 +687,46 @@ class CrumblingBridge(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        n_spans = self.count("bridge_spans", 10, 12)
+        n_spans = self.count("bridge_spans", 8, 10)
         for sp_i in range(n_spans):
-            # Sturdy stone castle bridge pier deck leading onto fragile drop tiles
-            self.seg(r.uniform(230, 300), r.uniform(36, 64))
-            if r.random() < 0.55:
-                self.pegs(r.randint(2, 3), (68, 118))
-
-            # Shaking castle bridge tile suspended across the abyss (0.45 s shake -> drops; step-down landing pier!)
-            tw = r.uniform(74, 88)
-            dy = r.uniform(26, 38)
-            cx, cy = self.x + tw * 0.5, self.y + dy * 0.35 + 10.0
-            body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
-            body.position = (cx, cy)
-            box = pymunk.Poly.create_box(body, (tw, 26), radius=5)
-            p = self.sim.add_prop(body, [box], "bridge_tile", material="plank")
-            self.tiles.append({
-                "prop": p,
-                "x0": self.x,
-                "x1": self.x + tw,
-                "cx": cx,
-                "cy": cy,
-                "tilt": r.choice([-1.0, 1.0]),
-                "hit": None,
-                "dropped": False,
-                "regrow": sp_i < n_spans - 2,
-            })
-            self.span(self.x, self.y, self.x + tw + 6.0, self.y + dy)
-            self.x += tw + 6.0
-            self.y += dy
-            self.low = max(self.low, self.y)
-
-            # Solid lower landing pier + overhead swinging iron hammer + spring kicker pad
-            self.seg(r.uniform(190, 250), r.uniform(28, 52))
-            if sp_i % 3 == 1:
-                hx = self.x - 85.0
-                gy = self.ground_y_at(hx)
-                piv = (hx, gy - 335.0)
-                hbody = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
-                hbody.position = piv
-                arm = pymunk.Segment(hbody, (0, 0), (0, 252), 5)
-                head = pymunk.Poly(hbody, [(-36, 236), (36, 236), (36, 278), (-36, 278)], radius=6)
-                hp = self.sim.add_prop(hbody, [arm, head], "hammer", hazard=True)
-                self.hammers.append((hp, r.uniform(0, 6.28), r.uniform(1.5, 2.0)))
-                self.sim.statics.append({"type": "post", "c": piv})
-            self.seg(r.uniform(95, 125), r.uniform(8, 20), material="bouncy")
-            if sp_i % 4 == 3:
-                self.gap(r.uniform(64, 88) * self.ramp(sp_i, n_spans), r.uniform(36, 62))
+            # Steep stone descent (Ramp-Descent profile) so the pack keeps real pace
+            self.seg(r.uniform(420, 560), r.uniform(165, 235))
+            if sp_i % 2 == 0:
+                # Crumbling bridge: 2-3 discrete 90-110 px stone slabs over the abyss. First contact -> CRACKING
+                # (>= 0.45 s, 3 px vibration, jagged cracks) -> slab detaches once the pack has crossed -> real holes
+                self.seg(r.uniform(90, 120), r.uniform(10, 20), material="bouncy")
+                n_tiles = 2 if sp_i < n_spans - 3 else 3
+                for _ in range(n_tiles):
+                    tw = r.uniform(90, 110)
+                    dy = r.uniform(8, 16)
+                    cx, cy = self.x + tw * 0.5, self.y + dy * 0.5 + 13.0
+                    body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+                    body.position = (cx, cy)
+                    box = pymunk.Poly.create_box(body, (tw - 2, 26), radius=3)
+                    p = self.sim.add_prop(body, [box], "bridge_tile", material="plank")
+                    self.tiles.append({"prop": p, "x0": self.x, "x1": self.x + tw, "cx": cx, "cy": cy,
+                                       "tilt": r.choice([-1.0, 1.0]), "hit": None, "dropped": False, "regrow": False})
+                    self.span(self.x, self.y, self.x + tw, self.y + dy)
+                    self.x += tw
+                    self.y += dy
+                    self.low = max(self.low, self.y)
+                self.seg(r.uniform(150, 210), r.uniform(30, 55))
+                if sp_i % 4 == 0:
+                    hx = self.x - 90.0
+                    gy = self.ground_y_at(hx)
+                    piv = (hx, gy - 335.0)
+                    hbody = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+                    hbody.position = piv
+                    arm = pymunk.Segment(hbody, (0, 0), (0, 252), 5)
+                    head = pymunk.Poly(hbody, [(-36, 236), (36, 236), (36, 278), (-36, 278)], radius=6)
+                    hp = self.sim.add_prop(hbody, [arm, head], "hammer", hazard=True)
+                    self.hammers.append((hp, r.uniform(0, 6.28), r.uniform(1.5, 2.0)))
+                    self.sim.statics.append({"type": "post", "c": piv})
+            else:
+                self.sim.static_circle((self.x + 26, self.y - 22), 17, "bumper")
+                self.seg(r.uniform(150, 230), r.uniform(35, 70))
+                if r.random() < 0.45:
+                    self.gap(r.uniform(80, 120) * self.ramp(sp_i, n_spans), r.uniform(25, 60))
 
         self.finish(700)
         self.sim.hooks_frame.append(self._tick)
@@ -756,18 +750,23 @@ class CrumblingBridge(Course):
                 states.append(0)
                 continue
             age = t - tl["hit"]
-            if age < 0.45:
-                # 0.45 s warning shake before dropping into the abyss
-                jx = math.sin(t * 74.0 + tl["cx"]) * 5.0
-                jy = math.cos(t * 58.0 + tl["cy"]) * 2.0
+            near = [c for c in self.sim.alive() if abs(c.pos[1] - (tl["cy"] - 13)) < 140]
+            loaded = any(tl["x0"] - 4 <= c.pos[0] <= tl["x1"] + 4 for c in near)
+            approaching = any(tl["x0"] - 260 <= c.pos[0] < tl["x0"] for c in near)
+            if not tl["dropped"] and (age < 0.45 or ((loaded or approaching) and age < 2.4)):
+                # CRACKING: >= 0.45 s of 3 px vibration + jagged cracks, then the slab detaches the moment it is
+                # unloaded (hard cap 1.0 s) -> real holes open right behind the pack
+                jx = math.sin(t * 74.0 + tl["cx"]) * 3.0
+                jy = math.cos(t * 58.0 + tl["cy"]) * 1.5
                 p.body.position = (tl["cx"] + jx, tl["cy"] + jy)
                 p.body.angle = 0.0
                 states.append(1)
             else:
                 if not tl["dropped"]:
                     tl["dropped"] = True
+                    tl["drop_t"] = t
                     self.pits.append((tl["x0"], tl["x1"]))
-                dt_f = age - 0.45
+                dt_f = t - tl["drop_t"]
                 if dt_f < 1.35:
                     p.body.position = (tl["cx"], tl["cy"] + 860.0 * dt_f * dt_f)
                     p.body.velocity = (0.0, 1720.0 * dt_f)
@@ -796,14 +795,14 @@ class CollapseTower(Course):
     key = "collapse_tower"
     vertical_tower = True
     SHAFT_W = 2020.0
-    STORY_Ys = (-1260.0, -910.0, -560.0, -210.0, +140.0, +490.0, +840.0)
+    STORY_Ys = (-1260.0, -910.0, -560.0, -210.0, +140.0)
 
     def __init__(self, sim):
         super().__init__(sim)
         self.trapdoors: list[dict] = []
         self.floor_bands: list[tuple[float, int]] = []
-        self.purge_y = -1500.0
-        self.lava_y = 1240.0
+        self.purge_y = self.STORY_Ys[0] - 900.0       # starts well above the camera -> zero slime on heads at 00:00
+        self.lava_y = self.STORY_Ys[-1] + 400.0
         self.hammers: list[tuple] = []
         self.spike_pockets: list[tuple[float, float, float, float]] = []
 
@@ -837,8 +836,9 @@ class CollapseTower(Course):
         r = self.sim.rng
         W_SH = self.SHAFT_W
         # Outer castle shaft containment walls
-        self.sim.static_segment((-28, -1660), (-28, 1340), "wall", radius=14)
-        self.sim.static_segment((W_SH + 28, -1660), (W_SH + 28, 1340), "wall", radius=14)
+        bot = self.STORY_Ys[-1] + 500.0
+        self.sim.static_segment((-28, -1660), (-28, bot), "wall", radius=14)
+        self.sim.static_segment((W_SH + 28, -1660), (W_SH + 28, bot), "wall", radius=14)
 
         floors = [(y0, +1 if i % 2 == 0 else -1) for i, y0 in enumerate(self.STORY_Ys)]
         for idx, (y_start, d) in enumerate(floors):
@@ -856,7 +856,6 @@ class CollapseTower(Course):
                     self.pits.append((640.0, 748.0))
                     self.spike_pockets.append((642.0, 746.0, pk_y + 52.0, pk_y + 135.0))
                     self.ground((748.0, pk_y + 22.0), (1220.0, pk_y + 60.0))
-                    self.sim.static_circle((980.0, pk_y + 14.0), 18.0, "bumper")
                     self._add_trapdoor(1228.0, pk_y + 60.0, 1362.0, pk_y + 70.0)
                     self.ground((1370.0, pk_y + 70.0), (x_end, pk_y + 98.0))
                 elif is_last:
@@ -864,15 +863,12 @@ class CollapseTower(Course):
                     self.ground((x_a, y_start), (510.0, y_start + 32.0))
                     self._add_trapdoor(518.0, y_start + 32.0, 665.0, y_start + 42.0, fatal_pit=True)
                     self.ground((672.0, y_start + 42.0), (1220.0, y_start + 78.0), material="bouncy")
-                    self.sim.static_circle((950.0, y_start + 28.0), 19.0, "bumper")
                     self._add_trapdoor(1228.0, y_start + 78.0, 1380.0, y_start + 88.0, fatal_pit=True)
                     self.ground((1388.0, y_start + 88.0), (x_end, y_start + 122.0))
                 else:
                     self.ground((x_a, y_start), (520.0, y_start + 34.0))
                     self._add_trapdoor(528.0, y_start + 34.0, 672.0, y_start + 44.0)
                     self.ground((680.0, y_start + 44.0), (1260.0, y_start + 84.0), material="bouncy")
-                    self.sim.static_circle((860.0, y_start + 30.0), 19.0, "bumper")
-                    self.sim.static_circle((1080.0, y_start + 46.0), 18.0, "bumper")
                     self._add_trapdoor(1268.0, y_start + 84.0, 1412.0, y_start + 94.0)
                     self.ground((1420.0, y_start + 94.0), (x_end, y_start + 126.0))
 
@@ -884,8 +880,6 @@ class CollapseTower(Course):
                 self.ground((1520.0, y_start + 34.0), (W_SH + 24.0, y_start))
                 self._add_trapdoor(1368.0, y_start + 44.0, 1512.0, y_start + 34.0)
                 self.ground((790.0, y_start + 84.0), (1360.0, y_start + 44.0), material="bouncy")
-                self.sim.static_circle((980.0, y_start + 44.0), 19.0, "bumper")
-                self.sim.static_circle((1180.0, y_start + 28.0), 18.0, "bumper")
                 self._add_trapdoor(638.0, y_start + 94.0, 782.0, y_start + 84.0)
                 self.ground((230.0, y_start + 126.0), (630.0, y_start + 94.0))
                 # Swinging iron hammer mid-story for hero impacts & knockbacks
@@ -902,9 +896,9 @@ class CollapseTower(Course):
                 self.sim.static_circle((165.0, y_start + 265.0), 19.0, "bumper")
 
         self.sim.finish_x = W_SH - 140.0
-        self.sim.kill_y = 1340.0
-        self.sim.bounds = (-120.0, -1560.0, W_SH + 120.0, 1340.0)
-        self.sim.statics.append({"type": "finish", "x": self.sim.finish_x, "y": 958.0})
+        self.sim.kill_y = self.STORY_Ys[-1] + 500.0
+        self.sim.bounds = (-120.0, -1560.0, W_SH + 120.0, self.sim.kill_y)
+        self.sim.statics.append({"type": "finish", "x": self.sim.finish_x, "y": self.STORY_Ys[-1] + 118.0})
         self.sim.hooks_frame.append(self._tick)
 
     def _story_index(self, y: float) -> int:
@@ -924,7 +918,8 @@ class CollapseTower(Course):
         return st * (self.SHAFT_W + 100.0) + max(0.0, min(self.SHAFT_W + 50.0, along))
 
     def at_finish(self, c: "Contestant") -> bool:
-        return c.pos[1] >= (self.STORY_Ys[-1] - 90.0) and c.pos[0] >= (self.sim.finish_x or (self.SHAFT_W - 140.0))
+        """Full-height pass-through finish sensor across the bottom-floor exit: first hero through wins instantly."""
+        return self._story_index(c.pos[1]) == len(self.STORY_Ys) - 1 and c.pos[0] >= (self.sim.finish_x or (self.SHAFT_W - 140.0))
 
     def _tick(self, t: float):
         for hp, ph, w in self.hammers:
@@ -958,16 +953,20 @@ class CollapseTower(Course):
 
         # 2. Rising lava/plasma pit strictly below Story 6 floor (y >= 1065) + Descending ceiling purge wave!
         if t > 3.0:
-            self.lava_y = max(1065.0, self.lava_y - (9.5 * self.sim.speed_mult) / 30.0)
-        if t > 1.0:
-            rate = 62.0 * self.sim.speed_mult
+            self.lava_y = max(self.STORY_Ys[-1] + 225.0, self.lava_y - (9.5 * self.sim.speed_mult) / 30.0)
+        alive = self.sim.alive()
+        if t > 2.0 and alive:
+            ys = sorted(c.pos[1] for c in alive)
+            cluster_y = ys[len(ys) // 2]
+            rate = 104.0 * self.sim.speed_mult
+            if self.purge_y < cluster_y - 700.0:
+                rate *= 2.6                      # fast catch-up so the hazard is always on screen chasing stragglers
             self.purge_y += rate / 30.0
-            alive = self.sim.alive()
-            if alive:
-                ys = sorted(c.pos[1] for c in alive)
-                cluster_y = ys[len(ys) // 2]
-                # Strictly stay above the active racing pack at ALL times (never wipe Story 0!)
-                self.purge_y = min(self.purge_y, cluster_y - (210.0 if self.sim.overtime else 320.0))
+            # Never overtake the median of the racing pack (hunts stragglers from behind/above)
+            self.purge_y = min(self.purge_y, cluster_y - (150.0 if self.sim.overtime else 185.0))
+            hero_ys = [c.pos[1] for c in alive if c.hero is not None]
+            if len(hero_ys) == 1:
+                self.purge_y = min(self.purge_y, hero_ys[0] - 170.0)   # the last hero must earn it at the finish
 
         for c in list(self.sim.alive()):
             x, y = c.pos
@@ -986,6 +985,7 @@ class CrusherGauntlet(Course):
     """v4.0: Fast stone gauntlet with oscillating overhead crusher pistons (timed smash gaps), oncoming rolling boulders
     tumbling against traffic, flush speed-boost chevrons, and bouncy angled ceiling deflectors."""
     key = "crusher_gauntlet"
+    chase_scale = 0.78
 
     def __init__(self, sim):
         super().__init__(sim)
@@ -998,15 +998,14 @@ class CrusherGauntlet(Course):
         r = self.sim.rng
         self.start()
 
-        n = self.count("gauntlet_bays", 11, 13)
+        n = self.count("gauntlet_bays", 6, 7)
         for i in range(n):
             # 1. Speed-boost approach slab with flush chevrons + overhead bouncy angled ceiling deflector
             bx0 = self.x + 25.0
             rx0, ry0 = self.x, self.y
-            self.seg(r.uniform(240, 315), r.uniform(42, 74))
+            self.seg(r.uniform(380, 470), r.uniform(150, 205))
             if i % 3 == 0:
                 self.boosts.append(("rect", bx0, self.x - 20.0))
-                self.sim.static_segment((rx0 + 40.0, ry0 - 210.0), (rx0 + 235.0, ry0 - 152.0), "bouncy", radius=10)
 
             # 2. Timed Overhead Crusher Piston bay
             bay_w = r.uniform(240, 305)
@@ -1014,19 +1013,20 @@ class CrusherGauntlet(Course):
             self.seg(bay_w, r.uniform(32, 62))
             gy = self.ground_y_at(cx)
             body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
-            base_y = gy - 180.0
-            body.position = (cx, base_y)
+            body.position = (cx, gy - self.TOP_OFF)
             head = pymunk.Poly.create_box(body, (112, 66), radius=6)
-            shaft = pymunk.Segment(body, (0, -33), (0, -240), 12)
+            shaft = pymunk.Segment(body, (0, -33), (0, -480), 12)
             cp = self.sim.add_prop(body, [shaft, head], "crusher", hazard=True)
-            self.crushers.append((cp, cx, gy, r.uniform(0, 6.28), r.uniform(1.9, 2.5)))
+            head.sensor = shaft.sensor = True        # crush/launch resolved by script -> zero floor tunnelling
+            self.crushers.append((cp, cx, gy, r.uniform(0, 1.0), r.uniform(1.9, 2.5)))
+            # Solid overhead stone/steel ceiling beam the piston is mounted to (visual, anchored up off-screen)
+            self.sim.statics.append({"type": "ceiling_beam", "x0": cx - 96.0, "x1": cx + 96.0, "y": gy - 470.0})
 
             # 3. Bouncy kicker + periodic downhill jump gap
             if i % 4 == 3:
                 self.seg(r.uniform(115, 145), r.uniform(8, 20), material="bouncy")
                 self.gap(r.uniform(68, 92) * self.ramp(i, n), r.uniform(42, 76))
             else:
-                self.pegs(2, (64, 114))
                 self.wave(r.uniform(220, 310), 24, 48)
 
         self.finish(700)
@@ -1037,27 +1037,53 @@ class CrusherGauntlet(Course):
         x = c.pos[0]
         return 1.32 if any(b[1] <= x <= b[2] for b in self.boosts) else 1.0
 
+    TOP_OFF = 189.0      # head centre above floor at the top of the stroke
+    BOT_OFF = 39.0       # head centre above floor at full stroke -> head bottom sits 6 px above the track
+    TELEGRAPH_S = 0.25
+
+    def _stroke(self, u: float, period: float) -> tuple[float, float]:
+        """Returns (offset above floor of head centre, shake px) for cycle phase u in [0, 1)."""
+        tele = min(0.12, self.TELEGRAPH_S / max(0.5, period))
+        if u < 0.40:
+            shake = 3.0 * math.sin(u * 900.0) if u > 0.40 - tele else 0.0
+            return self.TOP_OFF, shake
+        if u < 0.47:                                   # SLAM (ease-in)
+            k = (u - 0.40) / 0.07
+            return self.TOP_OFF - (self.TOP_OFF - self.BOT_OFF) * k * k, 0.0
+        if u < 0.55:                                   # hold at the bottom
+            return self.BOT_OFF, 0.0
+        k = (u - 0.55) / 0.45                          # slow hydraulic rise
+        k = k * k * (3 - 2 * k)
+        return self.BOT_OFF + (self.TOP_OFF - self.BOT_OFF) * k, 0.0
+
     def _tick(self, t: float):
-        # Oscillating crusher pistons (min physical bottom clearance = 73 px > max ball diameter -> zero floor tunneling!)
+        alive_heroes = sum(1 for c in self.sim.alive() if c.hero is not None)
         for cp, cx, gy, ph, w in self.crushers:
             om = w * self.sim.hazard_mult
-            s = math.sin(t * om + ph)
-            slam = s if s > 0 else s * 0.65
-            amp = 74.0
-            target_y = (gy - 180.0) + slam * amp
-            vy = math.cos(t * om + ph) * om * amp
-            cp.body.position = (cx, target_y)
-            cp.body.velocity = (0.0, vy)
-            # Crush check at bottom of stroke: dummies get crushed; heroes get squashed & knocked!
-            if target_y > gy - 122.0 and vy > 45.0:
-                for c in list(self.sim.alive()):
-                    if c.hero is None:
-                        if abs(c.pos[0] - cx) < 52.0 and gy - 78.0 <= c.pos[1] <= gy + 22.0:
-                            self.sim.eliminate(c, "lava")
-                    elif abs(c.pos[0] - cx) < 32.0 and gy - 72.0 <= c.pos[1] <= gy + 18.0 and c.stun <= 0.0:
-                        c.squash = 1.0
-                        c.stun = 0.24
-                        c.body.velocity = (max(125.0, c.body.velocity.x * 0.65), -210.0)
+            period = 2.0 * math.pi / om
+            u = (t / period + ph) % 1.0
+            off, shake = self._stroke(u, period)
+            off_prev, _ = self._stroke((u - (1.0 / 30.0) / period) % 1.0, period)
+            cp.body.position = (cx + shake, gy - off)
+            cp.body.velocity = (0.0, (off_prev - off) * 30.0)
+            head_bottom = gy - off + 33.0
+            descending = off < off_prev - 0.5 or u < 0.55 and u >= 0.40
+            if not descending:
+                continue
+            for c in list(self.sim.alive()):
+                dx = c.pos[0] - cx
+                if abs(dx) > 56.0 + c.radius or c.pos[1] - c.radius > head_bottom or c.pos[1] < gy - self.TOP_OFF:
+                    continue
+                if c.pos[1] + c.radius < head_bottom - 10.0 and c.pos[1] < gy - 2.0 * c.radius - 10.0:
+                    continue                           # airborne above the head's path
+                if c.hero is None:
+                    self.sim.eliminate(c, "crushed")   # genuinely smashed
+                    if c.hero is not None:
+                        alive_heroes -= 1
+                elif c.stun <= 0.0:
+                    c.squash = 1.0                     # launched out from under the slab
+                    c.stun = 0.25
+                    c.body.velocity = (max(260.0, c.body.velocity.x), -330.0)   # popped forward-up, keeps momentum
 
         # Oncoming rolling boulders tumbling against traffic
         if t >= self.next_boulder:

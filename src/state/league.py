@@ -206,6 +206,10 @@ class EpisodeOutcome:
     top3: list[tuple[str, int]]       # [(hero_key, points), ...]
     reigning_champion: str | None     # wears Gold Champion Star (★)
     is_grand_final: bool
+    top4: list[tuple[str, int, int]] = None        # [(hero_key, post-race points, points earned THIS race)]
+    pre_leader_key: str | None = None
+    ko_pill_text: str | None = None                # always "+2 KO: {HERO}"
+    podium: list[str] = None                       # Grand Final finish order (champion first), no points shown
 
 
 def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict[str, Any] | None = None,
@@ -252,6 +256,7 @@ def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict
 
     po = st.setdefault("playoff", {})
     winner_pts_earned = 0
+    race_delta: dict[str, int] = {}
 
     if stage == "league":
         for idx, hk in enumerate(hero_ranking):
@@ -259,11 +264,14 @@ def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict
             st["stats"][hk]["points"] += pts
             st["stats"][hk]["races"] += 1
             st["stats"][hk]["rank_sum"] += (idx + 1)
+            if pts:
+                race_delta[hk] = race_delta.get(hk, 0) + pts
             if idx == 0:
                 st["stats"][hk]["wins"] += 1
                 winner_pts_earned = pts
         if ko_bonus_key is not None:
             st["stats"][ko_bonus_key]["points"] += KO_BONUS_PTS
+            race_delta[ko_bonus_key] = race_delta.get(ko_bonus_key, 0) + KO_BONUS_PTS
         if rnum == LEAGUE_RACES:
             locked = [k for k, _ in sorted_standings(st["stats"])]
             po["seeds"] = locked[:3]
@@ -296,6 +304,7 @@ def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict
     runner_pts = int(new_standings[1][1]["points"]) if len(new_standings) > 1 else 0
     leader_pts = int(leader_stat["points"])
     points_gap = max(0, leader_pts - runner_pts)
+    # Strict: only when the sorted post-race #1 differs from the sorted pre-race #1 (league races only)
     lead_changed = bool(stage == "league" and prev_leader is not None and leader_key != prev_leader)
     races_rem = max(0, SEASON_LEN - rnum)
 
@@ -312,6 +321,7 @@ def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict
     else:
         right_txt = f"{races_rem} RACES LEFT"
 
+    ko_key_out = ko_bonus_key if stage == "league" else None
     outcome = EpisodeOutcome(
         season_number=snum,
         race_number=rnum,
@@ -319,10 +329,10 @@ def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict
         ribbon_text=card_ribbon_label(snum, rnum),
         winner_key=winner_key,
         winner_points_pill=win_pill,
-        ko_bonus_key=ko_bonus_key if stage == "league" else None,
-        winner_got_ko_bonus=bool(stage == "league" and ko_bonus_key == winner_key),
-        leader_key=winner_key if stage == "grand_final" else leader_key,
-        leader_name=HERO_BY_KEY[winner_key if stage == "grand_final" else leader_key].name,
+        ko_bonus_key=ko_key_out,
+        winner_got_ko_bonus=bool(ko_key_out is not None and ko_key_out == winner_key),
+        leader_key=leader_key,
+        leader_name=HERO_BY_KEY[leader_key].name,
         leader_pts=leader_pts,
         points_gap=points_gap,
         lead_changed=lead_changed,
@@ -331,6 +341,10 @@ def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict
         top3=[(k, int(s["points"])) for k, s in new_standings[:3]],
         reigning_champion=reigning,
         is_grand_final=(stage == "grand_final"),
+        top4=[(k, int(s["points"]), int(race_delta.get(k, 0))) for k, s in new_standings[:4]],
+        pre_leader_key=prev_leader,
+        ko_pill_text=(f"+{KO_BONUS_PTS} KO: {HERO_BY_KEY[ko_key_out].name.upper()}" if ko_key_out else None),
+        podium=list(hero_ranking[:3]) if stage == "grand_final" else None,
     )
 
     if mutate:

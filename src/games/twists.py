@@ -79,17 +79,23 @@ class GiantBall(Twist):
         self.at = self.sim.recipe.params["twist_at"] = 7.0
 
     def trigger(self):
-        body = pymunk.Body(40, pymunk.moment_for_circle(40, 0, 70))
-        if self.sim.mode == SIDE:
-            x = self.sim.cam_x + self.r.uniform(-100, 300)
-            body.position = (x, self.sim.arena.ground_y_at(x) - 700)
-            body.velocity = (self.r.uniform(-60, 120), 0)
-        else:
-            body.position = (self.r.uniform(-120, 120), self.r.uniform(-120, 120))
-            body.velocity = (self.r.uniform(-260, 260), self.r.uniform(-260, 260))
-        shape = pymunk.Circle(body, 70)
-        self.ball = self.sim.add_prop(body, [shape], "giant_ball")
-        shape.elasticity, shape.friction = 0.5, 0.6
+        """v4.2: 1-2 genuinely massive textured boulders (radius 65-75 px) — never a string of small cannonballs."""
+        self.balls = []
+        for k in range(self.r.choice([1, 2])):
+            rad = self.r.uniform(65.0, 75.0)
+            mass = 40.0 * (rad / 70.0) ** 2
+            body = pymunk.Body(mass, pymunk.moment_for_circle(mass, 0, rad))
+            if self.sim.mode == SIDE:
+                x = self.sim.cam_x + self.r.uniform(-60, 320) + k * 260
+                body.position = (x, self.sim.arena.ground_y_at(x) - 620 - k * 140)
+                body.velocity = (self.r.uniform(-40, 140), 0)
+            else:
+                body.position = (self.r.uniform(-120, 120), self.r.uniform(-120, 120))
+                body.velocity = (self.r.uniform(-260, 260), self.r.uniform(-260, 260))
+            shape = pymunk.Circle(body, rad)
+            self.balls.append(self.sim.add_prop(body, [shape], "giant_ball"))
+            shape.elasticity, shape.friction = 0.45, 0.7
+        self.ball = self.balls[0]
 
 
 class ShrinkingArena(Twist):

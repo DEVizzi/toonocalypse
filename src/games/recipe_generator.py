@@ -178,6 +178,9 @@ def generate(history: list[dict], day: int, seed: int, weights: dict | None = No
                     r.twist = None
             if goal:
                 r.goal = goal
+            if r.arena == "rotating_disc" and not ({"slippery_ice", "sticky_mud"} & set(r.hazards)):
+                # v4.2: always show peeling outer-ring ice/mud patches on the Rotating Disc
+                r.hazards = sorted(set(r.hazards) | {"slippery_ice"})
             v = _violations(r, history, day, lock_theme=(season_theme is not None)) - ignore
             if arena or goal:
                 v -= {1, 2, 3}

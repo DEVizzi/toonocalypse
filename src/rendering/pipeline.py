@@ -54,23 +54,16 @@ class Episode:
 
 
 def plan_shots(ep: Episode, teaser_f: int | None = None) -> list[Shot]:
-    """0.8 s cold-open teaser -> gameplay from gate retraction -> 0.3x winner replay -> dynamic game-show winner card."""
+    """v4.2: live starting-gate spotlight (the sim's real preroll frames, played continuously from frame 0) ->
+    gameplay from gate release -> 0.3x winner replay -> dynamic winner card. `teaser_f` is ignored (no jump cut)."""
     tr = ep.trace
     pre = tr.meta.get("preroll_frames", 0)
     end_t = tr.meta.get("resolved_at") or (tr.n_frames - pre) / FPS
     end_f = min(tr.n_frames - 1, pre + int(round(end_t * FPS)))
     winner = tr.meta.get("winner")
     shots: list[Shot] = []
-    n_cold = int(round(TIMELINE.cold_open_s * FPS))
-    tz_mult = 1.0 if tr.mode == "TOP_DOWN" else 1.08
-    if teaser_f is not None:
-        src = 0.3 * FPS
-        f0 = teaser_f - src * 0.55
-        for i in range(n_cold):
-            shots.append(Shot(max(pre, min(end_f, f0 + src * i / n_cold)), "cold", i / FPS, tz_mult, None))
-    else:
-        for i in range(n_cold):
-            shots.append(Shot(pre, "cold", i / FPS))
+    for f in range(pre):
+        shots.append(Shot(f, "cold", f / FPS))
     hitstops = {pre + int(e.t * FPS) for e in tr.events
                 if (e.kind == "elimination" and e.data.get("hero")) or (e.kind == "impact" and e.data.get("hero_pair")
                                                                        and e.data.get("impulse", 0) > 1600)}
@@ -209,19 +202,68 @@ class Renderer:
         return best
 
     def _build_void(self) -> pygame.Surface:
-        """v3.3 TOP_DOWN background: a deep abyss/moat void (radial gradient, faint ripple rings, drifting motes)."""
+        """v4.2 theme-matched TOP_DOWN depths under the floating platform (no generic starfield)."""
+        st = getattr(self.theme, "block_style", "royal")
+        pal = {
+            "royal": ((26, 92, 120), (8, 30, 52), (120, 200, 230)),       # castle moat water
+            "frost": ((150, 205, 235), (30, 60, 110), (240, 252, 255)),   # icy crevasse
+            "obsidian": ((70, 20, 14), (14, 6, 8), (255, 110, 30)),       # cracked glowing basalt magma
+            "neon": ((30, 10, 70), (6, 2, 18), (0, 230, 255)),            # cyber grid abyss
+            "moss": ((30, 58, 82), (8, 16, 30), (150, 200, 240)),         # swirling storm waters
+            "gothic": ((48, 60, 46), (12, 10, 22), (150, 255, 130)),      # misty swamp
+            "sandstone": ((196, 120, 60), (70, 30, 16), (255, 210, 140)), # desert canyon
+            "wafer": ((250, 170, 210), (170, 80, 140), (255, 245, 250)),  # frosting pool
+        }
+        inner, outer, acc = pal.get(st, pal["royal"])
         s = pygame.Surface((W, H))
         cx, cy = W / 2, 970
-        inner, outer = scenery.mix(self.theme.sky_top, (20, 18, 46), 0.75), (8, 8, 20)
         maxr = math.hypot(W, H) * 0.62
         for r in range(int(maxr), 0, -6):
             pygame.draw.circle(s, scenery.mix(inner, outer, min(1.0, r / maxr)), (cx, cy), r)
-        for k, r in enumerate(range(520, 1100, 110)):
-            pygame.draw.circle(s, scenery.mix(inner, (90, 110, 170), 0.10 + 0.04 * (k % 2)), (cx, cy), r, 2)
-        rng = random.Random(5)
-        for _ in range(70):
-            x, y = rng.uniform(0, W), rng.uniform(260, H)
-            pygame.draw.circle(s, scenery.mix(inner, (200, 220, 255), rng.uniform(0.15, 0.4)), (x, y), rng.choice((1, 2, 2, 3)))
+        rng = random.Random(5 + len(st))
+        if st in ("royal", "moss", "wafer"):
+            # concentric water / frosting ripple rings + swirl arcs
+            for k, r in enumerate(range(500, 1150, 70)):
+                pygame.draw.circle(s, scenery.mix(inner, acc, 0.16 + 0.05 * (k % 2)), (cx, cy), r, 3)
+            for _ in range(26):
+                rr = rng.uniform(480, 1000)
+                a0 = rng.uniform(0, 6.28)
+                rect = pygame.Rect(int(cx - rr), int(cy - rr), int(rr * 2), int(rr * 2))
+                pygame.draw.arc(s, scenery.mix(inner, acc, 0.35), rect, a0, a0 + rng.uniform(0.2, 0.6), 4)
+            if st == "royal":   # castle courtyard flagstone rim at the frame edges
+                for y in range(0, H, 64):
+                    for x in (0, W - 70):
+                        pygame.draw.rect(s, (118, 118, 132), (x + (y // 64 % 2) * 6, y, 64, 60), border_radius=6)
+                        pygame.draw.rect(s, (70, 70, 84), (x + (y // 64 % 2) * 6, y, 64, 60), 3, border_radius=6)
+        elif st == "obsidian":
+            for _ in range(34):   # glowing lava cracks through dark basalt
+                x, y = rng.uniform(0, W), rng.uniform(260, H)
+                pts = [(x, y)]
+                for _k in range(5):
+                    x += rng.uniform(-60, 60)
+                    y += rng.uniform(-50, 50)
+                    pts.append((x, y))
+                pygame.draw.lines(s, (255, 90, 20), False, pts, 6)
+                pygame.draw.lines(s, (255, 210, 90), False, pts, 2)
+        elif st == "frost":
+            for _ in range(28):   # white ice fracture lines
+                x, y = rng.uniform(0, W), rng.uniform(260, H)
+                pygame.draw.line(s, acc, (x, y), (x + rng.uniform(-140, 140), y + rng.uniform(-140, 140)), 3)
+        elif st == "neon":
+            for gx in range(0, W, 60):
+                pygame.draw.line(s, scenery.mix(inner, acc, 0.35), (gx, 260), (gx, H), 2)
+            for gy in range(260, H, 60):
+                pygame.draw.line(s, scenery.mix(inner, (255, 48, 192), 0.3), (0, gy), (W, gy), 2)
+        elif st == "gothic":
+            fog = pygame.Surface((W, H), pygame.SRCALPHA)
+            for _ in range(22):
+                pygame.draw.ellipse(fog, (170, 150, 200, 34), (rng.uniform(-200, W), rng.uniform(260, H), rng.uniform(260, 520), rng.uniform(70, 140)))
+            s.blit(fog, (0, 0))
+            for _ in range(40):
+                pygame.draw.circle(s, acc, (int(rng.uniform(0, W)), int(rng.uniform(300, H))), rng.choice((2, 3)))
+        elif st == "sandstone":
+            for k, y in enumerate(range(300, H, 46)):   # layered canyon strata
+                pygame.draw.line(s, scenery.mix(inner, outer, 0.25 + 0.1 * (k % 3)), (0, y), (W, y + rng.uniform(-20, 20)), 10)
         return s
 
     def _schedule_popups(self) -> list[tuple[float, str, tuple[float, float], int]]:
@@ -240,6 +282,8 @@ class Renderer:
                     word = "BETRAYAL!"
                 elif cause == "lava":
                     word = "SPLAT!"
+                elif cause == "crushed":
+                    word = "CRUNCH!"
                 elif cause != "left_behind":
                     word = "YEET!"
                 prio = 3
@@ -549,6 +593,9 @@ class Renderer:
                 pygame.draw.circle(fr, (140, 148, 165), c, 9 * z)
         self._zones(cam, zone, t_anim)
         self._props(cam, fi)
+        for sb in self.meta["statics"]:
+            if sb["type"] == "ceiling_beam":
+                self._draw_ceiling_beam(cam, sb)
 
     def _stone_bumper(self, cam: Cam, wx: float, gy: float) -> None:
         """Compact castle tower bumper (130 px tall) with crenellations and a dark arched door."""
@@ -608,7 +655,7 @@ class Renderer:
                 d = L * u / 6
                 pts.append((ox + math.sin(ang) * d + math.sin(t * 22 + u) * 5 * z, oy + side * math.cos(ang) * d * 0.5))
             pygame.draw.lines(self.frame, (232, 40, 60), False, pts, lw)
-        if age < 1.0:
+        if age < 1.0 and getattr(self, "_cur_alive", 99) <= 1:
             effects.draw_confetti(self.frame, age, 41, pygame.Rect(int(a[0] - 220 * z), int(a[1] - 160 * z),
                                                                      int(440 * z), int((b[1] - a[1]) + 160 * z)), n=40)
 
@@ -930,7 +977,10 @@ class Renderer:
                         pygame.draw.circle(self.frame, WHITE_, c, rr * 0.42)
                         pygame.draw.circle(self.frame, BLACK, c, rr * 0.72, max(2, int(2.5 * cam.zoom)))
                         continue
-                    col = {"boulder": (130, 110, 100), "cannonball": (40, 40, 50), "giant_ball": (255, 77, 166)}.get(st["style"], th.hazard)
+                    if st["style"] == "giant_ball":
+                        self._draw_boulder(c, rr, ang)
+                        continue
+                    col = {"boulder": (130, 110, 100), "cannonball": (40, 40, 50)}.get(st["style"], th.hazard)
                     pygame.draw.circle(self.frame, BLACK, c, rr + 4)
                     pygame.draw.circle(self.frame, col, c, rr)
                     pygame.draw.circle(self.frame, WHITE_, (c[0] - rr * 0.35, c[1] - rr * 0.35), rr * 0.2)
@@ -1021,6 +1071,129 @@ class Renderer:
                     col = {"tile": th.terrain, "wall_block": th.castle}.get(st["style"], th.hazard)
                     pygame.draw.polygon(self.frame, col, pts)
                     pygame.draw.polygon(self.frame, BLACK, pts, 4)
+
+    # ------------------------------------------------------------------ v4.2 live starting-gate spotlight + VS clash
+    def _draw_spotlights(self, cam: Cam, fi: int, seg_t: float) -> None:
+        spots = (self.ep.league_ctx or {}).get("spotlights") or []
+        if not spots or seg_t > 1.45:
+            return
+        fade = min(1.0, seg_t / 0.18) * (1.0 if seg_t < 1.2 else max(0.0, (1.45 - seg_t) / 0.25))
+        styles = {"leader": (255, 214, 40), "rival": (255, 96, 48), "wildcard": (0, 229, 255)}
+        for k, sp in enumerate(spots[:3]):
+            try:
+                i = self.tr.index(sp["key"])
+            except ValueError:
+                continue
+            x, y = float(self.tr.frames[fi][i][0]), float(self.tr.frames[fi][i][1])
+            sx, sy = cam.to_screen(x, y)
+            col = styles.get(sp.get("kind", "leader"), (255, 214, 40))
+            rad = (HERO_BY_KEY[sp["key"]].radius if sp["key"] in HERO_BY_KEY else 24) * cam.zoom
+            ring_r = rad + 10 + 4 * math.sin(seg_t * 9 + k)
+            glow = pygame.Surface((int(ring_r * 4), int(ring_r * 4)), pygame.SRCALPHA)
+            gc = glow.get_width() // 2
+            pygame.draw.circle(glow, (*col, int(70 * fade)), (gc, gc), int(ring_r * 1.5))
+            self.frame.blit(glow, (sx - gc, sy - gc))
+            pygame.draw.circle(self.frame, BLACK, (int(sx), int(sy)), int(ring_r + 3), 7)
+            pygame.draw.circle(self.frame, col, (int(sx), int(sy)), int(ring_r), 4)
+            # angled floating pointer tag (staggered so tags never stack)
+            ang = (-0.95, -2.2, -0.45)[k % 3]
+            dist = 120 + 26 * k
+            tx, ty = sx + math.cos(ang) * dist, sy + math.sin(ang) * dist
+            tx = max(150.0, min(W - 150.0, tx))
+            ty = max(LAYOUT["viewport"][0] + 40.0, ty)
+            pygame.draw.line(self.frame, BLACK, (sx, sy - ring_r), (tx, ty), 7)
+            pygame.draw.line(self.frame, col, (sx, sy - ring_r), (tx, ty), 3)
+            txt = hud.outlined(sp.get("label", ""), 30, fill=WHITE_, width=4)
+            box = pygame.Rect(0, 0, txt.get_width() + 56, txt.get_height() + 10)
+            box.center = (int(tx), int(ty))
+            plate = pygame.Surface(box.size, pygame.SRCALPHA)
+            pygame.draw.rect(plate, (18, 16, 36, int(235 * fade)), plate.get_rect(), border_radius=14)
+            pygame.draw.rect(plate, (*col, int(255 * fade)), plate.get_rect(), 4, border_radius=14)
+            plate = pygame.transform.rotozoom(plate, 0, 0.92 + 0.08 * min(1.0, seg_t / 0.2))
+            self.frame.blit(plate, plate.get_rect(center=box.center))
+            icx, icy = box.left + 26, box.centery
+            if sp.get("kind") == "leader":
+                hud._crown_badge(self.frame, icx, icy + 2, 30)
+            elif sp.get("kind") == "rival":
+                hud._draw_flame_icon(self.frame, icx, icy, 12)
+            else:
+                bolt = [(icx + 3, icy - 14), (icx - 9, icy + 2), (icx - 1, icy + 2), (icx - 5, icy + 14), (icx + 9, icy - 3), (icx + 1, icy - 3)]
+                pygame.draw.polygon(self.frame, (250, 204, 21), bolt)
+                pygame.draw.polygon(self.frame, BLACK, bolt, 2)
+            self.frame.blit(txt, txt.get_rect(midleft=(box.left + 44, box.centery)))
+            hud.TEXT_BOXES.append(box)
+
+    def _draw_vs_clash(self, seg_t: float) -> None:
+        """Grand Final: snappy 1.6 s 3-way VS clash banner over the trembling live starting gate."""
+        fins = (self.ep.league_ctx or {}).get("finalists") or [h.key for h in self.heroes[:3]]
+        if seg_t > 1.6:
+            return
+        k_in = min(1.0, seg_t / 0.22)
+        k_out = 1.0 if seg_t < 1.35 else max(0.0, (1.6 - seg_t) / 0.25)
+        band = pygame.Rect(0, 560, W, 420)
+        plate = pygame.Surface(band.size, pygame.SRCALPHA)
+        plate.fill((24, 10, 30, int(205 * k_out)))
+        pygame.draw.rect(plate, (255, 212, 44, int(255 * k_out)), (0, 0, W, 8))
+        pygame.draw.rect(plate, (255, 212, 44, int(255 * k_out)), (0, band.height - 8, W, 8))
+        self.frame.blit(plate, band.topleft)
+        title = hud.fit_width(hud.outlined("GRAND FINAL", 70, fill=(255, 226, 60), width=7), 860)
+        self.frame.blit(title, title.get_rect(center=(W / 2, band.top + 58)))
+        n = max(1, len(fins[:3]))
+        for idx, hk in enumerate(fins[:3]):
+            slide = (1.0 - k_in) * (-520 if idx == 0 else (520 if idx == n - 1 else 0))
+            cx = W * (idx + 0.5) / n + slide
+            cy = band.top + 230 + 6 * math.sin(seg_t * 14 + idx)
+            if hk in HERO_BY_KEY:
+                h = HERO_BY_KEY[hk]
+                balls.draw_ball(self.frame, h, None, (cx, cy), 0.0, 0.0, (0, 0), 0.0, "angry", "none", seg_t, 2.0 / max(0.6, h.radius / 25))
+                nm = hud.fit_width(hud.outlined(h.name.upper(), 40, fill=WHITE_, width=5), 300)
+                self.frame.blit(nm, nm.get_rect(center=(cx, band.top + 352)))
+            if idx < n - 1:
+                vs = pygame.transform.rotozoom(hud.outlined("VS", 64, fill=(255, 82, 72), width=7), -8, 1.0 + 0.15 * abs(math.sin(seg_t * 10)))
+                self.frame.blit(vs, vs.get_rect(center=(W * (idx + 1) / n, band.top + 230)))
+
+    def _draw_boulder(self, c, rr: float, ang: float) -> None:
+        """Massive textured rock boulder for the GIANT BALL twist."""
+        rng = random.Random(int(rr * 10))
+        pts = []
+        for k in range(14):
+            a = ang + 2 * math.pi * k / 14
+            rk = rr * (0.92 + 0.08 * rng.random())
+            pts.append((c[0] + math.cos(a) * rk, c[1] + math.sin(a) * rk))
+        pygame.draw.polygon(self.frame, BLACK, [(x + 3, y + 5) for x, y in pts])
+        pygame.draw.polygon(self.frame, (122, 104, 92), pts)
+        pygame.draw.circle(self.frame, (96, 80, 72), (int(c[0] + rr * 0.22), int(c[1] + rr * 0.26)), int(rr * 0.62))
+        pygame.draw.circle(self.frame, (152, 134, 120), (int(c[0] - rr * 0.3), int(c[1] - rr * 0.32)), int(rr * 0.3))
+        for k in range(4):
+            a = ang + k * 1.7
+            p0 = (c[0] + math.cos(a) * rr * 0.15, c[1] + math.sin(a) * rr * 0.15)
+            p1 = (c[0] + math.cos(a + 0.3) * rr * 0.55, c[1] + math.sin(a + 0.3) * rr * 0.55)
+            p2 = (c[0] + math.cos(a - 0.1) * rr * 0.8, c[1] + math.sin(a - 0.1) * rr * 0.8)
+            pygame.draw.lines(self.frame, (58, 46, 40), False, [p0, p1, p2], 4)
+        pygame.draw.polygon(self.frame, BLACK, pts, 5)
+
+    def _draw_ceiling_beam(self, cam: Cam, sb: dict) -> None:
+        a = cam.to_screen(sb["x0"], sb["y"])
+        b = cam.to_screen(sb["x1"], sb["y"])
+        if b[0] < -60 or a[0] > W + 60:
+            return
+        z = cam.zoom
+        _, rock, dark, light = scenery.rock_colours(self.theme)
+        hgt = max(18, int(46 * z))
+        beam = pygame.Rect(int(a[0]), int(a[1] - hgt / 2), int(b[0] - a[0]), hgt)
+        # anchor pillars rising off the top of the frame
+        for px in (beam.left + int(14 * z), beam.right - int(30 * z)):
+            col_r = pygame.Rect(px, LAYOUT["viewport"][0] - 20, max(10, int(18 * z)), beam.top - LAYOUT["viewport"][0] + 22)
+            if col_r.height > 0:
+                pygame.draw.rect(self.frame, dark, col_r)
+                pygame.draw.rect(self.frame, BLACK, col_r, 3)
+        pygame.draw.rect(self.frame, rock, beam)
+        pygame.draw.rect(self.frame, dark, (beam.left, beam.bottom - hgt // 3, beam.width, hgt // 3))
+        pygame.draw.line(self.frame, light, (beam.left + 3, beam.top + 4), (beam.right - 3, beam.top + 4), 3)
+        for rx in range(beam.left + 12, beam.right - 6, max(16, int(30 * z))):
+            pygame.draw.circle(self.frame, (205, 212, 226), (rx, beam.centery), max(2, int(3 * z)))
+        pygame.draw.rect(self.frame, BLACK, beam, 4)
+
 
     def _falling_bumpers(self, cam: Cam, fi: int, z: float) -> None:
         if self.disc_prop is None:
@@ -1303,7 +1476,7 @@ class Renderer:
                 cause = e.data.get("cause", "")
                 if cause == "left_behind":
                     continue   # rendered in foreground right over the Killer Fire Wall!
-                if cause in ("fell", "lava") and self.tr.mode == "SIDE_VIEW" and 0 <= sx <= W:
+                if cause in ("fell", "lava", "crushed") and self.tr.mode == "SIDE_VIEW" and 0 <= sx <= W:
                     ky = self.meta.get("kill_y", e.pos[1])
                     iy = cam.to_screen(e.pos[0], ky)[1]
                     if iy < H - 20:
@@ -1417,6 +1590,15 @@ class Renderer:
                         pygame.draw.circle(smoke, (26, 20, 28, 72), (int(edge_x + 12), int(sy_loc)), sr)
                 fr.blit(smoke, (0, top))
 
+            if getattr(th, "wall_style", "") == "neon" and base_x > 0:
+                # Solid dark pulsing cyber-grid void behind the plasma edge (castle never peeks through)
+                vw = int(min(W, base_x + 30))
+                pygame.draw.rect(fr, (12, 6, 30), (0, top, vw, h_span))
+                pulse_c = scenery.mix((40, 18, 90), (0, 200, 255), 0.35 + 0.25 * math.sin(t_anim * 6.0))
+                for gx in range(int((t_anim * 40) % 44) - 44, vw, 44):
+                    pygame.draw.line(fr, pulse_c, (gx, top), (gx, H), 2)
+                for gy in range(top + int((t_anim * 90) % 44), H, 44):
+                    pygame.draw.line(fr, pulse_c, (0, gy), (vw, gy), 2)
             # 3-Layer Leading Edge Ribbons
             pygame.draw.polygon(fr, c_out, [(-20.0, float(top - 20))] + pts1 + [(-20.0, float(H + 20))])
             pygame.draw.polygon(fr, c_mid, [(-20.0, float(top - 20))] + pts2 + [(-20.0, float(H + 20))])
@@ -1571,8 +1753,11 @@ class Renderer:
         self.frame.set_clip(self.world_rect)
         self.draw_contestants(cam, tf if slow else fi, t_anim, ranks=ranks,
                               show_tags=shot.segment in ("play", "replay"))
-        if shot.segment == "replay":
-            effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)
+        self._cur_alive = int(sum(1 for f in self.tr.flags[fi] if f & T.ALIVE))
+        if shot.segment == "replay" and self._cur_alive <= 1:
+            effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)   # never while ALIVE > 1
+        if shot.segment == "cold" and not self.finale:
+            self._draw_spotlights(cam, fi, shot.seg_t)
         if shot.segment in ("play", "replay", "cold"):
             self.draw_juice(cam, eff_play_t, t_anim, popups=shot.segment != "cold")
         if self.tr.mode == "SIDE_VIEW":
@@ -1656,17 +1841,11 @@ class Renderer:
         t_st, _ = self.tuno_state(play_t, shot.segment)
         twist_badge = self._active_twist_badge(fi, play_t) if shot.segment == "play" else None
 
-        if shot.segment == "cold":
-            scenery.draw_pick_strip(fr, self.heroes, t_anim, hud.TEXT_BOXES, reigning_champion=reigning)
-            arena_title = self.meta["recipe"]["arena"].replace("_", " ").upper()
-            hud.blit_text(
-                fr,
-                hud.fit_width(hud.outlined(arena_title, 76, fill=(255, 214, 0), width=8), hud.MAX_BANNER_W),
-                center=(W / 2, 345),
-            )
-        elif shot.segment != "card":
+        if shot.segment != "card":
             scenery.draw_panel(fr, alive, total, self.heroes, status, ranks, hud.TEXT_BOXES,
                                pulse=pulse, t=t_anim, eff_slots=eff_slots, reigning_champion=reigning)
+        if shot.segment == "cold" and self.finale:
+            self._draw_vs_clash(shot.seg_t)
 
         scenery.draw_header(fr, self.castle, self.ep.ep_label, t_st, t_anim, hud.TEXT_BOXES,
                             talking=self._talking(out_t), voice_rms=voice_rms, twist_badge=twist_badge)

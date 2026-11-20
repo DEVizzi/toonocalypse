@@ -76,25 +76,63 @@ def trim_silence_40db(pcm: np.ndarray, words: list[tuple[float, float, str]]) ->
     return out, shifted
 
 
-def synthesize(text: str) -> tuple[np.ndarray, list[tuple[float, float, str]]] | None:
+PROSODY: dict[str, tuple[str, str]] = {
+    "normal": ("+16%", "+2Hz"),     # INTRO / FILLER / generic reactions
+    "hype": ("+24%", "+7Hz"),       # KO / BETRAYAL / CLIMAX / WINNER
+    "deadpan": ("+11%", "-2Hz"),    # SELF_KO / DUMMY_ROAST / FACEPALM
+}
+BOOTH_MIC_AF = "highpass=f=120,equalizer=f=2800:width_type=o:width=1.5:g=3.5,acompressor=threshold=-16dB:ratio=4:attack=5:release=60"
+_CACHE: dict[tuple[str, str], tuple[np.ndarray, list[tuple[float, float, str]]] | None] = {}
+LAST_VOICE: dict[str, str] = {"voice": ""}
+
+
+def synthesize(text: str, style: str = "normal") -> tuple[np.ndarray, list[tuple[float, float, str]]] | None:
+    """Native-pitch edge-tts synthesis with per-beat prosody (never resampled). Results cached per (text, style)."""
+    ck = (text, style)
+    if ck in _CACHE:
+        return _CACHE[ck]
     a = settings()["audio"]
     voices = [a["voice"]]
     fb = a.get("voice_fallback")
     if fb and fb not in voices:
         voices.append(fb)
+    rate, pitch = PROSODY.get(style, PROSODY["normal"])
     mp3 = b""
     words: list[tuple[float, float, str]] = []
     for v in voices:
         try:
-            mp3, words = asyncio.run(_stream(text, v, a["voice_rate"], a["voice_pitch"]))
+            mp3, words = asyncio.run(_stream(text, v, rate, pitch))
             if mp3:
+                LAST_VOICE["voice"] = v
                 break
         except Exception:
             continue
     pcm = _decode(mp3)
     if pcm is None or pcm.size < int(SR * 0.12):
+        _CACHE[ck] = None
         return None
-    return trim_silence_40db(pcm, words)
+    res = trim_silence_40db(pcm, words)
+    _CACHE[ck] = res
+    return res
+
+
+def booth_mic_eq(voice: np.ndarray) -> np.ndarray:
+    """Runs the isolated narration stem through a crisp headset-mic chain (highpass + 2.8 kHz presence + compressor).
+    Falls back to the dry stem if ffmpeg is unavailable. Length is preserved exactly."""
+    if voice.size == 0 or not shutil.which("ffmpeg"):
+        return voice
+    pcm16 = (np.clip(voice, -1.0, 1.0) * 32767.0).astype(np.int16).tobytes()
+    p = subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-f", "s16le", "-ac", "1", "-ar", str(SR), "-i", "pipe:0",
+         "-af", BOOTH_MIC_AF, "-f", "s16le", "-ac", "1", "-ar", str(SR), "pipe:1"],
+        input=pcm16, capture_output=True, check=False,
+    )
+    if p.returncode != 0 or not p.stdout:
+        return voice
+    out = np.frombuffer(p.stdout, dtype=np.int16).astype(np.float32) / 32768.0
+    if out.size < voice.size:
+        out = np.concatenate([out, np.zeros(voice.size - out.size, np.float32)])
+    return out[: voice.size]
 
 
 def available() -> bool:

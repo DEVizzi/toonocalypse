@@ -20,7 +20,7 @@ video:
 # OWNER OVERRIDES 2026-11-20: tighter pacing for Shorts/Reels retention. v3.0 ball pass -> total video 20-28 s:
 # 0.8 s cold-open teaser + gameplay 16-24 s + 1.5 s replay + 1.6 s card + 0.4 s loop tail.
 timeline:
-  cold_open_s: 0.8              # teaser: slow-mo of the episode's cleanest big collision
+  cold_open_s: 1.5              # v4.2: live starting-gate spotlight (continuous, zero jump cut); 1.6 s on Grand Final
   flash_forward_s: 1.0
   flash_forward_chance: 0.30
   gameplay_target_min_s: 16
@@ -163,10 +163,10 @@ audio:
   duck_db: -6             # v3.4: ducks smoothly from -18 dB to -24 dB when narration RMS > 0.02
   loudness_lufs: -14
   sfx_cap_per_s: 12
-  voice: "en-US-BrianMultilingualNeural"   # v3.4: energetic broadcaster voice
-  voice_fallback: "en-US-DavisNeural"
-  voice_rate: "+20%"
-  voice_pitch: "+4Hz"
+  voice: "en-AU-WilliamNeural"   # v4.2: cheeky Ozzy-Man sports-chaos caster (per-beat prosody in tts.PROSODY)
+  voice_fallback: "en-GB-RyanNeural"
+  voice_rate: "+16%"
+  voice_pitch: "+2Hz"
   gemini_model: "gemini-2.5-flash"
   gemini_models: ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
   bpm: 126

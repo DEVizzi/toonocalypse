@@ -89,8 +89,9 @@ class TestV40LeagueAndOverhaul(unittest.TestCase):
         self.assertFalse(script._valid_llm_line(b_bet, "Massive Juggernaut flattens tiny Pip!"))
         self.assertTrue(script._valid_llm_line(b_bet, "Juggernaut just deleted Pip!"))
 
-        b_mko = script.Beat(18.0, "multi_ko_3", 10, {"winner": "Magneto"}, max_words=6)
-        self.assertTrue(script._valid_llm_line(b_mko, "TRIPLE WIPEOUT! Magneto steals it!"))
+        b_win = script.Beat(18.0, "winner", 10, {"winner": "Magneto"}, max_words=8)
+        self.assertFalse(script._valid_llm_line(b_win, "Double wipeout! Magneto steals it!"))   # v4.2 banned
+        self.assertTrue(script._valid_llm_line(b_win, "Last-second carnage—Magneto walks away!"))
 
     def test_top_down_camera_locked_at_origin_and_all_7_arenas_run(self) -> None:
         for arena in SHOWCASE_ARENAS:
