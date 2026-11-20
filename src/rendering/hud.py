@@ -114,7 +114,7 @@ def draw_pick_your_fighter(frame: pygame.Surface, heroes: list[Hero], t: float) 
 
 
 def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour: tuple[int, int, int], points: str,
-                     prompt: str, t: float) -> None:
+                     prompt: str, t: float, bot=None) -> None:
     panel = pygame.Rect(90, 520, W - 180, 700)
     shadow = panel.move(10, 12)
     pygame.draw.rect(frame, BLACK, shadow, border_radius=36)
@@ -123,6 +123,8 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
     blit_text(frame, outlined("WINNER!", 96, fill=(255, 214, 0), width=8), center=(W / 2, panel.top + 80))
     if hero is not None:
         renderer.draw_hero(frame, hero, (W / 2, panel.top + 270), 0, (0, 0), "celebrating", "victory", t, zoom=2.4)
+    elif bot is not None:      # a bot won: draw it big, celebrating with arms up
+        renderer.draw_extra(frame, bot, (W / 2, panel.top + 290), 0, "neutral", zoom=2.4, limb_state="victory", t=t)
     else:
         pygame.draw.circle(frame, BLACK, (W / 2, panel.top + 270), 64)
         pygame.draw.circle(frame, colour, (W / 2, panel.top + 270), 58)

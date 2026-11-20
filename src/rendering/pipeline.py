@@ -496,7 +496,7 @@ class Renderer:
             sx, sy = cam.to_screen(*e.pos)
             seed = int(e.t * 1000) % 997
             if e.kind == "elimination":
-                gy = min(max(sy, scenery.PANEL.bottom + 80), LAYOUT["viewport"][1] - 60)
+                gy = min(max(sy, scenery.PANEL.bottom + 80), LAYOUT["captions"]["y"][0] - 40)
                 gx = min(max(sx, 60), W - 60)
                 col = renderer.hex_rgb(HERO_BY_KEY[e.actors[0]].colour) if e.actors[0] in HERO_BY_KEY else (230, 220, 200)
                 effects.draw_ghost(self.frame, (gx, gy), age, col)
@@ -513,7 +513,8 @@ class Renderer:
 
     @staticmethod
     def _pop_xy(x: float, y: float) -> tuple[float, float]:
-        return min(max(x, 150), W - 150), min(max(y, scenery.PANEL.bottom + 90), LAYOUT["viewport"][1] - 90)
+        # above the HUD bar's bottom edge and clear of the caption band / platform UI below
+        return min(max(x, 150), W - 150), min(max(y, scenery.PANEL.bottom + 90), LAYOUT["captions"]["y"][0] - 70)
 
     # ------------------------------------------------------------------ frame
     def _ranks(self, fi: int) -> dict[str, int]:
@@ -615,7 +616,7 @@ class Renderer:
             name = hero.name if hero else (f"Number {self.extras[w].number}" if w in self.extras else "Nobody")
             col = renderer.hex_rgb(hero.colour) if hero else (200, 180, 140)
             hud.draw_winner_card(fr, hero, name, col, self.ep.season_line or "+10 SEASON POINTS",
-                                 self.ep.prompt or "Who wins tomorrow?", t_anim)
+                                 self.ep.prompt or "Who wins tomorrow?", t_anim, bot=self.extras.get(w) if w else None)
         if shot.segment == "tail":
             k = shot.seg_t / TIMELINE.loop_tail_s
             veil = pygame.Surface((W, H), pygame.SRCALPHA)

@@ -83,7 +83,7 @@ def track(trace: T.Trace) -> list[Cam]:
         if trace.mode == "TOP_DOWN":      # follow the shrinking arena in so the fight stays big on screen
             z0 = trace.zones[f]
             ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * z0.get("ring_r", 1.0) / max(1.0, trace.zones[0].get("ring_r", 1.0))
-            tz = base_zoom / max(0.55, ek)
+            tz = base_zoom / max(0.38, ek)
         tx_lead, ty_lead = tx, ty
         if 0 < len(everyone) <= 3:        # final-3: tight zoom on the survivors' faces (all of them stay in frame)
             xs, ys = rows[everyone, 0], rows[everyone, 1]
