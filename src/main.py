@@ -50,7 +50,8 @@ def simulate_best(recipe: Recipe, heroes: list, extras: list, seed: int, history
     report = []
     t_all = time.time()
     for i in range(sc["max_seeds"]):
-        if i == sc["seeds_per_batch"] and max(r[0] for r in results) >= scorer.min_score():
+        if i == sc["seeds_per_batch"] and any(r[0] >= scorer.min_score() and r[3].parts.get("duration", 0) == 0
+                                              for r in results):
             break
         s = seed * 1000 + i
         t0 = time.time()
@@ -62,7 +63,8 @@ def simulate_best(recipe: Recipe, heroes: list, extras: list, seed: int, history
                        "resolved_at": tr.meta["resolved_at"], "sim_s": round(dt, 2)})
         log(f"  seed {s}: score={res.total:+.0f} winner={tr.meta['winner']} t={tr.meta['resolved_at']:.1f}s sim={dt:.1f}s")
     log(f"  {len(results)} sims in {time.time() - t_all:.1f}s")
-    results.sort(key=lambda r: r[0], reverse=True)
+    # a run whose gameplay length is out of range can never pass the quality gate: rank in-range runs first
+    results.sort(key=lambda r: (r[3].parts.get("duration", 0) == 0, r[0]), reverse=True)
     best = results[0]
     return best[2], best[3], report
 

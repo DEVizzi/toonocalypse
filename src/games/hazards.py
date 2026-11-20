@@ -61,15 +61,16 @@ class SpinningBars(Hazard):
                 self.bars.append(self.kinematic((x, y), lambda b: [pymunk.Segment(b, (-150, 0), (150, 0), 9)], "bar"))
                 self.points.append((x, y))
         else:
-            for p in self.top_spots(2, 210) + [(0.0, 0.0)]:
-                L = self.r.uniform(150, 210)
+            for i, p in enumerate(self.top_spots(2, 210) + [(0.0, 0.0)]):
+                L = self.r.uniform(150, 200) if i < 2 else self.r.uniform(100, 140)
                 self.bars.append(self.kinematic(p, lambda b, L=L: [pymunk.Segment(b, (-L, 0), (L, 0), 10)], "bar"))
                 self.points.append(p)
         self.spin = [self.r.choice([-1, 1]) * self.r.uniform(1.6, 2.6) for _ in self.bars]
 
     def frame(self, t):
+        spin_up = 1.0 if self.sim.mode == SIDE else min(1.0, 0.3 + t / 8)   # TOP bars wind up after the start
         for p, w in zip(self.bars, self.spin):
-            p.body.angular_velocity = w * self.sim.speed_mult
+            p.body.angular_velocity = w * self.sim.speed_mult * spin_up
 
 
 class SwingingHammers(Hazard):
@@ -120,7 +121,7 @@ class FallingFloorTiles(Hazard):
                 tl["gone_at"] is not None and math.hypot(x - tl["c"][0], y - tl["c"][1]) < tl["r"] for tl in self.tiles)
 
     def frame(self, t):
-        if t < 2.0:   # tiles arm once the crowd has started moving
+        if t < (2.0 if self.sim.mode == SIDE else 5.0):   # tiles arm once the crowd has left the spawn ring
             return
         for tl in self.tiles:
             if tl["hit"] is None:

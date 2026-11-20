@@ -93,6 +93,7 @@ def generate(history: list[dict], day: int, seed: int, weights: dict | None = No
                 r.arena = arena
             if goal:
                 r.goal = goal
+                r.two_stage = r.two_stage and goal in ("last_one_standing", "survive_timer")
             v = _violations(r, history, day) - ignore
             if arena or goal:      # manual overrides (workflow_dispatch) skip arena/goal cooldowns
                 v -= {1, 2, 3}

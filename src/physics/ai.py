@@ -146,6 +146,9 @@ class Brain:
         bh = c.behaviour
         x, y = c.pos
         tx, ty = sim.goal.target(c)
+        if c.extra is not None and math.hypot(tx - x, ty - y) > sim.cfg["extras"]["goal_sight_px"]:
+            from src.games.goals import Goal
+            tx, ty = Goal.target(sim.goal, c)      # fodder doesn't strategize: far goals are ignored, it mills about
         safe = sim.arena.safe_target(c) if hasattr(sim.arena, "safe_target") else None
         for h in sim.hazards:
             if safe is None and hasattr(h, "flee"):
@@ -157,7 +160,7 @@ class Brain:
             dx, dy = -dx, -dy
         # edge avoidance: steer inward when close to the walkable boundary
         edge, ux, uy = sim.arena.edge_vector(x, y)
-        margin = 60 + 120 * bh.edge_awareness
+        margin = (60 + 120 * bh.edge_awareness) * (sim.cfg["hero_edge_margin"] if c.is_hero else 1.0)
         if edge < margin * 0.6:
             self._panic(sim, c)
         if edge < margin:
@@ -174,7 +177,7 @@ class Brain:
             if rival is not None:
                 rx, ry = rival.pos
                 d = math.hypot(rx - x, ry - y) or 1
-                k = 300 * c.body.mass
+                k = sim.cfg["shove_top"] * min(c.body.mass, 3.0 * rival.body.mass)
                 c.body.apply_impulse_at_world_point(((rx - x) / d * k, (ry - y) / d * k), c.body.position)
                 c.shove_cd = 1.6
 

@@ -269,10 +269,8 @@ class HotPotatoBomb(Goal):
             self.next_pop = t + (6.0 if self.sim.speed_mult > 1.5 else 8.0)
 
     def score(self, c):
-        if self.holder and self.holder in self.sim.by_key:
-            hx, hy = self.sim.by_key[self.holder].pos
-            return math.hypot(c.pos[0] - hx, c.pos[1] - hy) - (1e6 if c.key == self.holder else 0)
-        return self.tiebreak(c)
+        # the bomb holder ranks last; everyone else by the usual course/centre tie-break
+        return self.tiebreak(c) - (1e6 if c.key == self.holder else 0)
 
     def target(self, c):
         x, y = c.pos
