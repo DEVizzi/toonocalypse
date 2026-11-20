@@ -26,9 +26,15 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: ffmpeg
-        run: (which ffmpeg && ffmpeg -version | head -1) || (sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg)
-        timeout-minutes: 6
+      - name: ffmpeg (with retries)
+        timeout-minutes: 12
+        run: |
+          if which ffmpeg && which ffprobe; then ffmpeg -version | head -1; exit 0; fi
+          for i in 1 2 3; do
+            timeout 300 bash -c "sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg" && break
+            echo "apt attempt $i failed; retrying in 20s"; sleep 20
+          done
+          ffmpeg -version | head -1
       - run: pip install -r requirements.txt
       - name: Run
         env:
@@ -36,8 +42,12 @@ jobs:
         run: mkdir -p output && bash -c "$CMD"
       - name: Publish to the preview pre-release
         run: |
+          rm -f output/*.wav
           shopt -s nullglob
           files=(output/*)
-          gh release view preview >/dev/null 2>&1 || gh release create preview --prerelease --title "Preview" --notes "Rolling preview renders."
-          gh release upload preview "${files[@]}" --clobber
+          gh release view preview >/dev/null 2>&1 || gh release create preview --prerelease --title "Preview" --notes "Rolling preview renders." || true
+          for i in 1 2 3 4; do
+            gh release upload preview "${files[@]}" --clobber && break
+            echo "upload attempt $i failed; retrying in 10s"; sleep 10
+          done
           for f in "${files[@]}"; do echo "https://github.com/${GITHUB_REPOSITORY}/releases/download/preview/$(basename "$f")"; done

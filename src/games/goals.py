@@ -135,7 +135,9 @@ class SurviveTimer(Goal):
 
     def check(self, t: float) -> None:
         if t >= self.limit:
-            self.force_resolve(t)
+            alive = self.sim.alive()
+            if alive:
+                self.declare(max(alive, key=self.score).key, t, "timer")
 
     def zone_state(self):
         return {"timer": max(0.0, self.limit - self.sim.t)}
@@ -154,13 +156,23 @@ class CollectItems(Goal):
         r = self.sim.rng
         if self.sim.mode == SIDE:
             base = max((c.pos[0] for c in self.sim.alive()), default=600.0)
-            x = (near[0] if near else base + r.uniform(150, 700))
-            y = self.sim.arena.ground_y_at(x) - r.uniform(40, 140)
+            pits = getattr(self.sim.arena, "pits", [])
+            x = near[0] if near else base + r.uniform(140, 620)
+            for _ in range(12):
+                cand = near[0] + r.uniform(-50, 50) if near else base + r.uniform(130, 640)
+                if self.sim.finish_x is not None:
+                    cand = min(cand, self.sim.finish_x - 160.0)
+                if not any(p0 - 20 <= cand <= p1 + 20 for p0, p1 in pits):
+                    x = cand
+                    break
+            y = self.sim.arena.ground_y_at(x) - r.uniform(38, 115)
         else:
+            k = max(0.45, self.sim.edge_k)
+            x, y = 0.0, 0.0
             for _ in range(20):
-                a, d = r.uniform(0, 2 * math.pi), r.uniform(0, 330)
+                a, d = r.uniform(0, 2 * math.pi), r.uniform(0, 310 * k)
                 x, y = math.cos(a) * d, math.sin(a) * d
-                if self.sim.walkable is None or self.sim.walkable(x, y):
+                if self.sim.walkable is None or self.sim.walkable(x / k, y / k):
                     break
             if near:
                 x, y = near[0] + r.uniform(-40, 40), near[1] + r.uniform(-40, 40)
@@ -169,11 +181,11 @@ class CollectItems(Goal):
     def check(self, t: float) -> None:
         if t >= self.next_spawn and len(self.items) < 8:
             self._spawn()
-            self.next_spawn = t + 1.1 / self.sim.speed_mult
+            self.next_spawn = t + 0.95 / self.sim.speed_mult
         for c in self.sim.alive():
             x, y = c.pos
             for it in list(self.items):
-                if math.hypot(it[0] - x, it[1] - y) < c.radius + 18:
+                if math.hypot(it[0] - x, it[1] - y) < c.radius + 22:
                     self.items.remove(it)
                     c.score += 1
                     self.sim.event("collect", [c.key], c.pos, total=c.score)
@@ -185,7 +197,9 @@ class CollectItems(Goal):
                 for _ in range(drop):
                     self._spawn(near=c.elim_pos)
         if t >= self.limit:
-            self.force_resolve(t)
+            alive = self.sim.alive()
+            if alive:
+                self.declare(max(alive, key=self.score).key, t, "items")
 
     def score(self, c):
         return c.score * 10000 + self.tiebreak(c)
@@ -200,7 +214,11 @@ class CollectItems(Goal):
         return 1.0
 
     def zone_state(self):
-        return {"items": [tuple(i) for i in self.items], "scores": {c.key: c.score for c in self.sim.contestants if c.score}}
+        return {
+            "items": [tuple(i) for i in self.items],
+            "scores": {c.key: int(c.score) for c in self.sim.contestants if c.score},
+            "goal_timer": max(0.0, self.limit - self.sim.t),
+        }
 
 
 class HoldAZone(Goal):
@@ -208,21 +226,26 @@ class HoldAZone(Goal):
 
     def __init__(self, sim):
         super().__init__(sim)
-        self.r = 95.0
+        self.r = 110.0
         self.phase = sim.rng.uniform(0, 6.28)
         self.need = float(sim.cfg["goal_timers"]["zone_hold_s"])
 
     def center(self) -> tuple[float, float]:
         t = self.sim.t
         k = self.sim.edge_k
-        return math.cos(t * 0.45 + self.phase) * 190 * k, math.sin(t * 0.58 + self.phase) * 170 * k
+        return math.cos(t * 0.48 + self.phase) * 115 * k, math.sin(t * 0.62 + self.phase) * 105 * k
 
     def check(self, t: float) -> None:
         zx, zy = self.center()
         inside = [c for c in self.sim.alive() if math.hypot(c.pos[0] - zx, c.pos[1] - zy) < self.r]
-        if len(inside) == 1:          # king of the hill: a contested zone scores for nobody
+        if len(inside) == 1:          # uncontested hill: full capture speed
             c = inside[0]
-            c.score += 1 / 30
+            c.score += 1.0 / 30.0
+            if c.score >= self.need:
+                self.declare(c.key, t, "zone")
+        elif len(inside) > 1:         # contested hill: closest ball to dead-centre ticks at 0.65x
+            c = min(inside, key=lambda o: math.hypot(o.pos[0] - zx, o.pos[1] - zy))
+            c.score += 0.65 / 30.0
             if c.score >= self.need:
                 self.declare(c.key, t, "zone")
 
@@ -233,7 +256,11 @@ class HoldAZone(Goal):
         return self.center()
 
     def zone_state(self):
-        return {"zone": (*self.center(), self.r), "scores": {c.key: round(c.score, 2) for c in self.sim.contestants if c.score}}
+        return {
+            "zone": (*self.center(), self.r),
+            "zone_need": self.need,
+            "scores": {c.key: round(c.score, 2) for c in self.sim.contestants if c.score},
+        }
 
 
 class PushOthersOut(Goal):

@@ -78,11 +78,15 @@ TWIST_ARENA_EXTRA = {"shrinking_arena": {"pit_platforms", "crumbling_bridge"}}
 INCOMPATIBLE = {("slippery_ice", "slippery_floor"), ("lava_floor", "falling_floor_tiles")}
 GOAL_ARENA_EXCLUDE = {
     "reach_finish": {"rotating_disc", "sumo_pool_pit", "maze_corridors", "hex_tile_drop", "bumper_ring"},
+    "collect_items": {"rotating_disc", "sumo_pool_pit"},
+    "hold_a_zone": {"rotating_disc", "sumo_pool_pit"},
+    "survive_timer": {"rotating_disc", "sumo_pool_pit"},
 }
 ARENA_HAZARD_EXCLUDE = {
     "collapse_tower": {"lava_floor", "rolling_boulders", "falling_floor_tiles"},
     "crumbling_bridge": {"falling_floor_tiles", "lava_floor", "wind_gusts", "cannon_balls", "swinging_hammers"},
     "crusher_gauntlet": {"rolling_boulders", "lava_floor", "spinning_bars", "wind_gusts", "cannon_balls", "swinging_hammers"},
+    "conveyor_chaos": {"lava_floor"},
     "rotating_disc": {"moving_walls", "falling_floor_tiles", "spinning_bars"},
     "sumo_pool_pit": {"moving_walls", "falling_floor_tiles", "spinning_bars"},
 }

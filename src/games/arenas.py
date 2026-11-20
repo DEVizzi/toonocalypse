@@ -259,11 +259,15 @@ class PitPlatforms(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        n = self.count("islands", 14, 18)
+        n = self.count("islands", 12, 15)
         for i in range(n):
-            self.gap(r.uniform(80, 150) * self.ramp(i, n), r.uniform(-50, 50))
-            self.seg(r.uniform(180, 340))
-        self.gap(r.uniform(100, 150))
+            if i % 2 == 0:
+                self.seg(r.uniform(95, 130), r.uniform(10, 22), material="bouncy")
+            self.gap(r.uniform(80, 140) * self.ramp(i, n), r.uniform(18, 54))
+            self.seg(r.uniform(195, 320), r.uniform(36, 74))
+            if i % 2 == 1:
+                self.pegs(2, (62, 108))
+        self.gap(r.uniform(95, 135), 28)
         self.finish(700)
 
 
@@ -297,12 +301,15 @@ class NarrowBridge(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        n = self.count("planks", 34, 42)
-        breakaway = set(r.sample(range(n // 4, n - 2), k=max(3, n // 5)))   # the far end is the fragile part
+        n = self.count("planks", 26, 32)
+        breakaway = set(r.sample(range(n // 5, n - 2), k=max(4, n // 4)))   # fragile breakaway planks
         for i in range(n):
-            w = r.uniform(110, 150)
-            s = self.seg(w, material="plank")
+            w = r.uniform(115, 150)
+            dy = r.uniform(16, 30)
+            s = self.seg(w, dy, material="plank")
             self.planks.append({"shape": s, "x0": self.x - w, "x1": self.x, "break": i in breakaway, "hit": None})
+            if i % 7 == 3:
+                self.sim.static_circle((self.x - w * 0.5, self.y - r.uniform(68, 102)), 16, "bumper")
             self.x += 6      # visible plank gaps
         self.finish(700)
         self.sim.kill_y = self.low + 300
@@ -368,15 +375,16 @@ class ConveyorChaos(Course):
         r = self.sim.rng
         self.start()
         belts = []
-        n = self.count("belts", 11, 14)
+        n = self.count("belts", 10, 13)
         for i in range(n):
-            w = r.uniform(300, 460)
-            speed = r.choice([-1, 1, 1]) * r.uniform(120, 220)
-            s = self.seg(w, material="conveyor", surface_velocity=(-speed, 0))
+            w = r.uniform(290, 430)
+            dy = r.uniform(32, 66)
+            speed = (1 if i == 0 else r.choice([-1, 1, 1])) * r.uniform(135, 235)
+            s = self.seg(w, dy, material="conveyor", surface_velocity=(-speed, 0))
             self.sim.statics[-2]["belt"] = speed
             belts.append(s)
-            if r.random() < 0.5:
-                self.gap(r.uniform(90, 140) * self.ramp(i, n))
+            if i == 0 or r.random() < 0.52:
+                self.gap(r.uniform(85, 135) * self.ramp(i, n), r.uniform(16, 40))
         self.finish(700)
 
 
@@ -546,24 +554,46 @@ class MazeCorridors(TopArena):
     def build(self):
         r = self.sim.rng
         half = self.p.setdefault("half", round(r.uniform(400, 440)))
-        self.spawn_r = half * 0.8
+        self.spawn_r = half * 0.78
         self.sim.walkable = lambda x, y: abs(x) < half and abs(y) < half
         self.sim.statics.append({"type": "square", "c": (0, 0), "half": half})
         rings = self.p.setdefault("rings", 2)
+        self.ring_props: list[tuple] = []
         for k in range(rings):
-            rr = half * (0.62 - k * 0.27)
+            rr = half * (0.60 - k * 0.25)
             gap_a = r.uniform(0, 2 * math.pi)
             n = 10
+            body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+            segs = []
             for i in range(n):
                 a0, a1 = 2 * math.pi * i / n, 2 * math.pi * (i + 1) / n
                 if abs(((a0 + a1) / 2 - gap_a + math.pi) % (2 * math.pi) - math.pi) < 0.7:
                     continue
                 if i % 3 == 1:
                     continue
-                self.sim.static_segment((math.cos(a0) * rr, math.sin(a0) * rr), (math.cos(a1) * rr, math.sin(a1) * rr),
-                                        "wall", radius=8)
+                segs.append(pymunk.Segment(body, (math.cos(a0) * rr, math.sin(a0) * rr),
+                                           (math.cos(a1) * rr, math.sin(a1) * rr), 8))
+            if segs:
+                mp = self.sim.add_prop(body, segs, "maze_wall", material="wall")
+                omega = (0.20 if k % 2 == 0 else -0.26)
+                self.ring_props.append((mp, rr, omega))
         self.half = half
+        self.sim.hooks_step.append(self._step_maze)
         self.frame_top(half)
+
+    def _step_maze(self, dt: float) -> None:
+        tw = getattr(self.sim, "twist", None)
+        k_all = self.sim.edge_k * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)
+        max_r = self.half * k_all * 0.85
+        for mp, rr, omega in self.ring_props:
+            if rr > max_r:
+                mp.body.position = (4500.0, 4500.0)
+                mp.body.angular_velocity = 0.0
+            else:
+                mp.body.position = (0.0, 0.0)
+                w = omega * self.sim.hazard_mult
+                mp.body.angular_velocity = w
+                mp.body.angle += w * dt
 
 
 class HexTileDrop(TopArena):
@@ -585,6 +615,16 @@ class HexTileDrop(TopArena):
                     self.tiles[(q, rr)] = {"c": (x, y), "hit": None, "gone": False}
         self.sim.walkable = self._walkable
         self.sim.statics.append({"type": "hex_grid", "size": s, "tiles": [t["c"] for t in self.tiles.values()]})
+        # 3 compact pinball bumpers on the inner ring keep rivals colliding across hex islands (retract in tiny endgame)
+        self.hex_bumpers: list[tuple] = []
+        for idx in range(3):
+            ang = idx * 2 * math.pi / 3 + 0.52
+            bbody = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+            bbody.position = (math.cos(ang) * 118.0, math.sin(ang) * 118.0)
+            bsh = pymunk.Circle(bbody, 20.0)
+            bp = self.sim.add_prop(bbody, [bsh], "piston_bumper", material="bumper")
+            bsh.elasticity = 1.25
+            self.hex_bumpers.append((bp, ang))
         self.sim.hooks_frame.append(self._tick)
         self.frame_top(radius)
 
@@ -607,22 +647,30 @@ class HexTileDrop(TopArena):
         t = self.tiles.get(self._axial(x, y))
         return bool(t and not t["gone"])
 
-    CRACK_LOAD = 2.4      # contestant-seconds of standing weight before a tile cracks
+    CRACK_LOAD = 1.65     # contestant-seconds of standing weight before a tile cracks
 
     def _tick(self, t: float):
-        # weight on a tile accumulates (crowds crack tiles faster); cracked tiles vanish 0.6 s later and regrow
-        # after 4 s until overtime, after which the honeycomb collapses for good
+        # weight on a tile accumulates (crowds crack tiles faster); cracked tiles vanish 0.55 s later and regrow
+        # after 3.8 s until overtime, after which the honeycomb collapses for good
+        tw = getattr(self.sim, "twist", None)
+        k_all = self.sim.edge_k * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)
+        for bp, ang in self.hex_bumpers:
+            bx, by = math.cos(ang) * 118.0 * k_all, math.sin(ang) * 118.0 * k_all
+            if k_all < 0.44 or not self._walkable(bx / max(0.2, self.sim.edge_k), by / max(0.2, self.sim.edge_k)):
+                bp.body.position = (4500.0, 4500.0)
+            else:
+                bp.body.position = (bx, by)
         dt = 1 / 30
-        if t < 4.0:
+        if t < 1.6:
             return
         counts: dict = {}
         for c in self.sim.alive():
             k = self._axial(*c.pos)
             counts[k] = counts.get(k, 0) + 1
-        need = self.CRACK_LOAD / (self.sim.speed_mult * max(0.2, self.sim.pressure))
+        need = self.CRACK_LOAD / (self.sim.speed_mult * max(0.25, self.sim.pressure))
         for key, tile in self.tiles.items():
             if tile["gone"]:
-                if t < TIMELINE.escalation[2][0] and t - tile.get("gone_t", t) > 4.0 and key not in counts:
+                if t < TIMELINE.escalation[2][0] and t - tile.get("gone_t", t) > 3.8 and key not in counts:
                     tile.update(gone=False, hit=None, load=0.0)
                 continue
             n = counts.get(key, 0)
@@ -630,7 +678,7 @@ class HexTileDrop(TopArena):
                 tile["load"] = tile.get("load", 0.0) + dt * n if n else max(0.0, tile.get("load", 0.0) - dt * 0.6)
                 if tile["load"] >= need:
                     tile["hit"] = t
-            elif t - tile["hit"] > 0.6 / self.sim.speed_mult:
+            elif t - tile["hit"] > 0.55 / self.sim.speed_mult:
                 tile["gone"], tile["gone_t"] = True, t
         self.sim.zones["tiles"] = [0 if v["hit"] is None else (1 if not v["gone"] else 2) for v in self.tiles.values()]
 
@@ -660,21 +708,39 @@ class BumperRing(TopArena):
 
     def build(self):
         r = self.sim.rng
-        self.R0 = self.p.setdefault("radius", round(r.uniform(410, 450)))
+        self.R0 = self.p.setdefault("radius", round(r.uniform(415, 450)))
         self.R = float(self.R0)
-        self.spawn_r = self.R0 * 0.66
-        for _ in range(self.p.setdefault("bumpers", r.randint(5, 8))):
-            a, d = r.uniform(0, 2 * math.pi), r.uniform(80, self.R0 * 0.7)
-            self.sim.static_circle((math.cos(a) * d, math.sin(a) * d), r.uniform(28, 42), "bumper")
+        self.spawn_r = self.R0 * 0.64
+        n_b = self.p.setdefault("bumpers", r.randint(5, 7))
+        self.ring_bumpers: list[tuple] = []
+        for k in range(n_b):
+            a = 2 * math.pi * k / n_b + r.uniform(-0.18, 0.18)
+            d = r.uniform(105.0, self.R0 * 0.56)
+            rad = r.uniform(24.0, 32.0)
+            bbody = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+            bbody.position = (math.cos(a) * d, math.sin(a) * d)
+            bsh = pymunk.Circle(bbody, rad)
+            bp = self.sim.add_prop(bbody, [bsh], "piston_bumper", material="bumper")
+            bsh.elasticity = 1.24
+            self.ring_bumpers.append((bp, a, d))
         self.sim.walkable = lambda x, y: x * x + y * y < self.R * self.R
         self.sim.statics.append({"type": "ring", "c": (0, 0), "r": self.R0})
-        self.sim.hooks_frame.append(self._shrink)
+        self.sim.hooks_step.append(self._step_ring)
         self.frame_top(self.R0)
 
-    def _shrink(self, t: float):
-        if t > TIMELINE.escalation[1][0] * 0.5:
-            self.R = max(self.R0 * 0.35, self.R - 6.0 * self.sim.speed_mult * self.sim.pressure / 30)
-        self.sim.zones["ring_r"] = self.R
+    def _step_ring(self, dt: float) -> None:
+        tw = getattr(self.sim, "twist", None)
+        k_all = self.sim.edge_k * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)
+        t = self.sim.t
+        for idx, (bp, a0, d0) in enumerate(self.ring_bumpers):
+            if k_all < 0.38:
+                bp.body.position = (4500.0, 4500.0)
+                bp.body.velocity = (0.0, 0.0)
+            else:
+                ang = a0 + t * 0.38 * (1 if idx % 2 == 0 else -1)
+                d = d0 * k_all
+                bp.body.position = (math.cos(ang) * d, math.sin(ang) * d)
+        self.sim.zones["ring_r"] = self.R0
 
 
 class CrumblingBridge(Course):

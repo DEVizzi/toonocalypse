@@ -84,6 +84,8 @@ BANK: dict[str, list[str]] = {
                    "Speedrun elimination from {B}! Wow!"],
     "torched": ["{B} got toasted like cheap bread!", "Too slow, {B}—extra crispy now!",
                 "The wall ate {B} for lunch!", "{B} just became a campfire snack!"],
+    "bomb": ["BOOM! {B} held the bomb too long!", "Hot potato exploded—bye-bye, {B}!",
+             "{B} forgot to pass the bomb! Kaboom!"],
     "multi": ["Bodies everywhere! Call the cleaners!", "Bowling alley carnage—strike, strike, strike!",
               "Mass exodus! Half the pack evaporated!"],
     "speed": ["Speeding up—hold onto your eyebrows!", "Turbo button pressed. Zero regrets."],
@@ -165,7 +167,8 @@ def cliches_in(texts) -> list[str]:
 
 FAMILY_STYLE_PREFIX: list[tuple[str, str]] = [
     ("kill.", "hype"), ("drama", "hype"), ("multi", "hype"), ("winner", "hype"), ("overtime", "hype"),
-    ("final", "hype"), ("torched", "hype"), ("intro", "hype"), ("first_hero", "hype"), ("outro_final", "hype"),
+    ("final", "hype"), ("torched", "hype"), ("bomb", "hype"), ("intro", "hype"), ("first_hero", "hype"),
+    ("outro_final", "hype"),
     ("roast.", "deadpan"), ("host", "deadpan"), ("dummy", "deadpan"), ("ironic", "deadpan"), ("squash", "deadpan"),
 ]
 
@@ -208,7 +211,10 @@ _STIFF_DOUBLE_ADJ = re.compile(rf"\b[a-z\-]+\s+({_HERO_ALT})\s+[a-z\-]+\s+[a-z\-
 ARENA_NAMES = {
     "rotating_disc": "Rotating Disc", "ramp_descent": "Ramp Descent", "pachinko_drop": "Pachinko Drop",
     "sumo_pool_pit": "Sumo Pool Pit", "crumbling_bridge": "Crumbling Bridge", "collapse_tower": "Collapse Tower",
-    "crusher_gauntlet": "Crusher Gauntlet",
+    "crusher_gauntlet": "Crusher Gauntlet", "flat_track": "Flat Track", "pit_platforms": "Pit Platforms",
+    "tiered_tower": "Tiered Tower", "narrow_bridge": "Narrow Bridge", "bouncy_pad_field": "Bouncy Pad Field",
+    "seesaw_gauntlet": "Seesaw Gauntlet", "conveyor_chaos": "Conveyor Chaos", "maze_corridors": "Maze Corridors",
+    "hex_tile_drop": "Hex Tile Drop", "bumper_ring": "Bumper Ring",
 }
 
 
@@ -405,6 +411,8 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
             react(e.t, "betrayal", 8, [f"kill.{kk}", "drama"], ctx)
         elif e.data.get("cause") == "left_behind":
             react(e.t, "torched", 5, ["torched", f"roast.{vk}"], ctx)
+        elif e.data.get("cause") == "bomb":
+            react(e.t, "bomb", 7, ["bomb", f"roast.{vk}"], ctx)
         else:
             dummies_alive = any(not k in HERO_BY_KEY and _alive(r, k, fi) for k in tr.keys)
             fams = [f"roast.{vk}"] + (["host_dummy"] if dummies_alive else []) + ["host"]
@@ -752,7 +760,7 @@ _ELIM_WORDS = re.compile(
     r"\b(self[- ]?destruct\w*|binned|bins? it|eliminated|elimination|knocked out|ko'?d|dead|toast|rip|bye|"
     r"game over|done for|deleted|evicted|wiped out|roadkill|sent home|heading home|gone|out of (here|the race)|"
     r"is out|exit\w*|retire\w*|history|bites the dust|left the building)\b", re.IGNORECASE)
-ELIM_KINDS = ("first_hero", "betrayal", "torched", "hero_fall", "dummy", "multi", "multi_ko")
+ELIM_KINDS = ("first_hero", "betrayal", "torched", "bomb", "hero_fall", "dummy", "multi", "multi_ko")
 
 
 def _bank_fallback(b: Beat) -> str | None:

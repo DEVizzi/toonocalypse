@@ -890,8 +890,33 @@ class Renderer:
         if zone.get("zone"):
             zx, zy, r = zone["zone"]
             c = cam.to_screen(zx, zy)
-            pygame.draw.circle(fr, (255, 214, 0), c, r * z, 8)
-            pygame.draw.circle(fr, (255, 214, 0), c, r * z * (0.7 + 0.1 * math.sin(t * 6)), 3)
+            rz = max(12.0, r * z)
+            zf = pygame.Surface((int(rz * 2 + 24), int(rz * 2 + 24)), pygame.SRCALPHA)
+            zc = zf.get_width() // 2
+            pygame.draw.circle(zf, (255, 214, 0, 46), (zc, zc), int(rz))
+            self.frame.blit(zf, (int(c[0] - zc), int(c[1] - zc)))
+            pygame.draw.circle(fr, BLACK, c, rz + 3, max(4, int(10 * z)))
+            pygame.draw.circle(fr, (255, 214, 0), c, rz, max(3, int(6 * z)))
+            pygame.draw.circle(fr, (255, 240, 128), c, rz * (0.68 + 0.08 * math.sin(t * 6)), max(2, int(3 * z)))
+            scores = zone.get("scores") or {}
+            need = float(zone.get("zone_need") or 5.5)
+            best_s = max((float(v) for v in scores.values()), default=0.0)
+            if best_s > 0.05 and need > 0:
+                frac = min(1.0, best_s / need)
+                arc_r = pygame.Rect(int(c[0] - rz - 8), int(c[1] - rz - 8), int((rz + 8) * 2), int((rz + 8) * 2))
+                pygame.draw.arc(fr, (80, 250, 140), arc_r, math.pi / 2 - frac * 2 * math.pi, math.pi / 2, max(5, int(8 * z)))
+        for x0_c, x1_c in zone.get("cracking", []):
+            mx = (float(x0_c) + float(x1_c)) * 0.5
+            g_c = self._ground_seg_at(mx)
+            if g_c is not None:
+                a_c = cam.to_screen(float(x0_c), self.ground_y(float(x0_c)))
+                b_c = cam.to_screen(float(x1_c), self.ground_y(float(x1_c)))
+                jit = math.sin(t * 70.0 + mx) * 3.0 * z
+                pygame.draw.line(fr, (238, 62, 48), (a_c[0], a_c[1] + jit), (b_c[0], b_c[1] - jit), max(5, int(12 * z)))
+                cm = ((a_c[0] + b_c[0]) * 0.5, (a_c[1] + b_c[1]) * 0.5)
+                pygame.draw.lines(fr, (255, 236, 96), False,
+                                  [(cm[0] - 16 * z, cm[1] - 7 * z), (cm[0] + 4 * z, cm[1]), (cm[0] - 6 * z, cm[1] + 8 * z)],
+                                  max(2, int(3.5 * z)))
         for it in zone.get("items", []):
             c = cam.to_screen(*it)
             bob = math.sin(t * 6 + it[0]) * 5
@@ -1032,6 +1057,13 @@ class Renderer:
                         for end_p in pts:
                             pygame.draw.circle(self.frame, BLACK, end_p, wd * 0.65 + 3)
                             pygame.draw.circle(self.frame, (255, 214, 42), end_p, wd * 0.65)
+                    elif st["style"] == "maze_wall":
+                        _, rock, _dark, light = scenery.rock_colours(th)
+                        pygame.draw.line(self.frame, rock, pts[0], pts[1], wd + 2)
+                        pygame.draw.line(self.frame, light, pts[0], pts[1], max(2, wd // 3))
+                        for end_p in pts:
+                            pygame.draw.circle(self.frame, BLACK, end_p, wd * 0.58 + 3)
+                            pygame.draw.circle(self.frame, rock, end_p, wd * 0.58)
                     else:
                         pygame.draw.line(self.frame, (245, 245, 245), pts[0], pts[1], wd)
                         nseg = 8
@@ -1542,8 +1574,21 @@ class Renderer:
             screen[k] = (sx, sy)
             if alive and hero is not None:
                 pills.append((hero, sx, sy - hero.radius * z - 16, bool(f & T.FAN_FAV)))
+            z_cur = self.tr.zones[min(fi, len(self.tr.zones) - 1)]
+            if alive and self.meta["recipe"].get("goal") == "collect_items":
+                cnt = int((z_cur.get("scores") or {}).get(k, 0))
+                if cnt > 0:
+                    br = balls.body_radius(hero, extra) * z
+                    bx_i, by_i = sx + br * 0.72, sy - br * 0.72
+                    pygame.draw.circle(self.frame, BLACK, (int(bx_i), int(by_i)), 16)
+                    pygame.draw.circle(self.frame, (255, 210, 36), (int(bx_i), int(by_i)), 13)
+                    ct = hud.outlined(f"{cnt}", 20, fill=WHITE_, width=3)
+                    self.frame.blit(ct, ct.get_rect(center=(int(bx_i), int(by_i))))
             if f & T.HAS_BOMB:
-                self._bomb(sx, sy - balls.body_radius(hero, extra) * z - 10, t_anim)
+                rad_b = balls.body_radius(hero, extra) * z
+                pygame.draw.circle(self.frame, (255, 52, 52), (int(sx), int(sy)),
+                                   int(rad_b + 8 + 4 * abs(math.sin(t_anim * 12))), 4)
+                self._bomb(sx, sy - rad_b - 12, t_anim, z_cur.get("bomb_timer"))
         if show_tags and not falling_only:
             self._pills(pills, ranks or {}, screen, fi)
 
@@ -1579,10 +1624,17 @@ class Renderer:
             y = max(LAYOUT["viewport"][0] + 10, min(y, LAYOUT["captions"]["y"][0] - 40))
             self.frame.blit(s, (x, y))
 
-    def _bomb(self, x, y, t):
-        pygame.draw.circle(self.frame, BLACK, (x, y - 14), 16)
-        pygame.draw.line(self.frame, (160, 120, 80), (x + 8, y - 26), (x + 16, y - 38), 4)
-        pygame.draw.circle(self.frame, (255, 200, 40) if int(t * 10) % 2 else (255, 80, 40), (x + 17, y - 40), 6)
+    def _bomb(self, x, y, t, timer: float | None = None):
+        pulse = 2 if (timer is not None and timer < 1.5 and int(t * 14) % 2 == 0) else 0
+        pygame.draw.circle(self.frame, WHITE_ if pulse else BLACK, (int(x), int(y - 16)), 20 + pulse)
+        pygame.draw.circle(self.frame, (44, 46, 62), (int(x), int(y - 16)), 17 + pulse)
+        pygame.draw.circle(self.frame, (120, 128, 152), (int(x - 5), int(y - 22)), 5)
+        pygame.draw.line(self.frame, (175, 132, 86), (x + 8, y - 30), (x + 18, y - 44), 4)
+        pygame.draw.circle(self.frame, (255, 224, 48) if int(t * 12) % 2 else (255, 72, 36), (int(x + 19), int(y - 46)), 8)
+        if timer is not None:
+            col_t = (255, 76, 76) if timer < 1.8 else (255, 228, 72)
+            ft = hud.outlined(f"{timer:.1f}s", 22, fill=col_t, width=3)
+            self.frame.blit(ft, ft.get_rect(center=(int(x), int(y - 62))))
 
     def draw_juice(self, cam: Cam, play_t: float, t_anim: float, popups: bool = True) -> None:
         """v3.4: ghosts/sparks for KOs on camera (left_behind incinerations are drawn in foreground over the fire wall);
@@ -1598,7 +1650,10 @@ class Renderer:
                 cause = e.data.get("cause", "")
                 if cause == "left_behind":
                     continue   # rendered in foreground right over the Killer Fire Wall!
-                if cause in ("fell", "lava", "crushed") and self.tr.mode == "SIDE_VIEW" and 0 <= sx <= W:
+                if cause == "bomb" and visible:
+                    effects.draw_incineration(self.frame, (sx, sy), age, seed)
+                    effects.draw_sparks(self.frame, (sx, sy), age, seed)
+                elif cause in ("fell", "lava", "crushed") and self.tr.mode == "SIDE_VIEW" and 0 <= sx <= W:
                     ky = self.meta.get("kill_y", e.pos[1])
                     iy = cam.to_screen(e.pos[0], ky)[1]
                     if iy < H - 20:
@@ -1795,13 +1850,17 @@ class Renderer:
     # ------------------------------------------------------------------ frame & Commentator Host state
     def _ranks(self, fi: int) -> dict[str, int]:
         rows, flags = self.tr.frames[fi], self.tr.flags[fi]
+        scores = self.tr.zones[min(fi, len(self.tr.zones) - 1)].get("scores") or {}
         alive_heroes = [i for i in range(len(self.tr.keys)) if (flags[i] & T.ALIVE) and self.tr.keys[i] in HERO_BY_KEY]
-        if self.tr.mode == "TOP_DOWN":
-            alive_heroes.sort(key=lambda i: rows[i, 0] ** 2 + rows[i, 1] ** 2)
-        elif self.meta.get("vertical_tower"):
-            alive_heroes.sort(key=lambda i: -rows[i, 1])
-        else:
-            alive_heroes.sort(key=lambda i: -rows[i, 0])
+
+        def tie(i: int) -> float:
+            if self.tr.mode == "TOP_DOWN":
+                return float(rows[i, 0] ** 2 + rows[i, 1] ** 2)
+            if self.meta.get("vertical_tower"):
+                return float(-rows[i, 1])
+            return float(-rows[i, 0])
+
+        alive_heroes.sort(key=lambda i: (bool(flags[i] & T.HAS_BOMB), -float(scores.get(self.tr.keys[i], 0.0)), tie(i)))
         w = self.meta.get("winner")
         if w and w in HERO_BY_KEY and flags[self.tr.index(w)] & T.WINNER:
             alive_heroes.sort(key=lambda i: self.tr.keys[i] != w)
@@ -2057,6 +2116,81 @@ class Renderer:
                 return any(w0 - 0.03 <= out_t <= w1 + 0.03 for w0, w1, _ in words)
         return False
 
+    def _draw_goal_hud(self, fi: int, t_anim: float) -> None:
+        """Compact broadcast objective badge at top-center of viewport so all 7 gameplays read instantly."""
+        goal = str(self.meta.get("recipe", {}).get("goal") or "reach_finish")
+        zone = self.tr.zones[min(fi, len(self.tr.zones) - 1)]
+        scores = zone.get("scores") or {}
+        top_hero, top_val = None, 0.0
+        for k, v in scores.items():
+            if k in HERO_BY_KEY and float(v) > top_val:
+                top_hero, top_val = k, float(v)
+
+        accent = (255, 214, 48)
+        label = "RACE TO FINISH"
+        if goal == "reach_finish":
+            label, accent = "RACE TO FINISH", (255, 214, 48)
+        elif goal == "last_one_standing":
+            label, accent = "LAST BALL STANDING", (255, 168, 42)
+        elif goal == "survive_timer":
+            rem = float(zone.get("timer", 0.0))
+            label = f"SURVIVE: {rem:04.1f}S"
+            accent = (255, 78, 88) if rem < 4.5 else (96, 232, 255)
+        elif goal == "collect_items":
+            rem = float(zone.get("goal_timer", 0.0))
+            label = f"CROWN RUSH {rem:04.1f}S" + (f"  x{int(top_val)}" if top_hero else "")
+            accent = (255, 214, 42)
+        elif goal == "hold_a_zone":
+            need = float(zone.get("zone_need") or 5.5)
+            label = f"KING OF THE HILL  {top_val:.1f}/{need:.1f}S" if top_hero else "KING OF THE HILL"
+            accent = (92, 248, 148)
+        elif goal == "push_others_out":
+            label = f"KO BRAWL  {int(top_val)} KOS" if top_hero else "KO BRAWL"
+            accent = (255, 96, 56)
+        elif goal == "hot_potato_bomb":
+            rem = float(zone.get("bomb_timer", 0.0))
+            label = f"HOT POTATO  {rem:.1f}S"
+            accent = (255, 68, 68) if rem < 1.8 else (255, 148, 48)
+
+        txt = hud.outlined(label, 24, fill=WHITE_, width=3)
+        extra_icon = 36 if top_hero and goal in ("collect_items", "hold_a_zone", "push_others_out") else 0
+        w = min(560, txt.get_width() + 62 + extra_icon)
+        h = 42
+        box = pygame.Rect(0, 0, w, h)
+        box.midtop = (W // 2, LAYOUT["viewport"][0] + 10)
+        plate = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(plate, (18, 18, 36, 224), (0, 0, w, h), border_radius=21)
+        pygame.draw.rect(plate, (*accent, 245), (0, 0, w, h), 3, border_radius=21)
+        self.frame.blit(plate, box.topleft)
+
+        icx, icy = box.left + 24, box.centery
+        if goal == "reach_finish":
+            for r_i in range(2):
+                for c_i in range(2):
+                    col_f = BLACK if (r_i + c_i) % 2 else WHITE_
+                    pygame.draw.rect(self.frame, col_f, (icx - 10 + c_i * 10, icy - 10 + r_i * 10, 10, 10))
+            pygame.draw.rect(self.frame, accent, (icx - 10, icy - 10, 20, 20), 2)
+        elif goal in ("last_one_standing", "collect_items"):
+            hud._crown_badge(self.frame, icx, icy + 2, 24)
+        elif goal == "survive_timer":
+            hud._draw_hourglass_icon(self.frame, icx, icy, 11)
+        elif goal == "hold_a_zone":
+            pygame.draw.circle(self.frame, accent, (icx, icy), 11, 3)
+            pygame.draw.circle(self.frame, (255, 214, 48), (icx, icy), 5)
+        elif goal == "push_others_out":
+            hud._draw_flame_icon(self.frame, icx, icy, 11)
+        elif goal == "hot_potato_bomb":
+            pygame.draw.circle(self.frame, BLACK, (icx, icy + 2), 10)
+            pygame.draw.circle(self.frame, (255, 214, 48) if int(t_anim * 12) % 2 else (255, 68, 48), (icx + 7, icy - 8), 4)
+
+        tx_left = box.left + 44
+        if extra_icon and top_hero:
+            hud._mini_hero_ball(self.frame, top_hero, tx_left + 12, icy, 13, None)
+            tx_left += 32
+        fit = hud.fit_width(txt, box.right - tx_left - 14)
+        self.frame.blit(fit, fit.get_rect(midleft=(tx_left, icy + 1)))
+        hud.TEXT_BOXES.append(box)
+
     def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int, ranks: dict[str, int],
                   out_t: float = 0.0, voice_rms: float | None = None) -> None:
         fr = self.frame
@@ -2082,6 +2216,8 @@ class Renderer:
         if shot.segment != "card":
             scenery.draw_panel(fr, alive, total, self.heroes, status, ranks, hud.TEXT_BOXES,
                                pulse=pulse, t=t_anim, eff_slots=eff_slots, reigning_champion=reigning)
+        if shot.segment in ("cold", "play") and not (shot.segment == "cold" and self.finale):
+            self._draw_goal_hud(fi, t_anim)
         if shot.segment == "cold" and self.finale:
             self._draw_vs_clash(shot.seg_t)
 
