@@ -50,16 +50,103 @@ class Hazard:
         return self.sim.add_prop(body, shapes_fn(body), style, hazard=hazard)
 
 
+def _pt_seg_dist(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
+    dx, dy = bx - ax, by - ay
+    d2 = dx * dx + dy * dy
+    if d2 < 1e-6:
+        return math.hypot(px - ax, py - ay)
+    u = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / d2))
+    return math.hypot(px - (ax + u * dx), py - (ay + u * dy))
+
+
 class SpinningBars(Hazard):
     key = "spinning_bars"
+
+    def _side_clearance(self, cx: float, cy: float) -> float:
+        """Minimum distance from hub (cx, cy) to any rendered track slab (incl. 68px masonry depth), peg, wall or seesaw."""
+        best = 1e9
+        track_mats = ("ground", "ice", "mud", "bouncy", "conveyor", "plank")
+        for s in self.sim.statics:
+            st = s["type"]
+            if st == "seg" and s["mat"] in track_mats:
+                (ax, ay), (bx, by) = s["a"], s["b"]
+                if max(ax, bx) < cx - 260 or min(ax, bx) > cx + 260:
+                    continue
+                for dy in (-10.0, 28.0, 68.0):
+                    best = min(best, _pt_seg_dist(cx, cy, ax, ay + dy, bx, by + dy))
+                best = min(best, _pt_seg_dist(cx, cy, ax, ay - 10.0, ax, ay + 68.0))
+                best = min(best, _pt_seg_dist(cx, cy, bx, by - 10.0, bx, by + 68.0))
+            elif st == "seg" and s["mat"] in ("wall", "gate"):
+                (ax, ay), (bx, by) = s["a"], s["b"]
+                if abs(ax - cx) < 260:
+                    gy = self.sim.arena.ground_y_at(ax + 30)
+                    best = min(best, _pt_seg_dist(cx, cy, ax, gy - 148.0, ax, gy) - 40.0)
+            elif st == "circle":
+                ox, oy = s["c"]
+                if abs(ox - cx) < 260:
+                    best = min(best, math.hypot(cx - ox, cy - oy) - float(s["r"]))
+        for p in getattr(self.sim, "props", []):
+            if p.style == "seesaw":
+                px, py = float(p.body.position.x), float(p.body.position.y)
+                if abs(px - cx) < 420:
+                    best = min(best, _pt_seg_dist(cx, cy, px - 210.0, py, px + 210.0, py) - 115.0)
+        return best
+
+    def _place_side_bar(self, x0: float) -> tuple[float, float, float] | None:
+        """Finds (cx, cy, L) near x0 with >= 40px clearance everywhere while keeping the bar sweep active above the track."""
+        bar_r = 9.0
+        min_clear = 40.0       # strictly > 35px spec
+        track_mats = ("ground", "ice", "mud", "bouncy", "conveyor", "plank")
+        for L in (116.0, 96.0, 78.0):
+            sweep = L + bar_r + min_clear
+            for dx in (0.0, -35.0, 35.0, -70.0, 70.0, -105.0, 105.0, -140.0, 140.0, -180.0, 180.0, -230.0, 230.0, -290.0, 290.0, -350.0, 350.0):
+                cx = x0 + dx
+                if cx < 520 or (self.sim.finish_x and cx > self.sim.finish_x - 320):
+                    continue
+                if any(abs(cx - px) < 280 for px, _ in self.points):
+                    continue
+                # Find the active shelf surface at cx (not an unrelated overhang 240px above)
+                gy_center = None
+                segs_near = []
+                for s in self.sim.statics:
+                    if s["type"] == "seg" and s["mat"] in track_mats:
+                        (ax, ay), (bx, by) = s["a"], s["b"]
+                        if abs(bx - ax) <= 1.0:
+                            continue
+                        if min(ax, bx) <= cx <= max(ax, bx):
+                            y_here = ay + (by - ay) * (cx - ax) / (bx - ax)
+                            gy_center = y_here if gy_center is None else max(gy_center, y_here)
+                        if max(ax, bx) >= cx - (L + 48) and min(ax, bx) <= cx + (L + 48):
+                            segs_near.append((ax, ay, bx, by))
+                if gy_center is None:
+                    continue
+                local_tops = [gy_center]
+                for ax, ay, bx, by in segs_near:
+                    sx0 = max(min(ax, bx), cx - (L + 48))
+                    sx1 = min(max(ax, bx), cx + (L + 48))
+                    for sx in (sx0, (sx0 + sx1) * 0.5, sx1):
+                        yy = ay + (by - ay) * (sx - ax) / (bx - ax)
+                        if abs(yy - gy_center) < 120.0:
+                            local_tops.append(yy)
+                base_cy = min(local_tops) - (sweep + 6.0)
+                for extra_lift in (0.0, 14.0, 28.0, 42.0):
+                    cy = base_cy - extra_lift
+                    if gy_center - (cy + L + bar_r) > 140.0:
+                        continue
+                    if self._side_clearance(cx, cy) >= sweep:
+                        return cx, cy, L
+        return None
 
     def build(self):
         self.bars = []
         if self.sim.mode == SIDE:
             for x in self.side_spots(self.r.randint(3, 4)):
-                y = self.sim.arena.ground_y_at(x) - 160
-                self.bars.append(self.kinematic((x, y), lambda b: [pymunk.Segment(b, (-150, 0), (150, 0), 9)], "bar"))
-                self.points.append((x, y))
+                placed = self._place_side_bar(x)
+                if placed is None:
+                    continue
+                bx, by, L = placed
+                self.bars.append(self.kinematic((bx, by), lambda b, L=L: [pymunk.Segment(b, (-L, 0), (L, 0), 9)], "bar"))
+                self.points.append((bx, by))
         else:
             for i, p in enumerate(self.top_spots(2, 210) + [(0.0, 0.0)]):
                 L = self.r.uniform(150, 200) if i < 2 else self.r.uniform(100, 140)

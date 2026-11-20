@@ -19,8 +19,8 @@ from src.characters.tuno import draw_tuno
 from src.config import H, LAYOUT, W, font_path
 
 HEADER_BOTTOM = LAYOUT["header"][1]
-PANEL = pygame.Rect(28, 108, 762, 114)          # Top-left Top-5 Heroes Bar (y=0..255 broadcast header)
-CAM_RECT = pygame.Rect(815, 20, 230, 220)       # Top-right: MC Tuno Commentator Booth Cam
+PANEL = pygame.Rect(28, 120, 760, 104)          # Top-left dynamic-width Top-5 Heroes Bar
+CAM_RECT = pygame.Rect(816, 20, 240, 220)       # v3.4: 240x220 rounded-rectangle Broadcast Booth Window
 
 
 def mix(a, b, k: float) -> tuple[int, int, int]:
@@ -136,26 +136,33 @@ def sky(theme) -> pygame.Surface:
     return out
 
 
-# ---------------------------------------------------------------------------------------------- broadcast header (v3.2)
+# ---------------------------------------------------------------------------------------------- broadcast header (v3.4)
 def castle_header(theme) -> pygame.Surface:
-    """v3.2: Vibrant Commentator Booth Cam ring for MC Tuno in the top-right (260x260)."""
-    s = pygame.Surface((260, 260), pygame.SRCALPHA)
-    cx, cy, r = 130, 126, 106
-    pygame.draw.circle(s, (0, 0, 0, 105), (cx + 4, cy + 7), r + 9)
-    pygame.draw.circle(s, BLACK, (cx, cy), r + 8)
-    pygame.draw.circle(s, (44, 48, 76), (cx, cy), r + 3)
-    pygame.draw.circle(s, BLACK, (cx, cy), r - 7)
-    # Studio booth backdrop with diagonal neon spotlight beams
-    inner_r = r - 13
-    booth = pygame.Surface((260, 260), pygame.SRCALPHA)
-    pygame.draw.circle(booth, (34, 24, 68), (cx, cy), inner_r)
-    pygame.draw.polygon(booth, (66, 42, 118), [(cx - 90, cy - 90), (cx - 20, cy - 95), (cx + 75, cy + 95), (cx + 5, cy + 95)])
-    pygame.draw.circle(booth, (0, 229, 255, 55), (cx, cy + 16), inner_r * 0.76, 6)
-    mask = pygame.Surface((260, 260), pygame.SRCALPHA)
-    pygame.draw.circle(mask, (255, 255, 255, 255), (cx, cy), inner_r)
+    """v3.4: Sleek 240x220 rounded-rectangle Broadcast Booth Window backdrop (inside 256x236 shadow canvas)."""
+    s = pygame.Surface((256, 236), pygame.SRCALPHA)
+    win = pygame.Rect(8, 6, 240, 220)
+    # Soft drop shadow
+    pygame.draw.rect(s, (0, 0, 0, 115), win.move(4, 7), border_radius=24)
+    # Outer comic black outline + thick dark-gold frame
+    pygame.draw.rect(s, BLACK, win.inflate(8, 8), border_radius=26)
+    pygame.draw.rect(s, (138, 96, 12), win, border_radius=22)
+
+    # Studio booth interior backdrop (224x204)
+    inner = win.inflate(-16, -16)
+    booth = pygame.Surface(inner.size, pygame.SRCALPHA)
+    bw, bh = inner.size
+    booth.fill((28, 20, 56))
+    # Subtle acoustic studio wall slats
+    for x in range(12, bw, 22):
+        pygame.draw.line(booth, (36, 26, 70), (x, 0), (x, bh), 4)
+    # Diagonal studio spotlight beams
+    pygame.draw.polygon(booth, (66, 42, 118), [(0, 0), (78, 0), (195, bh), (96, bh)])
+    pygame.draw.polygon(booth, (0, 205, 245, 34), [(bw, 0), (bw - 65, 0), (50, bh), (130, bh)])
+    pygame.draw.circle(booth, (0, 229, 255, 48), (int(bw * 0.56), int(bh * 0.48)), 74, 5)
+    mask = pygame.Surface(inner.size, pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=16)
     booth.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
-    s.blit(booth, (0, 0))
-    pygame.draw.circle(s, (255, 208, 40), (cx, cy), r - 10, 5)
+    s.blit(booth, inner.topleft)
     return s
 
 
@@ -180,67 +187,115 @@ def _fit(surf: pygame.Surface, width: float) -> pygame.Surface:
 @lru_cache(maxsize=16)
 def episode_ribbon(text: str) -> pygame.Surface:
     """Stylized cartoon episode ribbon with thick black outline."""
-    txt = _outlined_text(text.upper(), 30, fill=(255, 214, 0), outline=BLACK, w=4)
-    w = min(540, txt.get_width() + 44)
-    h = 58
+    txt = _outlined_text(text.upper(), 28, fill=(255, 214, 0), outline=BLACK, w=4)
+    w = min(516, txt.get_width() + 42)
+    h = 52
     s = pygame.Surface((w, h), pygame.SRCALPHA)
-    pts = [(10, 4), (w - 4, 4), (w - 18, h - 4), (2, h - 4)]
+    pts = [(10, 4), (w - 4, 4), (w - 16, h - 4), (2, h - 4)]
     pygame.draw.polygon(s, BLACK, [(x + 3, y + 4) for x, y in pts])
     pygame.draw.polygon(s, (46, 48, 78), pts)
     pygame.draw.polygon(s, BLACK, pts, 4)
-    fit = _fit(txt, w - 34)
-    s.blit(fit, fit.get_rect(center=(w / 2, h / 2 + 2)))
+    fit = _fit(txt, w - 32)
+    s.blit(fit, fit.get_rect(center=(w / 2, h / 2 + 1)))
+    return s
+
+
+def _draw_twist_icon(s: pygame.Surface, kind: str, cx: float, cy: float) -> None:
+    """Crisp comic vector icon for the Active Twist Badge (lightning bolt, gravity arrow, ice crystal, etc.)."""
+    if kind == "bolt":
+        pts = [(cx + 2, cy - 12), (cx - 8, cy + 1), (cx - 1, cy + 1), (cx - 4, cy + 12), (cx + 8, cy - 2), (cx + 1, cy - 2)]
+        pygame.draw.polygon(s, BLACK, [(x + 1, y + 1) for x, y in pts])
+        pygame.draw.polygon(s, (250, 204, 21), pts)
+        pygame.draw.polygon(s, BLACK, pts, 2)
+    elif kind in ("down", "up"):
+        sgn = 1 if kind == "down" else -1
+        pts = [
+            (cx - 4, cy - 10 * sgn), (cx + 4, cy - 10 * sgn),
+            (cx + 4, cy + 1 * sgn), (cx + 10, cy + 1 * sgn),
+            (cx, cy + 11 * sgn), (cx - 10, cy + 1 * sgn), (cx - 4, cy + 1 * sgn),
+        ]
+        col = (255, 118, 42) if kind == "down" else (0, 229, 255)
+        pygame.draw.polygon(s, col, pts)
+        pygame.draw.polygon(s, BLACK, pts, 2)
+    elif kind == "ice":
+        for k in range(3):
+            a = k * math.pi / 3
+            p0 = (cx - math.cos(a) * 10, cy - math.sin(a) * 10)
+            p1 = (cx + math.cos(a) * 10, cy + math.sin(a) * 10)
+            pygame.draw.line(s, BLACK, p0, p1, 5)
+            pygame.draw.line(s, (165, 243, 252), p0, p1, 3)
+    else:
+        pygame.draw.circle(s, BLACK, (cx, cy), 10)
+        pygame.draw.circle(s, (250, 204, 21), (cx, cy), 8)
+        pygame.draw.circle(s, WHITE, (cx - 2, cy - 2), 3)
+
+
+@lru_cache(maxsize=32)
+def _twist_badge_surf(icon_kind: str, label: str, accent: tuple[int, int, int]) -> pygame.Surface:
+    txt = _outlined_text(label.upper(), 22, fill=WHITE, outline=BLACK, w=3)
+    w = min(310, txt.get_width() + 48)
+    h = 36
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    r = pygame.Rect(0, 0, w, h)
+    pygame.draw.rect(s, (0, 0, 0, 120), r.move(2, 3), border_radius=12)
+    pygame.draw.rect(s, (26, 22, 48, 232), r, border_radius=12)
+    pygame.draw.rect(s, accent, r, 3, border_radius=12)
+    _draw_twist_icon(s, icon_kind, 20, h / 2)
+    fit = _fit(txt, w - 42)
+    s.blit(fit, fit.get_rect(midleft=(36, h / 2 + 1)))
     return s
 
 
 def draw_header(frame: pygame.Surface, portrait_bg: pygame.Surface, ep_label: str, tuno_state: str, t: float,
-                text_boxes: list, speech: str = "", talking: bool | None = None) -> None:
-    """Top-left episode ribbon + Top-right MC Tuno Commentator Booth Cam with bottom-anchored speech tag (y ~ 235)."""
+                text_boxes: list, speech: str = "", talking: bool | None = None,
+                voice_rms: float | None = None, twist_badge: tuple[str, str, tuple[int, int, int]] | None = None) -> None:
+    """v3.4 Top-left Episode Ribbon + Active Twist Badge + Top-right 240x220 Broadcast Booth Window with LIVE badge."""
     rib = episode_ribbon(ep_label.replace(" - ", " • "))
-    r = rib.get_rect(topleft=(28, 30))
+    r = rib.get_rect(topleft=(28, 20))
     frame.blit(rib, r)
     text_boxes.append(r)
 
-    # Top-right Commentator Booth Cam (220x220 inner clip)
-    cx, cy = CAM_RECT.centerx, CAM_RECT.centery - 6
-    frame.blit(portrait_bg, portrait_bg.get_rect(center=(cx, cy)))
-    buf = pygame.Surface((220, 220), pygame.SRCALPHA)
-    draw_tuno(buf, 110, 214, tuno_state, t, scale=1.62, talking=talking)
-    mask = pygame.Surface((220, 220), pygame.SRCALPHA)
-    pygame.draw.circle(mask, (255, 255, 255, 255), (110, 110), 92)
-    buf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
-    frame.blit(buf, buf.get_rect(center=(cx, cy)))
-
-    # Crisp bezel highlight + ON-AIR red pulse dot on top-right of bezel
-    rim_col = (255, 65, 85) if tuno_state == "SWEATING_INTENSE" else (255, 208, 40)
-    pygame.draw.circle(frame, BLACK, (cx, cy), 99, 4)
-    pygame.draw.circle(frame, rim_col, (cx, cy), 95, 4)
-    if int(t * 3) % 2 == 0 or tuno_state != "HYPED_TALKING":
-        pygame.draw.circle(frame, BLACK, (cx + 76, cy - 68), 9)
-        pygame.draw.circle(frame, (255, 50, 70), (cx + 76, cy - 68), 6)
-
-    if speech:
-        # v3.2 FIX: Anchor speech tag cleanly along the BOTTOM edge of the portrait circle (y ~ 235),
-        # NEVER on the left edge where it collided with the dark Top-5 leaderboard bar!
-        sp = _fit(_outlined_text(speech, 30, fill=WHITE, outline=BLACK, w=4), 196)
-        bw, bh = sp.get_width() + 26, sp.get_height() + 10
-        tag = pygame.Surface((bw, bh + 12), pygame.SRCALPHA)
-        # Upward comic speech pointer pointing cleanly at MC Tuno's chin
-        ptr = [(bw / 2 - 11, 13), (bw / 2, 1), (bw / 2 + 11, 13)]
-        pygame.draw.polygon(tag, BLACK, [(px, py) for px, py in ptr])
-        body_r = pygame.Rect(0, 10, bw, bh)
-        pygame.draw.rect(tag, BLACK, body_r, border_radius=14)
-        fill_col = (238, 52, 78) if speech in ("NO WAY!", "OOF!", "RIP!", "WIPEOUT!") else (0, 175, 235)
-        pygame.draw.rect(tag, fill_col, body_r.inflate(-6, -6), border_radius=11)
-        pygame.draw.polygon(tag, fill_col, [(bw / 2 - 7, 14), (bw / 2, 5), (bw / 2 + 7, 14)])
-        tag.blit(sp, sp.get_rect(center=(bw / 2, 10 + bh / 2 + 1)))
-        tr = tag.get_rect(center=(cx, 235))
-        if tr.right > W - 14:
-            tr.right = W - 14
-        if tr.left < PANEL.right + 14:
-            tr.left = PANEL.right + 14
-        frame.blit(tag, tr)
+    # Compact Active Twist Badge neatly beneath the episode pill whenever a twist/escalation is active
+    if twist_badge is not None:
+        ik, lbl, acc = twist_badge
+        tb = _twist_badge_surf(ik, lbl, acc)
+        tr = tb.get_rect(topleft=(30, 76))
+        frame.blit(tb, tr)
         text_boxes.append(tr)
+
+    # Top-right 240x220 rounded-rectangle Broadcast Booth Window
+    frame.blit(portrait_bg, (CAM_RECT.left - 8, CAM_RECT.top - 6))
+    buf = pygame.Surface(CAM_RECT.size, pygame.SRCALPHA)
+    draw_tuno(buf, 134, 216, tuno_state, t, scale=1.0, talking=talking, voice_rms=voice_rms)
+
+    # Mask strictly inside the 224x204 inner booth window so zero pixels ever clip the thick dark-gold frame
+    mask = pygame.Surface(CAM_RECT.size, pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), pygame.Rect(8, 8, 224, 204), border_radius=16)
+    buf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+    frame.blit(buf, CAM_RECT.topleft)
+
+    # Thick dark-gold broadcast frame + specular highlight bevel
+    outer_gold = (156, 108, 14) if tuno_state != "SWEATING_INTENSE" else (196, 52, 48)
+    inner_gold = (246, 198, 48) if tuno_state != "SWEATING_INTENSE" else (255, 126, 72)
+    pygame.draw.rect(frame, BLACK, CAM_RECT.inflate(4, 4), 4, border_radius=24)
+    pygame.draw.rect(frame, outer_gold, CAM_RECT, 8, border_radius=22)
+    pygame.draw.rect(frame, inner_gold, CAM_RECT.inflate(-6, -6), 3, border_radius=19)
+    pygame.draw.rect(frame, BLACK, CAM_RECT.inflate(-14, -14), 3, border_radius=16)
+
+    # Blinking red "● LIVE" indicator in the top-left corner of the Broadcast Booth Window
+    live_box = pygame.Rect(CAM_RECT.left + 14, CAM_RECT.top + 13, 76, 25)
+    live_plate = pygame.Surface(live_box.size, pygame.SRCALPHA)
+    pygame.draw.rect(live_plate, (14, 14, 24, 222), live_plate.get_rect(), border_radius=8)
+    pygame.draw.rect(live_plate, (246, 198, 48, 150), live_plate.get_rect(), 2, border_radius=8)
+    blink_on = int(t * 2.6) % 2 == 0
+    if blink_on:
+        pygame.draw.circle(live_plate, (255, 48, 68, 95), (14, 12), 8)
+        pygame.draw.circle(live_plate, (255, 42, 62), (14, 12), 5)
+    else:
+        pygame.draw.circle(live_plate, (120, 26, 36), (14, 12), 5)
+    live_txt = font(18).render("LIVE", True, WHITE if blink_on else (205, 210, 224))
+    live_plate.blit(live_txt, live_txt.get_rect(midleft=(25, 13)))
+    frame.blit(live_plate, live_box.topleft)
 
 
 def _crown(frame, cx: float, cy: float, w: float) -> None:
@@ -256,52 +311,78 @@ def _icon(frame, h: Hero, c, rad: float, expr: str = "neutral") -> None:
 
 
 def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[Hero], status: dict[str, str],
-               ranks: dict[str, int], text_boxes: list, pulse: float = 0.0) -> None:
-    """Top-left ALIVE pill beside the episode ribbon + Top 5 Heroes Bar (#1-#5 over alive heroes only)."""
-    k = 1.0 + 0.12 * pulse
-    alive_rect = pygame.Rect(584, 30, 206, 58)
-    pygame.draw.rect(frame, BLACK, alive_rect.move(3, 4), border_radius=16)
-    pygame.draw.rect(frame, (24, 26, 40), alive_rect, border_radius=16)
-    pygame.draw.rect(frame, (255, 90, 90) if pulse > 0 else WHITE, alive_rect, 3, border_radius=16)
-    lab = font(26).render("ALIVE:", True, WHITE)
-    num = font(int(34 * k)).render(f"{survivors}/{total}", True, (255, 214, 0) if survivors <= 3 else (255, 90, 90))
-    r1 = frame.blit(lab, lab.get_rect(midleft=(alive_rect.x + 14, alive_rect.centery + 2)))
-    r2 = frame.blit(num, num.get_rect(midright=(alive_rect.right - 14, alive_rect.centery + 2)))
-    text_boxes += [r1, r2]
+               ranks: dict[str, int], text_boxes: list, pulse: float = 0.0, t: float = 0.0,
+               eff_slots: float | None = None) -> None:
+    """v3.4 Dynamic Top-Left HUD:
+    - Snappy 1.22x red pulse + shake animation on ALIVE: X/15 pill on EVERY elimination.
+    - Auto-shrinking dark Top-5 Leaderboard pill width as survivors drop below 5 (zero empty black void)."""
+    # 1. ALIVE: X/15 pill with 1.22x red pulse + shake on every elimination
+    p = max(0.0, min(1.0, pulse))
+    k_scale = 1.0 + 0.22 * p
+    shake_dx = math.sin(t * 68.0) * 6.0 * p
+    shake_dy = math.cos(t * 54.0) * 3.5 * p
 
-    plate = pygame.Surface(PANEL.size, pygame.SRCALPHA)
-    pygame.draw.rect(plate, (20, 22, 36, 218), plate.get_rect(), border_radius=24)
-    pygame.draw.rect(plate, (255, 255, 255, 80), plate.get_rect(), 3, border_radius=24)
-    frame.blit(plate, PANEL)
+    base_w, base_h = 220, 52
+    pill_surf = pygame.Surface((base_w + 10, base_h + 10), pygame.SRCALPHA)
+    pr = pygame.Rect(4, 3, base_w, base_h)
+    pygame.draw.rect(pill_surf, BLACK, pr.move(3, 4), border_radius=15)
+    bg_col = mix((24, 26, 40), (168, 24, 44), min(1.0, p * 1.15))
+    bd_col = mix(WHITE, (255, 72, 86), min(1.0, p * 1.3))
+    pygame.draw.rect(pill_surf, bg_col, pr, border_radius=15)
+    pygame.draw.rect(pill_surf, bd_col, pr, 3, border_radius=15)
+    lab = font(25).render("ALIVE:", True, WHITE)
+    num_col = (255, 224, 64) if (survivors <= 3 and p < 0.25) else ((255, 255, 255) if p > 0.35 else (255, 92, 92))
+    num = font(32).render(f"{survivors}/{total}", True, num_col)
+    pill_surf.blit(lab, lab.get_rect(midleft=(pr.left + 14, pr.centery + 2)))
+    pill_surf.blit(num, num.get_rect(midright=(pr.right - 14, pr.centery + 2)))
+
+    if k_scale > 1.005:
+        pill_surf = pygame.transform.rotozoom(pill_surf, math.sin(t * 48.0) * 2.2 * p, k_scale)
+    alive_anchor = (670 + shake_dx, 46 + shake_dy)
+    ar = frame.blit(pill_surf, pill_surf.get_rect(center=(int(alive_anchor[0]), int(alive_anchor[1]))))
+    text_boxes.append(ar)
+
+    # 2. Auto-shrinking Top-5 Leaderboard pill (zero empty right-hand black void when < 5 heroes remain!)
     live = sorted((h for h in heroes if status.get(h.key) != "out"), key=lambda h: ranks.get(h.key, 99))[:5]
-    step = (PANEL.width - 24) / 5
-    f_rank = font(34)
+    if not live:
+        return
+    slot_w = 148.0
+    slots = max(float(len(live)), min(5.0, eff_slots if eff_slots is not None else float(len(live))))
+    dyn_w = max(168, int(round(20.0 + slot_w * slots)))
+    dyn_panel = pygame.Rect(PANEL.x, PANEL.y, dyn_w, PANEL.height)
+
+    plate = pygame.Surface(dyn_panel.size, pygame.SRCALPHA)
+    pygame.draw.rect(plate, (20, 22, 36, 220), plate.get_rect(), border_radius=22)
+    pygame.draw.rect(plate, (255, 255, 255, 88), plate.get_rect(), 3, border_radius=22)
+    frame.blit(plate, dyn_panel.topleft)
+
+    f_rank = font(32)
     for i, h in enumerate(live):
-        cx = PANEL.x + 12 + step * i + 44
-        cy = PANEL.centery + 2
-        _icon(frame, h, (cx, cy), 34, "celebrating" if status.get(h.key) == "crown" else "neutral")
+        cx = dyn_panel.x + 12 + slot_w * i + 42
+        cy = dyn_panel.centery + 2
+        _icon(frame, h, (cx, cy), 32, "celebrating" if status.get(h.key) == "crown" else "neutral")
         rank = ranks.get(h.key, i + 1)
         rn = f_rank.render(f"#{rank}", True, (255, 214, 0) if rank == 1 else WHITE)
-        rb = frame.blit(rn, rn.get_rect(midleft=(cx + 42, cy + 2)))
+        rb = frame.blit(rn, rn.get_rect(midleft=(cx + 39, cy + 2)))
         if rank == 1:
-            _crown(frame, cx, cy - 42, 24)
+            _crown(frame, cx, cy - 39, 22)
         text_boxes.append(rb)
 
 
 def draw_pick_strip(frame: pygame.Surface, heroes: list[Hero], t: float, text_boxes: list) -> None:
-    """Cold-open PICK YOUR FIGHTER strip in the top-left bar slot (y=108..222), never over the balls."""
+    """Cold-open PICK YOUR FIGHTER strip in the top-left bar slot (y=120..224), never over the balls."""
     plate = pygame.Surface(PANEL.size, pygame.SRCALPHA)
-    pygame.draw.rect(plate, (20, 22, 36, 225), plate.get_rect(), border_radius=24)
-    pygame.draw.rect(plate, (255, 214, 0, 210), plate.get_rect(), 4, border_radius=24)
+    pygame.draw.rect(plate, (20, 22, 36, 225), plate.get_rect(), border_radius=22)
+    pygame.draw.rect(plate, (255, 214, 0, 210), plate.get_rect(), 4, border_radius=22)
     frame.blit(plate, PANEL)
-    lab = font(28).render("PICK YOUR FIGHTER!", True, (255, 214, 0))
+    lab = font(26).render("PICK YOUR FIGHTER!", True, (255, 214, 0))
     text_boxes.append(frame.blit(lab, lab.get_rect(midtop=(PANEL.centerx, PANEL.y + 6))))
     n = len(heroes)
     step = (PANEL.width - 30) / max(1, n)
     for i, h in enumerate(heroes):
         cx = PANEL.x + 15 + step * (i + 0.5)
         bob = 3 * math.sin(t * 9 + i)
-        _icon(frame, h, (cx, PANEL.y + 74 + bob), 24, "happy")
+        _icon(frame, h, (cx, PANEL.y + 70 + bob), 22, "happy")
 
 
 # ---------------------------------------------------------------------------------------------- architectural 2D terrain (v3.2)

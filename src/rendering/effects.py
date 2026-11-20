@@ -100,6 +100,59 @@ def draw_ghost(frame: pygame.Surface, pos: tuple[float, float], age: float, colo
         pygame.draw.circle(frame, (255, 255, 255), (int(pos[0]), int(pos[1])), int(rr), 4)
 
 
+def draw_incineration(frame: pygame.Surface, pos: tuple[float, float], age: float, seed: int) -> None:
+    """v3.4: Bright orange-white flare burst + dark char smoke puff when a ball is incinerated by the Killer Fire Wall."""
+    if age < 0.0 or age > 0.60:
+        return
+    cx, cy = float(pos[0]), float(pos[1])
+    rng = random.Random(seed + 91)
+
+    # 1. Dark char smoke puffs expanding & rising (0.03s .. 0.60s)
+    if age >= 0.03:
+        ca = min(1.0, (age - 0.03) / 0.57)
+        alpha = max(0, int(215 * (1.0 - ca) ** 1.3))
+        puff_surf = pygame.Surface((180, 180), pygame.SRCALPHA)
+        for k in range(6):
+            ang = rng.uniform(0, 2 * math.pi)
+            dist = (10 + ca * rng.uniform(36, 68))
+            px = 90 + math.cos(ang) * dist + ca * 18
+            py = 90 + math.sin(ang) * dist * 0.8 - ca * 46
+            pr = int((14 + k * 2.5) * (0.7 + 0.65 * ca))
+            col = (26, 20, 22, alpha) if k % 2 == 0 else (48, 34, 32, int(alpha * 0.8))
+            pygame.draw.circle(puff_surf, col, (int(px), int(py)), pr)
+        frame.blit(puff_surf, (int(cx - 90), int(cy - 90)))
+
+    # 2. Bright orange-white incandescent flare burst (0.00s .. 0.26s)
+    if age < 0.26:
+        fk = 1.0 - age / 0.26
+        r_outer = (44 + age * 150) * (0.65 + 0.35 * fk)
+        flare = pygame.Surface((220, 220), pygame.SRCALPHA)
+        ox = oy = 110
+        pygame.draw.circle(flare, (249, 115, 22, int(170 * fk)), (ox, oy), int(r_outer * 0.85))
+        pts = []
+        n_sp = 14
+        for i in range(n_sp):
+            a = i * math.pi / (n_sp / 2) + age * 5.0
+            rad = r_outer if i % 2 == 0 else r_outer * 0.38
+            pts.append((ox + math.cos(a) * rad, oy + math.sin(a) * rad))
+        pygame.draw.polygon(flare, (249, 115, 22, int(235 * fk)), pts)
+        inner_pts = [(ox + (px - ox) * 0.62, oy + (py - oy) * 0.62) for px, py in pts]
+        pygame.draw.polygon(flare, (254, 240, 138, int(250 * fk)), inner_pts)
+        pygame.draw.circle(flare, (255, 255, 255, int(255 * fk)), (ox, oy), max(4, int(20 * fk)))
+        frame.blit(flare, (int(cx - ox), int(cy - oy)))
+
+    # 3. Flying hot cinders
+    if age < 0.42:
+        ck = age / 0.42
+        for k in range(8):
+            ang = rng.uniform(-math.pi * 0.75, math.pi * 0.55)
+            spd = rng.uniform(90, 220)
+            ex = cx + math.cos(ang) * spd * age + 24 * age
+            ey = cy + math.sin(ang) * spd * age - 95 * age
+            er = max(2, int(5 * (1.0 - ck)))
+            pygame.draw.circle(frame, (254, 240, 138) if k % 2 == 0 else (249, 115, 22), (int(ex), int(ey)), er)
+
+
 def draw_dust(frame: pygame.Surface, pos: tuple[float, float], age: float, seed: int) -> None:
     if age > 0.4:
         return

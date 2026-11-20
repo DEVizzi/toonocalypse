@@ -128,8 +128,9 @@ class Renderer:
         self.finish_t = next((e.t for e in self.tr.events if e.kind in ("finish", "win")), None) \
             if self.meta.get("finish_x") is not None else None
         self.popups = self._schedule_popups()
-        self.speech: list = []          # narration lines (set by the audio module): captions + MC Tuno lip-sync
-        self.out_index: dict = {}       # output frame index -> output time (for captions)
+        self.speech: list = []                  # narration lines: borderless 3-4 word pop captions
+        self.voice_rms: list[float] | None = None  # v3.4: per-frame 33ms isolated voice RMS for MC Tuno lip-sync
+        self.out_index: dict = {}               # output frame index -> output time (for captions)
 
     # ------------------------------------------------------------------ precomputed presentation state
     def _schedule_banners(self) -> list[tuple[float, str]]:
@@ -712,28 +713,38 @@ class Renderer:
                     pygame.draw.line(fr, WHITE_, (sx - sr, sy), (sx + sr, sy), 2)
                     pygame.draw.line(fr, WHITE_, (sx, sy - sr), (sx, sy + sr), 2)
         elif key == "mud_zones":
-            # v3.3: flat glossy dark-brown scalloped puddle (no stray highlight line)
-            lobes = [
-                (cx + math.cos(a) * r * (0.86 + 0.14 * math.sin(i * 2.3 + wx * 0.05)),
-                 cy + math.sin(a) * r * (0.86 + 0.14 * math.cos(i * 1.9 + wy * 0.05)))
-                for i, a in enumerate(2 * math.pi * k / 10 for k in range(10))
+            # v3.4: sleek flattened glossy dark-brown puddle with small bubbles (zero puffy cloud lobes)
+            ph1 = wx * 0.037 + wy * 0.021
+            ph2 = wy * 0.043 - wx * 0.019
+            puddle = []
+            inner_pool = []
+            for k in range(56):
+                a = 2 * math.pi * k / 56
+                und = 0.92 + 0.055 * math.sin(2 * a + ph1) + 0.035 * math.cos(3 * a + ph2)
+                px = cx + math.cos(a) * r * und
+                py = cy + math.sin(a) * r * 0.84 * und
+                puddle.append((px, py))
+                inner_pool.append((cx + (px - cx) * 0.72, cy + (py - cy) * 0.72))
+            pygame.draw.polygon(fr, (38, 20, 9), [(px, py + 2) for px, py in puddle])
+            pygame.draw.polygon(fr, (78, 45, 20), puddle)
+            pygame.draw.polygon(fr, (58, 32, 13), inner_pool)
+            pygame.draw.polygon(fr, (36, 18, 8), puddle, max(2, lw - 1))
+            # Sleek wet glossy specular sheen arcs
+            sheen = [
+                (cx + math.cos(a) * r * 0.64, cy + math.sin(a) * r * 0.52)
+                for a in (-2.45 + 0.16 * u for u in range(9))
             ]
-            lobe_r = max(6, int(r * 0.34))
-            for lx, ly in lobes:
-                pygame.draw.circle(fr, (40, 22, 10), (lx, ly), lobe_r + lw)
-            pygame.draw.circle(fr, (40, 22, 10), (cx, cy), int(r * 0.80) + lw)
-            for lx, ly in lobes:
-                pygame.draw.circle(fr, (88, 52, 24), (lx, ly), lobe_r)
-            pygame.draw.circle(fr, (88, 52, 24), (cx, cy), int(r * 0.80))
-            pygame.draw.ellipse(fr, (255, 236, 210, 70), (cx - r * 0.55, cy - r * 0.52, r * 0.62, r * 0.26))
-            pygame.draw.ellipse(fr, (255, 236, 210, 45), (cx + r * 0.12, cy + r * 0.18, r * 0.30, r * 0.12))
+            pygame.draw.lines(fr, (255, 240, 218, 95), False, sheen, max(2, int(4 * z)))
+            pygame.draw.ellipse(fr, (255, 242, 224, 65), (cx + r * 0.14, cy + r * 0.18, r * 0.24, r * 0.10))
+            # Small rising/popping mud bubbles
             for j in range(3):
-                ang = j * 2.1 + t * 0.7
-                bx, by = cx + math.cos(ang) * r * 0.42, cy + math.sin(ang * 1.2) * r * 0.38
-                br = max(3, int(r * 0.11 * (0.85 + 0.35 * math.sin(t * 5 + j * 1.7))))
-                pygame.draw.circle(fr, (40, 22, 10), (bx, by), br + 2)
-                pygame.draw.circle(fr, (118, 76, 40), (bx, by), br)
-                pygame.draw.circle(fr, (230, 200, 160), (bx - br * 0.3, by - br * 0.3), max(1, int(br * 0.28)))
+                ang = j * 2.15 + ph1 + t * 0.45
+                bx = cx + math.cos(ang) * r * 0.36
+                by = cy + math.sin(ang * 1.15) * r * 0.28
+                br = max(2, int(r * 0.085 * (0.80 + 0.30 * math.sin(t * 4.8 + j * 1.9))))
+                pygame.draw.circle(fr, (36, 18, 8), (bx, by), br + 1)
+                pygame.draw.circle(fr, (108, 66, 32), (bx, by), br)
+                pygame.draw.circle(fr, (240, 215, 185), (bx - br * 0.3, by - br * 0.3), max(1, int(br * 0.28)))
         elif key == "boost_zones":
             pygame.draw.circle(fr, BLACK, (cx, cy), r + lw)
             pygame.draw.circle(fr, (32, 36, 58), (cx, cy), r)
@@ -769,25 +780,6 @@ class Renderer:
                     bx = (i * 97 + t * 40) % W
                     pygame.draw.circle(fr, (255, 200, 60), (bx, y + 10 + 6 * math.sin(t * 5 + i)), 14)
                 pygame.draw.line(fr, (255, 230, 120), (0, y), (W, y), 6)
-        if "chase_x" in zone:
-            x = cam.to_screen(zone["chase_x"], 0)[0]
-            if x > -80:
-                top = LAYOUT["viewport"][0]
-                pts = [(0, top)]
-                for i in range(int((H - top) / 40) + 2):
-                    yy = top + i * 40
-                    jag = 34 + 22 * math.sin(t * 9 + i * 1.7) + (26 if i % 2 else 0)
-                    pts.append((x + jag, yy))
-                pts += [(0, H)]
-                pygame.draw.polygon(fr, (120, 20, 10), pts)
-                inner = [(px - 26 if px > 0 else 0, py) for px, py in pts]
-                pygame.draw.polygon(fr, (240, 90, 20), inner)
-                core = [(px - 52 if px > 0 else 0, py) for px, py in pts]
-                pygame.draw.polygon(fr, (255, 200, 60), core)
-                pygame.draw.lines(fr, BLACK, False, pts[1:-1], 5)
-                for i in range(10):
-                    ey = top + ((i * 157 + t * 260) % (H - top))
-                    pygame.draw.circle(fr, (255, 220, 120), (x + 40 + 18 * math.sin(t * 5 + i), ey), 5)
         if zone.get("zone"):
             zx, zy, r = zone["zone"]
             c = cam.to_screen(zx, zy)
@@ -1158,17 +1150,19 @@ class Renderer:
         pygame.draw.circle(self.frame, (255, 200, 40) if int(t * 10) % 2 else (255, 80, 40), (x + 17, y - 40), 6)
 
     def draw_juice(self, cam: Cam, play_t: float, t_anim: float, popups: bool = True) -> None:
-        """v3.3: ghosts/sparks only for KOs that are actually on camera; comic starbursts only from the pre-scheduled,
-        on-screen, non-stacking popup list (offset 70 px above the hit, clamped to x in [40, 1040])."""
+        """v3.4: ghosts/sparks for KOs on camera (left_behind incinerations are drawn in foreground over the fire wall);
+        comic starbursts from the pre-scheduled, on-screen, non-stacking popup list."""
         for e in self.tr.events:
             age = play_t - e.t
-            if age < 0 or age > 0.9 or e.pos is None:
+            if age < 0 or age > 0.95 or e.pos is None:
                 continue
             sx, sy = cam.to_screen(*e.pos)
             visible = cam.on_screen(e.pos[0], e.pos[1], pad=10)
             seed = int(e.t * 1000) % 997
             if e.kind == "elimination":
                 cause = e.data.get("cause", "")
+                if cause == "left_behind":
+                    continue   # rendered in foreground right over the Killer Fire Wall!
                 if cause in ("fell", "lava") and self.tr.mode == "SIDE_VIEW" and 0 <= sx <= W:
                     ky = self.meta.get("kill_y", e.pos[1])
                     iy = cam.to_screen(e.pos[0], ky)[1]
@@ -1193,6 +1187,101 @@ class Renderer:
                 sx, sy = cam.to_screen(*pos)
                 effects.draw_popup(self.frame, word, (sx, sy - 70), age, seed)
 
+    def _draw_killer_fire(self, cam: Cam, fi: int, play_t: float, t_anim: float) -> None:
+        """v3.4 Foreground Killer Fire Wall (SIDE_VIEW):
+        - Drawn ABOVE all platforms, seesaws, and balls (below HUD only) so seesaws never overlap the fire.
+        - 85px additive warm orange heat-glow gradient ahead of the flames.
+        - 3 overlapping vertical flame ribbons scrolling upward at 140, 220, 310 px/s with layered sine harmonics
+          forming organic curling tongues pointing right (#B91C1C crimson, #F97316 orange, #FEF08A incandescent core).
+        - Rising bright ember sparks + subtle dark smoke puffs + incineration flare/char/ghost VFX."""
+        zone = self.tr.zones[fi]
+        if "chase_x" not in zone:
+            return
+        fr = self.frame
+        base_x = cam.to_screen(zone["chase_x"], 0)[0]
+        top = LAYOUT["viewport"][0]
+        h_span = H - top
+
+        if base_x > -110:
+            pts1: list[tuple[float, float]] = []
+            pts2: list[tuple[float, float]] = []
+            pts3: list[tuple[float, float]] = []
+            ys = list(range(top - 16, H + 28, 12))
+            for y in ys:
+                u1 = y + t_anim * 140.0
+                dx1 = 42.0 + 26.0 * math.sin(u1 * 0.026) + 15.0 * math.sin(u1 * 0.061 + 1.1) + 9.0 * math.sin(u1 * 0.128 - t_anim * 3.8)
+                cy1 = y - 11.0 * max(0.0, math.sin(u1 * 0.026 + 0.65))
+                pts1.append((base_x + dx1, cy1))
+
+                u2 = y + t_anim * 220.0
+                dx2 = 16.0 + 22.0 * math.sin(u2 * 0.031 + 0.9) + 12.0 * math.sin(u2 * 0.074 + 2.2) + 7.5 * math.sin(u2 * 0.149 - t_anim * 5.2)
+                cy2 = y - 9.0 * max(0.0, math.sin(u2 * 0.031 + 1.55))
+                pts2.append((base_x + dx2, cy2))
+
+                u3 = y + t_anim * 310.0
+                dx3 = -10.0 + 18.0 * math.sin(u3 * 0.038 + 2.0) + 10.0 * math.sin(u3 * 0.089 + 0.4) + 6.0 * math.sin(u3 * 0.176 - t_anim * 7.0)
+                cy3 = y - 7.0 * max(0.0, math.sin(u3 * 0.038 + 2.65))
+                pts3.append((base_x + dx3, cy3))
+
+            max_x = max(p[0] for p in pts1)
+            glow_w = min(W, max(16, int(max_x + 92)))
+            if glow_w > 16:
+                # 1. Additive warm orange heat-glow gradient (85px wide) extending ahead of the flames
+                glow = pygame.Surface((glow_w, h_span))
+                for step in range(17, 0, -1):
+                    off = step * 5.0   # 85px -> 5px
+                    poly_g = [(0.0, 0.0)] + [(max(0.0, px + off), py - top) for px, py in pts1] + [(0.0, float(h_span))]
+                    # Cumulative additive steps build a silky quadratic orange heat gradient
+                    pygame.draw.polygon(glow, (11, 5, 1), poly_g)
+                fr.blit(glow, (0, top), special_flags=pygame.BLEND_RGB_ADD)
+
+                # 2. Subtle dark smoke puffs drifting upward just ahead/above the crimson flame tips
+                smoke = pygame.Surface((min(W, glow_w + 40), h_span), pygame.SRCALPHA)
+                for i in range(14):
+                    sy_loc = (i * 137.0 - t_anim * (175.0 + (i % 3) * 28.0)) % (h_span + 60) - 30
+                    u_s = (sy_loc + top) + t_anim * 140.0
+                    edge_x = base_x + 44.0 + 22.0 * math.sin(u_s * 0.026) + 14.0 * math.sin(t_anim * 2.4 + i)
+                    if 0 <= edge_x < smoke.get_width() - 20:
+                        sr = 18 + (i % 4) * 5
+                        pygame.draw.circle(smoke, (30, 22, 26, 68), (int(edge_x + 12), int(sy_loc)), sr)
+                fr.blit(smoke, (0, top))
+
+            # 3. Three overlapping scrolling flame ribbons:
+            #    Outer crimson (#B91C1C) -> Mid blazing orange (#F97316) -> Inner incandescent core (#FEF08A)
+            pygame.draw.polygon(fr, (185, 28, 28), [(-20.0, float(top - 20))] + pts1 + [(-20.0, float(H + 20))])
+            pygame.draw.polygon(fr, (249, 115, 22), [(-20.0, float(top - 20))] + pts2 + [(-20.0, float(H + 20))])
+            pygame.draw.polygon(fr, (254, 240, 138), [(-20.0, float(top - 20))] + pts3 + [(-20.0, float(H + 20))])
+            if base_x > 26:
+                hot = [(-20.0, float(top - 20))] + [(px - 28.0, py) for px, py in pts3] + [(-20.0, float(H + 20))]
+                pygame.draw.polygon(fr, (255, 252, 214), hot)
+
+            # 4. Rising bright ember sparks ahead of the flames
+            for i in range(22):
+                spd_y = 250.0 + (i % 5) * 38.0
+                ey = top + ((i * 113.0 - t_anim * spd_y) % h_span)
+                life = ((i * 0.31 + t_anim * 1.4) % 1.0)
+                ex = base_x + 24.0 + life * 68.0 + 16.0 * math.sin(t_anim * 5.5 + i * 1.7)
+                if -10 <= ex <= W:
+                    er = max(2, int((4.5 - 2.5 * life)))
+                    pygame.draw.circle(fr, (249, 115, 22), (int(ex), int(ey)), er + 2)
+                    pygame.draw.circle(fr, (254, 240, 138), (int(ex), int(ey)), er)
+
+        # 5. Foreground Incineration Burn VFX (bright orange-white flare + dark char puff -> delayed ghost)
+        for e in self.tr.events:
+            if e.kind != "elimination" or e.data.get("cause") != "left_behind" or e.pos is None:
+                continue
+            age = play_t - e.t
+            if age < 0.0 or age > 1.05:
+                continue
+            sx, sy = cam.to_screen(*e.pos)
+            sx = max(float(max(28.0, base_x + 18.0)), sx)
+            if -40 <= sx <= W + 40 and top <= sy <= H:
+                seed = int(e.t * 1000) % 997
+                effects.draw_incineration(fr, (sx, sy), age, seed)
+                if age >= 0.16:
+                    col = renderer.hex_rgb(HERO_BY_KEY[e.actors[0]].colour) if e.actors[0] in HERO_BY_KEY else (230, 220, 200)
+                    effects.draw_ghost(fr, (sx, sy - 10), age - 0.16, col)
+
     # ------------------------------------------------------------------ frame & Commentator Host state
     def _ranks(self, fi: int) -> dict[str, int]:
         rows, flags = self.tr.frames[fi], self.tr.flags[fi]
@@ -1207,34 +1296,45 @@ class Renderer:
         return {self.tr.keys[i]: r + 1 for r, i in enumerate(alive_heroes)}
 
     def tuno_state(self, play_t: float, segment: str) -> tuple[str, str]:
-        """v3.2/3.3: MC Tuno's 6 reaction poses + bottom-anchored micro-callout tags. The cold open is always HYPED."""
+        """v3.4: MC Tuno's 6 reaction poses (zero chin badge pills; voice + RMS lip-sync + face carry reactions)."""
         if segment == "cold":
-            return "HYPED_TALKING", "LET'S GO!"
+            return "HYPED_TALKING", ""
         if segment in ("card", "replay"):
-            return "TROPHY_CHEER", ("GG!" if segment == "replay" else "")
+            return "TROPHY_CHEER", ""
         recent = [e for e in self.elims if 0 <= play_t - e.t < 1.15]
-        # 1. Multi-KO wipeout -> LAUGHING_TEARS
         for e in recent:
             if sum(1 for o in self.elims if e.t - 1.1 <= o.t <= e.t) >= 2:
-                return "LAUGHING_TEARS", ("WIPEOUT!" if play_t - e.t < 0.85 else "")
-        # 2. Betrayal / Hero-on-Hero KO -> SHOCKED_JAWDROP
+                return "LAUGHING_TEARS", ""
         if any(e.data.get("hero") and e.data.get("by_hero") for e in recent):
-            return "SHOCKED_JAWDROP", "NO WAY!"
-        # 3. Dumb unforced fall / Dummy self-KO -> FACEPALM
+            return "SHOCKED_JAWDROP", ""
         if recent and not recent[-1].data.get("by_hero") and recent[-1].data.get("cause") in ("fell", "lava"):
-            tag = "OOF!" if recent[-1].data.get("hero") else "RIP!"
-            return "FACEPALM", (tag if play_t - recent[-1].t < 0.8 else "")
-        # 4. Overtime Chaos / Final 3 clutch -> SWEATING_INTENSE
+            return "FACEPALM", ""
         if play_t >= self.overtime_t:
-            tag = "WHOA!" if (len(self.late_leads) >= 1 and any(0 <= play_t - lt < 0.85 for lt in self.late_leads)) else ""
-            if 0 <= play_t - self.overtime_t < 0.9:
-                tag = "WHOA!"
-            return "SWEATING_INTENSE", tag
-        # 5. Twist / Speed-up escalation -> HYPED_TALKING with callout
-        for e in self.escalations:
-            if 0.0 <= play_t - e.t < 0.75:
-                return "HYPED_TALKING", "LET'S GO!"
+            return "SWEATING_INTENSE", ""
         return "HYPED_TALKING", ""
+
+    def _active_twist_badge(self, fi: int, play_t: float) -> tuple[str, str, tuple[int, int, int]] | None:
+        """Returns (icon_kind, label, accent_rgb) whenever a twist or speed escalation is active during gameplay."""
+        zone = self.tr.zones[fi]
+        tw = self.meta["recipe"].get("twist")
+        if tw and zone.get("twist_on"):
+            mapping = {
+                "heavy_gravity": ("down", "HEAVY GRAV", (255, 118, 42)),
+                "low_gravity": ("up", "LOW GRAV", (0, 229, 255)),
+                "slippery_floor": ("ice", "SLIPPERY ICE", (125, 232, 255)),
+                "speed_boost_zones": ("bolt", "2X BOOST", (250, 204, 21)),
+                "shrinking_arena": ("orb", "SHRINKING", (255, 82, 120)),
+                "giant_ball": ("orb", "GIANT BALL", (255, 77, 166)),
+                "reversed_controls": ("orb", "REVERSED", (192, 112, 255)),
+                "random_teleport_pads": ("orb", "TELEPORT", (148, 92, 255)),
+            }
+            if tw in mapping:
+                return mapping[tw]
+        if play_t >= self.overtime_t or TIMELINE.speed_at(play_t) >= 1.6:
+            return ("bolt", "2X OVERTIME", (255, 72, 88))
+        if TIMELINE.speed_at(play_t) > 1.05:
+            return ("bolt", "1.3X SPEED", (250, 204, 21))
+        return None
 
     def render_shot(self, shot: Shot, index: int) -> pygame.Surface:
         hud.TEXT_BOXES.clear()
@@ -1250,6 +1350,7 @@ class Renderer:
         elif shot.zoom_mult != 1.0:
             cam = Cam(cam.x, cam.y, min(cam.zoom * shot.zoom_mult, cap), cam.shake)
         play_t = (fi - self.pre) / FPS
+        eff_play_t = play_t if shot.segment not in ("cold", "replay") else (tf - self.pre) / FPS
         hud_fi = {"replay": self.end_f, "card": self.end_f}.get(shot.segment, fi)
         ranks = self._ranks(hud_fi)
         slow = shot.segment in ("cold", "replay")
@@ -1261,11 +1362,15 @@ class Renderer:
         if shot.segment == "replay":
             effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)
         if shot.segment in ("play", "replay", "cold"):
-            self.draw_juice(cam, play_t if not slow else (tf - self.pre) / FPS, t_anim, popups=shot.segment != "cold")
+            self.draw_juice(cam, eff_play_t, t_anim, popups=shot.segment != "cold")
         if self.tr.mode == "SIDE_VIEW":
             self._abyss(cam, fi, t_anim)
+            if shot.segment != "card":
+                # v3.4: Foreground Killer Fire Wall ABOVE all platforms, seesaws, balls, and abyss (below HUD only)
+                self._draw_killer_fire(cam, fi, eff_play_t, t_anim)
         self.frame.set_clip(None)
-        self._overlays(shot, play_t, t_anim, hud_fi, ranks, index / FPS)
+        rms = self.voice_rms[index] if (self.voice_rms is not None and index < len(self.voice_rms)) else None
+        self._overlays(shot, play_t, t_anim, hud_fi, ranks, index / FPS, voice_rms=rms)
         return self.frame
 
     def _abyss(self, cam: Cam, fi: int, t: float) -> None:
@@ -1273,11 +1378,9 @@ class Renderer:
         fr, key = self.frame, self.theme.key
         ky = self.tr.zones[fi].get("lava_y", self.meta.get("kill_y", 500.0))
         y0 = int(cam.to_screen(0, ky)[1])
-        # Keep pit trench recessed cleanly below active platforms so zero slab undersides clip behind spikes
         y0 = max(1540, int(self._lowest_slab_y + 28), min(1760, y0))
         y0 = min(1760, y0)
 
-        # Recessed dark stone pit lip + deep abyss trench backdrop
         pygame.draw.rect(fr, BLACK, (0, y0 - 8, W, H - y0 + 8))
         pygame.draw.rect(fr, (54, 52, 74), (0, y0 - 6, W, 12))
         pygame.draw.rect(fr, (18, 16, 30), (0, y0 + 6, W, H - y0 - 6))
@@ -1292,7 +1395,6 @@ class Renderer:
                 by = y0 + 56 + 24 * math.sin(t * 2.4 + i)
                 pygame.draw.circle(fr, (255, 204, 64), (bx, by), 9 + 3 * math.sin(t * 6 + i))
         else:
-            # Layered metallic castle spikes recessed inside the dark pit trench
             for x in range(-8, W + 48, 52):
                 btip = (x + 52, y0 + 16)
                 pygame.draw.polygon(fr, (42, 46, 64), [(x + 26, y0 + 78), btip, (x + 78, y0 + 78)])
@@ -1305,7 +1407,6 @@ class Renderer:
             pygame.draw.rect(fr, (26, 26, 40), (0, y0 + 74, W, H - y0 - 74))
 
     def _talking(self, out_t: float) -> bool | None:
-        """MC Tuno lip-sync: mouth flaps only while a narrated word is being spoken (None = no narration track)."""
         if not self.speech:
             return None
         for ln in self.speech:
@@ -1317,7 +1418,7 @@ class Renderer:
         return False
 
     def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int, ranks: dict[str, int],
-                  out_t: float = 0.0) -> None:
+                  out_t: float = 0.0, voice_rms: float | None = None) -> None:
         fr = self.frame
         flags = self.tr.flags[fi]
         alive = int(sum(1 for f in flags if (f & T.ALIVE) or (self.tr.mode == "TOP_DOWN" and (f & T.FALLING))))
@@ -1326,18 +1427,35 @@ class Renderer:
         for h in self.heroes:
             f = flags[self.tr.index(h.key)]
             status[h.key] = "crown" if f & T.WINNER else ("alive" if f & T.ALIVE else "out")
-        recent = sum(1 for e in self.tr.events if e.kind == "elimination" and 0 <= play_t - e.t < 1.5)
-        t_st, t_sp = self.tuno_state(play_t, shot.segment)
+
+        # Snappy 1.22x red pulse + shake on ALIVE pill on EVERY elimination
+        elim_ages = [play_t - e.t for e in self.elims if 0.0 <= play_t - e.t <= 0.38] if shot.segment == "play" else []
+        pulse = max(((1.0 - a / 0.38) ** 1.5 for a in elim_ages), default=0.0)
+
+        # Smooth dynamic Top-5 Leaderboard pill width as alive heroes drop below 5
+        live_heroes_n = sum(1 for h in self.heroes if status.get(h.key) != "out")
+        hero_ko_ages = [play_t - e.t for e in self.elims if e.data.get("hero") and 0.0 <= play_t - e.t <= 0.24]
+        eff_slots = min(5.0, float(live_heroes_n) + sum(1.0 - a / 0.24 for a in hero_ko_ages))
+
+        t_st, _ = self.tuno_state(play_t, shot.segment)
+        twist_badge = self._active_twist_badge(fi, play_t) if shot.segment == "play" else None
+
         if shot.segment == "cold":
             scenery.draw_pick_strip(fr, self.heroes, t_anim, hud.TEXT_BOXES)
-            hud.blit_text(fr, hud.fit_width(hud.outlined("WHO SURVIVES?", 84, fill=(255, 214, 0), width=8), hud.MAX_BANNER_W),
-                          center=(W / 2, 520))
+            # v3.4: Display Arena Title banner at top/center on 00:00 (no duplicate "WHO SURVIVES?")
+            arena_title = self.meta["recipe"]["arena"].replace("_", " ").upper()
+            hud.blit_text(
+                fr,
+                hud.fit_width(hud.outlined(arena_title, 76, fill=(255, 214, 0), width=8), hud.MAX_BANNER_W),
+                center=(W / 2, 345),
+            )
         elif shot.segment != "card":
             scenery.draw_panel(fr, alive, total, self.heroes, status, ranks, hud.TEXT_BOXES,
-                               pulse=1.0 if recent >= 3 else 0.0)
-        # Draw header + Commentator Booth Cam AFTER panel so bottom-anchored speech tags are always crisp on top
-        scenery.draw_header(fr, self.castle, self.ep.ep_label, t_st, t_anim, hud.TEXT_BOXES, speech=t_sp,
-                            talking=self._talking(out_t))
+                               pulse=pulse, t=t_anim, eff_slots=eff_slots)
+
+        # Broadcast Header + 240x220 MC Tuno Booth Cam (active with RMS lip-sync across ALL segments incl. Winner Card!)
+        scenery.draw_header(fr, self.castle, self.ep.ep_label, t_st, t_anim, hud.TEXT_BOXES,
+                            talking=self._talking(out_t), voice_rms=voice_rms, twist_badge=twist_badge)
 
         if shot.segment == "play":
             for start, txt in self.banners:
@@ -1362,12 +1480,13 @@ def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0, s
     out.parent.mkdir(parents=True, exist_ok=True)
     snd_info: dict = {}
     if sound and audio is None:
-        # M5: comedy commentary (Gemini/templated -> edge-tts) + procedural SFX + chiptune, mixed to -14 LUFS
+        # M5/v3.4: MC Tuno narration (isolated voice stem -> 33ms RMS lip-sync) + ducked SFX + funk BGM (-18/-24 dB)
         from src.audio.mix import build_soundtrack
         snd = build_soundtrack(r, ep, out.with_suffix(".wav"))
         audio = snd["wav"]
         r.speech = snd["speech"]
-        snd_info = {k: v for k, v in snd.items() if k not in ("speech", "wav")}
+        r.voice_rms = snd["frame_rms"]
+        snd_info = {k: v for k, v in snd.items() if k not in ("speech", "wav", "frame_rms", "voice_wav")}
         snd_info["lines"] = [ln["text"] for ln in snd["speech"]]
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
            "-i", "-"]
@@ -1381,7 +1500,6 @@ def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0, s
     assert proc.stdin is not None
     boxes = []
     n = len(ep.shots)
-    # Include the exact final frame (n - 1) when stills >= 6 so we can visually verify zero cold-open flash at end!
     pcts = (0.02, 0.16, 0.42, 0.68, 0.84, 1.0)[:stills]
     still_at = {min(n - 1, int((n - 1) * k)) for k in pcts} if stills else set()
     for i, shot in enumerate(ep.shots):

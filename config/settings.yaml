@@ -32,7 +32,7 @@ timeline:
   replay_speed: 0.3
   replay_source_s: 0.45
   replay_zoom: 1.35
-  winner_card_s: 2.0
+  winner_card_s: 2.1
   loop_tail_s: 0.0
   two_stage_chance: 0.30
   two_stage_qualifier_s: 8
@@ -46,7 +46,7 @@ layout:
   header: [0, 255]
   viewport: [255, 1650]
   action_bias: [720, 1220]
-  captions: {y: [1240, 1440], x: [100, 940]}
+  captions: {y: [1480, 1620], x: [60, 1020]}
   bottom_band: [1650, 1920]
   right_ui_column: {x_min: 960, y: [900, 1650]}
 
@@ -158,12 +158,15 @@ audio:
   sample_rate: 44100
   narration_db: 0
   sfx_db: -7
-  music_db: -17           # chiptune bed when nobody is talking
-  duck_db: -8             # extra music ducking under narration
+  sfx_duck_db: -7         # v3.4: attenuate loud SFX by -7 dB during active narration
+  music_db: -18           # v3.4: upbeat game-show funk BGM at -18 dB
+  duck_db: -6             # v3.4: ducks smoothly from -18 dB to -24 dB when narration RMS > 0.02
   loudness_lufs: -14
   sfx_cap_per_s: 12
-  voice: "en-US-GuyNeural"    # edge-tts (free) MC Tuno voice
-  voice_rate: "+14%"
-  voice_pitch: "+6Hz"
-  gemini_model: "gemini-2.5-flash"   # free-tier comedy writer; templated lines are the fallback
-  bpm: 150
+  voice: "en-US-BrianMultilingualNeural"   # v3.4: energetic broadcaster voice
+  voice_fallback: "en-US-DavisNeural"
+  voice_rate: "+20%"
+  voice_pitch: "+4Hz"
+  gemini_model: "gemini-2.5-flash"
+  gemini_models: ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+  bpm: 126
