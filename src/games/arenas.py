@@ -725,6 +725,7 @@ class BumperRing(TopArena):
             self.ring_bumpers.append((bp, a, d))
         self.sim.walkable = lambda x, y: x * x + y * y < self.R * self.R
         self.sim.statics.append({"type": "ring", "c": (0, 0), "r": self.R0})
+        self.sim.zones["ring_r"] = self.R0
         self.sim.hooks_step.append(self._step_ring)
         self.frame_top(self.R0)
 

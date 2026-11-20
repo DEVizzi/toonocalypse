@@ -104,7 +104,8 @@ def track(trace: T.Trace) -> list[Cam]:
     hero_kos = [(pre + int(e.t * FPS), e.pos[0], e.pos[1]) for e in trace.events
                 if e.kind == "elimination" and e.data.get("hero") and e.pos is not None]
     bias_win = int(0.50 * FPS)
-    r0 = trace.zones[0].get("ring_r", 1.0)
+    r0 = next((float(s["r"]) for s in meta.get("statics", []) if s.get("type") == "ring"),
+              float(trace.zones[0].get("ring_r", 1.0)))
     vert_tower = bool(meta.get("vertical_tower", False))
     held_lead: int | None = None                 # hysteresis: the #1 the camera is currently committed to
     cand_lead: int | None = None
@@ -121,8 +122,9 @@ def track(trace: T.Trace) -> list[Cam]:
             # v4.0 Part A.3: Lock TOP_DOWN camera center strictly at (0, 0) (zoom + micro-shake only!)
             tx, ty = 0.0, 0.0
             z0 = trace.zones[f]
-            ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * z0.get("ring_r", 1.0) / max(1.0, r0)
-            tz = base_zoom * min(top_zmax, 1.0 / max(ek, 1e-3))
+            ring_scale = float(z0.get("ring_r", r0)) / max(1.0, r0)
+            ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * ring_scale
+            tz = base_zoom * min(top_zmax, max(1.0, 1.0 / max(ek, 1e-3)))
         elif vert_tower:
             alive = [i for i in heroes if flags[i] & T.ALIVE] or everyone
             if not alive:

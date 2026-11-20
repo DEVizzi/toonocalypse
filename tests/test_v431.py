@@ -54,6 +54,22 @@ class TestV431(unittest.TestCase):
         self.assertEqual((st["season_number"], st["race_number"], st["total_day"]), (1, 1, 1))
         self.assertTrue(all(not any(v.values()) for v in st["stats"].values()))
 
+    def test_bumper_ring_camera_zoom_never_collapses(self) -> None:
+        import random
+        from src.characters.roster import HEROES, make_extras
+        from src.games import recipe_generator
+        from src.physics.camera import top_base_zoom, track
+        from src.physics.engine import Sim
+
+        rng = random.Random(318)
+        r, _ = recipe_generator.generate([], 1, 318, mode="TOP_DOWN", arena="bumper_ring",
+                                         goal="collect_items", season_theme="frostbite_siege")
+        tr = Sim(r, list(HEROES), make_extras(4, rng), 318013).run()
+        cams = track(tr)
+        bz = top_base_zoom(tr.meta)
+        self.assertGreaterEqual(min(c.zoom for c in cams), bz * 0.98)
+        self.assertLessEqual(max(c.zoom for c in cams), bz * 2.15)
+
 
 if __name__ == "__main__":
     unittest.main()
