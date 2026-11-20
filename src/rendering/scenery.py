@@ -219,8 +219,8 @@ def draw_cliff(frame: pygame.Surface, pts: list, zoom: float, theme, mat: str) -
     pygame.draw.polygon(frame, rock, poly)
     # strata + shading
     for f, col in ((0.28, light), (0.55, dark)):
-        pygame.draw.lines(frame, col, False, [(x, ay + (by - ay) * ((x - ax) / span) + (y - ay - (by - ay) * ((x - ax) / span)) * f)
-                                             for x, y in bottom[1:-1]] or [(ax, ay), (bx, by)], max(2, int(4 * zoom)))
+        line = [(x, ay + (by - ay) * ((x - ax) / span) + (y - ay - (by - ay) * ((x - ax) / span)) * f) for x, y in bottom]
+        pygame.draw.lines(frame, col, False, line, max(2, int(4 * zoom)))
     shade = [(x, y) for x, y in bottom]
     pygame.draw.lines(frame, dark, False, shade, max(3, int(10 * zoom)))
     pygame.draw.polygon(frame, BLACK, poly, max(3, int(4 * zoom)))

@@ -19,41 +19,28 @@ The governing spec is **"Toon Toon Castle: Master Build Brief & Technical Specif
   - `src/config.py` provides TIMELINE, LAYOUT and W/H/FPS.
   - `requirements.txt` is pinned for Python 3.11 (numpy 2.3.5, scipy 1.16.3, pygame-ce 2.5.8, pymunk 7.3.1, ...).
   - Fonts: LuckiestGuy, Fredoka, Bangers, Anton, ComicNeue, each with its licence file; CREDITS.md.
-- **M2 cast: rendered and reviewed, still needs a re-render and commit.**
-  - `tests/render_cast_sheet.py` produced the cast sheet, and it looked good.
-  - Later tweaks: stronger rim, bigger Pip face, toned-down Glitch stripes, popups in 2 rows.
-  - TODO: re-render via preview.yml, then commit `docs/cast_sheet.png` (acceptance).
-  - Modules: `src/characters/{roster,expressions,renderer,tuno}.py`, `src/rendering/effects.py`.
-- **M3 physics, recipes and scorer: IN PROGRESS** (code written, tuning not done).
-  - Modules:
-    - `src/physics/{engine,ai,trace,scorer,camera}.py`
-    - `src/games/{base,arenas,goals,hazards,twists,themes,recipe_generator}.py`
-  - Dev harnesses: `python -m tests.simstat any`, then `python -m tests.batch SIDE_VIEW 3` and `TOP_DOWN 5`.
-  - Tests written but not yet run in CI: `tests/test_anti_repeat.py`, `tests/test_timeline.py`.
-  - Tests still to write: test_physics_modes, test_scorer, test_balance (1000 runs per mode, which will need a sharded slow workflow).
-  - Key fixes so far:
-    - Drive forces are re-applied every substep (`Sim.push` / `_apply_drives`), because pymunk resets forces after each step.
-    - Side-view drive also overcomes sliding friction, since rotation is locked.
-    - Top-down uses capped velocity-error steering.
-    - The left-behind camera proxy is eased, not monotonic.
-    - In side view a "collapsing floor" chase (`chase_x`) is paced to reach the finish at about 36 s.
-    - In top-down the walkable edge creeps inward from 12 s (`edge_k`).
-    - Hex tiles use a load model (2.4 contestant-seconds), regrow until 22 s, and the AI flees loaded tiles.
-    - Top-down avoidance steers away from the actual direction of the nearest drop (`edge_vector`).
-  - Current state:
-    - Simulations take about 0.5–1.8 s each.
-    - Durations are mostly 26–36 s now.
-    - **Extras still win about 50% of runs; the balance target is ≤15%.**
-  - Next balance ideas:
-    - Make extras less competent; they already have rim anchors, speed 130–180 before compression, a 0.6 force factor and poor jumping.
-    - Run a parameter sweep.
-    - Check per-hero win shares (5–20%).
-- **M4 silent render: CODE WRITTEN, never run.**
-  - `src/rendering/{hud,pipeline}.py` (shot planning, world, props, zones, contestants, juice, HUD, ffmpeg pipe) and `src/physics/camera.py`.
-  - Next:
-    1. Add `src/main.py` (CLI: `--dry-run --seed --arena --goal`). It should generate a recipe, simulate N seeds, score, pick the best, then call `pipeline.encode()`.
-    2. Run it via preview.yml to make the 3 silent samples (side-view race, top-down sumo, Sunday rumble).
-    3. Fix the bugs that show up.
+- **M2 cast: DONE.** `docs/cast_sheet.png` committed (accepted).
+- **M3 physics, recipes and scorer: tuning mostly done** (2026-11-20 session 2).
+  - Pacing: `Sim._pacing()` computes a schedule-driven `pressure` (config `physics.pacing`) that drives the SIDE
+    collapsing chase speed, TOP edge shrink (`edge_k` from 6 s, down to 0.12), bumper-ring shrink and hex crack load.
+    LEFT BEHIND widens (`_behind_k`) when ahead of schedule. SIDE gap widths ramp along the course (`course_ramp`),
+    courses are longer (`course_length_scale`).
+  - Extras are now **bots** (owner decision): grey round robots with an antenna, hero-sized (r=24), 10-14 per
+    Spotlight episode, 16 on Sundays; they freeze in cartoon panic at drops (`physics.extras`), jump lower, ignore
+    far TOP goals. Goals: hold_a_zone is king-of-the-hill (contested = no points); hot potato tie-break = centre.
+  - Hero tweaks: Juggernaut momentum (SIDE), Floater weak air control, TOP heroes keep wider edge margin.
+  - Latest win shares (dev samples, `python -m tests.winstat MODE N`): SIDE extras ~12%, heroes 2-19%;
+    TOP extras ~17-25%, Juggernaut ~25% (still over 20%). Still TODO: per-hero fine-tune with the 1,000-run
+    sharded `test_balance.py` in a slow workflow; write test_physics_modes / test_scorer; ~45% of SIDE runs end
+    < 26 s (Best-of-N now ranks in-range runs first, so the chosen run is usually fine).
+  - Dev harnesses: `tests.winstat`, `tests.runlog`, `tests.simstat`, `tests.batch`.
+- **M4 silent render: renders working; samples posted, awaiting owner review.**
+  - `src/main.py` CLI (`--dry-run --seed --arena --goal --mode --kind rumble --flash-forward --stills N`).
+  - Visual overhaul toward the owner's reference image: `src/rendering/scenery.py` (cloud sky + distant towers,
+    castle header with Lord Tuno's balcony, white episode pill, bottom status panel with hero portraits and live
+    ranks, floating rocky capped cliffs, floating top-down platforms with shadows), camera zoom 1.4 in SIDE and
+    zoom-in as TOP arenas shrink (config `render`).
+  - Render takes ~10-20 s per video on Actions. `--stills N` saves half-size PNGs for review (I can't play mp4s).
 - **M5–M8: not started.** Commentary/TTS/audio, state and lore, workflows and tokens, publishing.
 
 ## Notes
