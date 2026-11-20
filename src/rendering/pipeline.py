@@ -568,7 +568,8 @@ class Renderer:
         if shot.zoom_mult != 1.0 and shot.focus:
             i = self.tr.index(shot.focus)
             rows, _, _ = self.tr.sample(tf / FPS)
-            cam = Cam(float(rows[i, 0]), float(rows[i, 1]), cam.zoom * shot.zoom_mult)
+            cap = self.cams[min(self.pre, len(self.cams) - 1)].zoom * 1.9     # never blow sprites up into pixels
+            cam = Cam(float(rows[i, 0]), float(rows[i, 1]), min(cam.zoom * shot.zoom_mult, cap))
         if shot.segment == "tail":
             cam = self.cams[0]
             fi = 0
