@@ -17,26 +17,28 @@ video:
   duration_max_s: 50
 
 # §4 master episode timeline (single source of truth; read through src/config.TIMELINE)
+# OWNER OVERRIDE 2026-11-20: tighter pacing for Shorts/Reels retention -> total video 25-32 s
+# (spec v3.0 had gameplay 26-36 s, replay 2.2 s, card 2.5 s).
 timeline:
   cold_open_s: 0.5
   flash_forward_s: 1.0
   flash_forward_chance: 0.30
-  gameplay_target_min_s: 26
-  gameplay_target_max_s: 36
-  forced_resolution_s: 36
-  hard_stop_s: 38
-  escalation: [[0, 1.0, ""], [12, 1.3, "SPEED UP!"], [22, 1.65, "OVERTIME CHAOS!"]]
-  replay_s: 2.2
-  replay_speed: 0.4
-  replay_source_s: 0.9
+  gameplay_target_min_s: 20
+  gameplay_target_max_s: 27
+  forced_resolution_s: 27
+  hard_stop_s: 29
+  escalation: [[0, 1.0, ""], [9, 1.3, "SPEED UP!"], [17, 1.65, "OVERTIME CHAOS!"]]
+  replay_s: 1.5
+  replay_speed: 0.3
+  replay_source_s: 0.45
   replay_zoom: 1.35
-  winner_card_s: 2.5
+  winner_card_s: 3.0
   loop_tail_s: 0.4
   two_stage_chance: 0.30
-  two_stage_qualifier_s: 14
+  two_stage_qualifier_s: 10
   two_stage_survivors: 6
   two_stage_sting_s: 0.6
-  two_stage_final_s: 16
+  two_stage_final_s: 12
 
 # §8 safe zones (y ranges, 1080x1920)
 layout:
@@ -69,30 +71,41 @@ physics:
   speed_centre: 255        # effective max speed = centre + (stat - centre) * spread (keeps §9.2 ordering)
   speed_spread: 0.45
   pacing:                   # schedule-driven arena pressure (see Sim._pacing)
-    schedule_end_s: 33
-    schedule_power: 1.6
+    schedule_end_s: 25
+    schedule_power: 1.3
     pressure_gain: 4.0
     pressure_max: 3.0
-    chase_min: 0.6
-    chase_max: 1.8
-    shrink_start_s: 6
+    left_behind_views: 2.3    # LEFT BEHIND distance behind the camera centre, in 1080-px view widths
+    chase_finish_s: 32        # SIDE collapsing floor would reach the finish line at this gameplay time
+    chase_min: 0.4
+    chase_max: 1.15
+    shrink_start_s: 3
     shrink_rate: 0.016
     edge_k_min: 0.12
   extras:                   # extras are fodder: they freeze in cartoon panic at drops and hazards
     panic_per_s: 3.5
     panic_s: [0.3, 0.8]
     jump_k: 0.9              # bots jump lower than heroes
+    mill_radius: 1.15         # TOP: bots mill about this far out (x spawn radius), near the rim
     goal_sight_px: 180       # TOP: extras ignore goal targets farther than this
   juggernaut_momentum: 0.45  # SIDE: Juggernaut's top speed grows up to +45% while rolling at speed
   floater_air_control: 0.45  # SIDE: Floater drifts; it steers poorly in the air
+  hazard_escalation_exp: 1.5  # hazards scale with speed_mult ** exp (overtime 1.65x -> 2.5x hazards)
+  goal_timers:                # survive/collect timers and zone hold, sized to the gameplay window
+    survive_s: [21, 25]
+    collect_s: [21, 25]
+    zone_hold_s: 7
+    bomb_pop_s: [6.0, 4.5]    # normal, overtime
+  top_quake: {t: 1.5, dv: 380, stun_s: 0.35}   # TOP opening lever: outward floor buck (owner: action in 4 s)
   hero_edge_margin: 1.35     # TOP: heroes keep this much more distance from drops
   shove_top: 240             # TOP shove impulse per unit mass (lunger mass capped at 3x the target's)
-  course_length_scale: 1.45  # SIDE section counts multiplier
-  course_ramp: [0.55, 1.3]  # SIDE gap-width multiplier from the start to the finish of a course
+  course_length_scale: 1.35  # SIDE section counts multiplier
+  course_ramp: [0.6, 1.1]  # SIDE gap-width multiplier from the start to the finish of a course
 
 render:
   side_zoom: 1.4          # camera zoom in SIDE_VIEW (bigger, chunkier characters)
   top_zoom: 1.0           # multiplier on the fit-to-arena zoom in TOP_DOWN
+  final3_zoom: 1.5        # extra zoom when 3 or fewer contestants survive (every mode)
 
 mode_mix: {SIDE_VIEW: 0.65, TOP_DOWN: 0.35}
 

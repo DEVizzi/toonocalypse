@@ -70,7 +70,7 @@ class SpinningBars(Hazard):
     def frame(self, t):
         spin_up = 1.0 if self.sim.mode == SIDE else min(1.0, 0.3 + t / 8)   # TOP bars wind up after the start
         for p, w in zip(self.bars, self.spin):
-            p.body.angular_velocity = w * self.sim.speed_mult * spin_up
+            p.body.angular_velocity = w * self.sim.hazard_mult * spin_up
 
 
 class SwingingHammers(Hazard):
@@ -92,8 +92,8 @@ class SwingingHammers(Hazard):
 
     def frame(self, t):
         for p, ph, w in self.hammers:
-            a = 1.05 * math.sin(t * w * self.sim.speed_mult + ph)
-            da = 1.05 * math.cos(t * w * self.sim.speed_mult + ph) * w * self.sim.speed_mult
+            a = 1.05 * math.sin(t * w * self.sim.hazard_mult + ph)
+            da = 1.05 * math.cos(t * w * self.sim.hazard_mult + ph) * w * self.sim.hazard_mult
             p.body.angle = a
             p.body.angular_velocity = da
 
@@ -134,7 +134,7 @@ class FallingFloorTiles(Hazard):
                     if on:
                         tl["hit"] = t
                         break
-            elif tl["gone_at"] is None and t - tl["hit"] > (0.6 if self.sim.mode == SIDE else 1.1) / self.sim.speed_mult:
+            elif tl["gone_at"] is None and t - tl["hit"] > (0.6 if self.sim.mode == SIDE else 1.1) / self.sim.hazard_mult:
                 tl["gone_at"] = t
                 if tl["prop"] is not None:
                     tl["prop"].body.position = (tl["prop"].body.position.x, tl["prop"].body.position.y + 4000)
@@ -173,12 +173,12 @@ class RollingBoulders(Hazard):
 
     def frame(self, t):
         if t >= self.next:
-            self.next = t + self.r.uniform(2.8, 4.2) / self.sim.speed_mult
+            self.next = t + self.r.uniform(2.8, 4.2) / self.sim.hazard_mult
             ahead = self.sim.cam_x + self.sim.view_w * 0.9
             gy = self.sim.arena.ground_y_at(ahead)
             body = pymunk.Body(30, pymunk.moment_for_circle(30, 0, 46))
             body.position = (ahead, gy - 260)
-            body.velocity = (-260 * self.sim.speed_mult, 0)
+            body.velocity = (-260 * self.sim.hazard_mult, 0)
             shape = pymunk.Circle(body, 46)
             p = self.sim.add_prop(body, [shape], "boulder", hazard=True)
             shape.friction, shape.elasticity = 0.9, 0.2
@@ -208,7 +208,7 @@ class WindGusts(Hazard):
     def push(self, dt):
         if not self.active:
             return
-        f = 900.0 * self.sim.speed_mult      # mass-independent force: light heroes fly further
+        f = 900.0 * self.sim.hazard_mult      # mass-independent force: light heroes fly further
         if self.sim.mode == SIDE:
             fx, fy = f * self.dir, -f * 0.35
         else:
@@ -235,7 +235,7 @@ class LavaFloor(Hazard):
         self.top = self.sim.arena.ground_y_at(self.sim.finish_x or 0) if self.sim.finish_x else 0
 
     def frame(self, t):
-        rate = 6.0 * (self.sim.speed_mult ** 2)
+        rate = 6.0 * (self.sim.hazard_mult ** 2)
         if t > 6:
             self.y -= rate / 30
         for c in self.sim.alive():
@@ -266,7 +266,7 @@ class MovingWalls(Hazard):
 
     def frame(self, t):
         for p, base, axis, ph in self.walls:
-            w = 1.3 * self.sim.speed_mult
+            w = 1.3 * self.sim.hazard_mult
             if axis == "y":   # SIDE: piston rising out of the ground / TOP: sweep along y
                 amp = 90 if self.sim.mode == SIDE else 170
                 p.body.velocity = (0, math.cos(t * w + ph) * amp * w)
@@ -284,17 +284,17 @@ class CannonBalls(Hazard):
 
     def frame(self, t):
         if t >= self.next:
-            self.next = t + self.r.uniform(1.6, 2.6) / self.sim.speed_mult
+            self.next = t + self.r.uniform(1.6, 2.6) / self.sim.hazard_mult
             body = pymunk.Body(6, pymunk.moment_for_circle(6, 0, 20))
             if self.sim.mode == SIDE:
                 x = self.sim.cam_x + self.sim.view_w * 0.75
                 gy = self.sim.arena.ground_y_at(x)
                 body.position = (x, gy - self.r.uniform(40, 120))
-                body.velocity = (-620 * self.sim.speed_mult, -60)
+                body.velocity = (-620 * self.sim.hazard_mult, -60)
             else:
                 a = self.r.uniform(0, 6.28)
                 body.position = (math.cos(a) * 560, math.sin(a) * 560)
-                body.velocity = (-math.cos(a) * 520 * self.sim.speed_mult, -math.sin(a) * 520 * self.sim.speed_mult)
+                body.velocity = (-math.cos(a) * 520 * self.sim.hazard_mult, -math.sin(a) * 520 * self.sim.hazard_mult)
                 self.sim.event("cannon", [], (math.cos(a) * 520, math.sin(a) * 520))
             shape = pymunk.Circle(body, 20)
             p = self.sim.add_prop(body, [shape], "cannonball", hazard=True)

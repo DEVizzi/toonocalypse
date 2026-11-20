@@ -16,7 +16,7 @@ from src.characters.tuno import draw_tuno
 from src.config import H, LAYOUT, W, font_path
 
 HEADER_BOTTOM = LAYOUT["header"][1]
-PANEL = pygame.Rect(28, 1462, 922, 172)        # bottom status panel (left of the right UI column, above the band)
+PANEL = pygame.Rect(20, 312, W - 40, 104)       # compact status bar just under the castle wall (clear of Shorts/Reels UI)
 
 
 def mix(a, b, k: float) -> tuple[int, int, int]:
@@ -140,57 +140,55 @@ def _crown(frame, cx: float, cy: float, w: float) -> None:
     pygame.draw.polygon(frame, BLACK, pts, 2)
 
 
+def _fit(surf: pygame.Surface, width: float) -> pygame.Surface:
+    if surf.get_width() <= width:
+        return surf
+    return pygame.transform.smoothscale(surf, (int(width), max(1, int(surf.get_height() * width / surf.get_width()))))
+
+
 def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[Hero], status: dict[str, str],
                ranks: dict[str, int], text_boxes: list, pulse: float = 0.0) -> None:
-    """Dark rounded status panel: SURVIVORS n/N + hero portraits with live rank (crossed out when eliminated)."""
+    """Single-row status bar: SURVIVORS n/N + up to 6 hero chips (face, name, live rank). Sundays show the top 6."""
     plate = pygame.Surface(PANEL.size, pygame.SRCALPHA)
-    pygame.draw.rect(plate, (24, 26, 40, 205), plate.get_rect(), border_radius=28)
-    pygame.draw.rect(plate, (255, 255, 255, 60), plate.get_rect(), 3, border_radius=28)
+    pygame.draw.rect(plate, (24, 26, 40, 215), plate.get_rect(), border_radius=26)
+    pygame.draw.rect(plate, (255, 255, 255, 70), plate.get_rect(), 3, border_radius=26)
     frame.blit(plate, PANEL)
-    lab = font(30).render("SURVIVORS:", True, WHITE)
-    r1 = frame.blit(lab, (PANEL.x + 26, PANEL.y + 26))
+    lab = font(24).render("SURVIVORS", True, WHITE)
+    r1 = frame.blit(lab, (PANEL.x + 22, PANEL.y + 12))
     k = 1.0 + 0.15 * pulse
-    num = font(int(64 * k)).render(f"{survivors}", True, (255, 74, 74))
-    tot = font(int(64 * k)).render(f" / {total}", True, WHITE)
-    r2 = frame.blit(num, (PANEL.x + 26, PANEL.y + 66))
-    r3 = frame.blit(tot, (r2.right, PANEL.y + 66))
+    num = font(int(52 * k)).render(f"{survivors}", True, (255, 74, 74))
+    tot = font(int(52 * k)).render(f"/{total}", True, WHITE)
+    r2 = frame.blit(num, (PANEL.x + 22, PANEL.y + 40))
+    r3 = frame.blit(tot, (r2.right + 4, PANEL.y + 40))
     text_boxes += [r1, r2, r3]
-    n = len(heroes)
-    x0 = PANEL.x + 250
-    two_rows = n > 6                        # Sunday: 10 heroes in 2 rows of 5
-    cols = 5 if two_rows else max(1, n)
-    step = (PANEL.right - 16 - x0) / cols
-    rad = 26 if two_rows else min(40, step * 0.42)
-    small = font(20 if two_rows else int(min(23, step * 0.2)))
-    for i, h in enumerate(heroes):
-        if two_rows:
-            cx, cy = x0 + step * (i % cols) + rad + 4, PANEL.y + 14 + rad + (i // cols) * 80
-        else:
-            cx, cy = x0 + step * (i + 0.5), PANEL.y + 16 + rad
+    shown = list(heroes)
+    if len(shown) > 6:      # Sunday: only the 6 best-placed heroes, in rank order
+        shown = sorted(shown, key=lambda h: ranks.get(h.key, 99))[:6]
+    x0 = PANEL.x + 214
+    step = (PANEL.right - 10 - x0) / 6
+    rad = 27
+    f_name, f_rank = font(21), font(23)
+    for i, h in enumerate(shown):
+        cx, cy = x0 + step * i + rad + 6, PANEL.centery
         st = status.get(h.key, "alive")
         face = renderer.body_surface(h, "eliminated" if st == "out" else ("celebrating" if st == "crown" else "neutral"), 0)
-        sz = int(rad * 2.1)
+        sz = int(rad * 2.2)
         f = pygame.transform.smoothscale(face, (sz, int(sz * face.get_height() / face.get_width())))
         if st == "out":
-            f.set_alpha(110)
+            f.set_alpha(105)
         frame.blit(f, f.get_rect(center=(cx, cy)))
         if st == "out":
-            pygame.draw.line(frame, (60, 64, 80), (cx - rad * 0.8, cy - rad * 0.8), (cx + rad * 0.8, cy + rad * 0.8), 9)
-            pygame.draw.line(frame, (60, 64, 80), (cx - rad * 0.8, cy + rad * 0.8), (cx + rad * 0.8, cy - rad * 0.8), 9)
-        col = WHITE if st != "out" else (120, 124, 140)
-        nm = small.render(h.name, True, col)
-        rn = small.render(_ordinal(ranks[h.key]) if h.key in ranks else "", True, (255, 214, 0) if st != "out" else col)
-        if two_rows:
-            room = step - 2 * rad - 16
-            if nm.get_width() > room:          # long names (JUGGERNAUT) shrink to fit their cell
-                nm = pygame.transform.smoothscale(nm, (int(room), int(nm.get_height() * room / nm.get_width())))
-            ra = frame.blit(nm, nm.get_rect(bottomleft=(cx + rad + 6, cy + 2)))
-            rb = frame.blit(rn, rn.get_rect(topleft=(cx + rad + 6, cy + 2)))
-        else:
-            ra = frame.blit(nm, nm.get_rect(midtop=(cx, cy + rad + 6)))
-            rb = frame.blit(rn, rn.get_rect(midtop=(cx - (10 if ranks.get(h.key) == 1 else 0), ra.bottom + 1)))
-        if ranks.get(h.key) == 1 and st != "out":
-            _crown(frame, rb.right + 14, rb.centery, 20)
+            for d in (1, -1):
+                pygame.draw.line(frame, (70, 74, 92), (cx - rad * 0.8, cy - d * rad * 0.8), (cx + rad * 0.8, cy + d * rad * 0.8), 8)
+        col = WHITE if st != "out" else (125, 130, 148)
+        room = step - 2 * rad - 16
+        nm = _fit(f_name.render(h.name.upper(), True, col), room)
+        rank = ranks.get(h.key)
+        rn = f_rank.render(_ordinal(rank) if rank else "", True, (255, 214, 0) if st != "out" else col)
+        ra = frame.blit(nm, nm.get_rect(bottomleft=(cx + rad + 8, cy - 1)))
+        rb = frame.blit(rn, rn.get_rect(topleft=(cx + rad + 8, cy + 3)))
+        if rank == 1 and st != "out":
+            _crown(frame, rb.right + 16, rb.centery, 20)
         text_boxes += [ra, rb]
 
 

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class Twist:
     key = ""
-    at = 8.0
+    at = 5.0                 # owner pacing override (was 8 s)
 
     def __init__(self, sim: "Sim") -> None:
         self.sim = sim
@@ -76,7 +76,7 @@ class GiantBall(Twist):
     key = "giant_ball"
 
     def setup(self):
-        self.at = self.sim.recipe.params["twist_at"] = 10.0
+        self.at = self.sim.recipe.params["twist_at"] = 7.0
 
     def trigger(self):
         body = pymunk.Body(40, pymunk.moment_for_circle(40, 0, 70))
@@ -96,7 +96,7 @@ class ShrinkingArena(Twist):
     key = "shrinking_arena"
 
     def setup(self):
-        self.at = self.sim.recipe.params["twist_at"] = 12.0
+        self.at = self.sim.recipe.params["twist_at"] = 3.0
         self.k = 1.0
 
     def trigger(self):

@@ -57,7 +57,8 @@ class Goal:
         a = h * 2 * math.pi + self.sim.t * (0.45 + 0.4 * h) * (1 if h > 0.5 else -1)   # keep the crowd moving
         base = getattr(self.sim.arena, "spawn_r", 250)
         # extras mill about near the rim (fodder); heroes fight for the middle
-        rad = base * (0.95 if c.extra is not None else 0.5 * (1 - 0.6 * c.behaviour.aggression))
+        rad = base * (self.sim.cfg["extras"]["mill_radius"] * self.sim.edge_k if c.extra is not None
+                      else 0.5 * (1 - 0.6 * c.behaviour.aggression))
         return cx + math.cos(a) * rad, cy + math.sin(a) * rad
 
     def update(self, t: float) -> None:
@@ -70,6 +71,10 @@ class Goal:
                     self.sim.eliminate(c, "qualifier")
             self.sim.event("stage_final", [], None, survivors=sorted(keep))
         self.check(t)
+        fx = self.sim.finish_x
+        if (self.sim.mode == SIDE and fx is not None and not self.sim.winner and self.key != "reach_finish"
+                and any(c.pos[0] >= fx for c in self.sim.alive())):
+            self.force_resolve(t)          # nobody stalls against the end wall: the course is over
         alive = self.sim.alive()
         if len(alive) == 1 and not self.sim.winner:
             self.declare(alive[0].key, t, "last_standing")
@@ -106,7 +111,7 @@ class SurviveTimer(Goal):
 
     def __init__(self, sim):
         super().__init__(sim)
-        self.limit = sim.recipe.params.setdefault("timer", round(sim.rng.uniform(28, 33), 1))
+        self.limit = sim.recipe.params.setdefault("timer", round(sim.rng.uniform(*sim.cfg["goal_timers"]["survive_s"]), 1))
 
     def check(self, t: float) -> None:
         if t >= self.limit:
@@ -122,7 +127,7 @@ class CollectItems(Goal):
     def __init__(self, sim):
         super().__init__(sim)
         self.items: list[list[float]] = []
-        self.limit = sim.recipe.params.setdefault("timer", round(sim.rng.uniform(28, 32), 1))
+        self.limit = sim.recipe.params.setdefault("timer", round(sim.rng.uniform(*sim.cfg["goal_timers"]["collect_s"]), 1))
         self.next_spawn = 0.0
 
     def _spawn(self, near: tuple[float, float] | None = None) -> None:
@@ -185,7 +190,7 @@ class HoldAZone(Goal):
         super().__init__(sim)
         self.r = 95.0
         self.phase = sim.rng.uniform(0, 6.28)
-        self.need = 10.0
+        self.need = float(sim.cfg["goal_timers"]["zone_hold_s"])
 
     def center(self) -> tuple[float, float]:
         t = self.sim.t
@@ -242,7 +247,7 @@ class HotPotatoBomb(Goal):
     def __init__(self, sim):
         super().__init__(sim)
         self.holder: str | None = None
-        self.next_pop = 8.0
+        self.next_pop = sim.cfg["goal_timers"]["bomb_pop_s"][0]
         self.pass_cd = 0.0
 
     def _give(self, key: str | None) -> None:
@@ -266,7 +271,7 @@ class HotPotatoBomb(Goal):
             self.sim.event("bomb_pop", [h.key], h.pos)
             self.sim.eliminate(h, "bomb")
             self.holder = None
-            self.next_pop = t + (6.0 if self.sim.speed_mult > 1.5 else 8.0)
+            self.next_pop = t + self.sim.cfg["goal_timers"]["bomb_pop_s"][1 if self.sim.speed_mult > 1.5 else 0]
 
     def score(self, c):
         # the bomb holder ranks last; everyone else by the usual course/centre tie-break

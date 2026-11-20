@@ -125,6 +125,7 @@ class Sim:
         self.chase_x = -500.0           # SIDE: the collapsing castle floor chasing from the left
         self.edge_k = 1.0               # TOP: escalation shrinks every arena's walkable edge (§4 "arena shrinks")
         self.pressure = 1.0             # Lord Tuno's pacing pressure: >1 when more contestants remain than the schedule
+        self.hazard_mult = 1.0          # hazards escalate harder than racers (speed_mult ** hazard_escalation_exp)
         self.cam_x = 0.0
         self.fan_favorite = fan_favorite
         self.arena = arenas.build(self)
@@ -425,11 +426,24 @@ class Sim:
         c.drive = (c.drive[0] + fx, c.drive[1] + fy)
 
     def _escalate(self) -> None:
+        q = self.cfg.get("top_quake")
+        if self.mode == TOP and q and not getattr(self, "_quaked", False) and self.t >= q["t"]:
+            # Lord Tuno's opening lever: the floor bucks outward so the first wipeouts happen within seconds
+            self._quaked = True
+            self.event("escalation", [], None, mult=self.speed_mult, banner="TUNO QUAKE!")
+            cx, cy = self.arena.center
+            for c in self.alive():
+                dx, dy = c.pos[0] - cx, c.pos[1] - cy
+                d = math.hypot(dx, dy) or 1.0
+                c.body.apply_impulse_at_world_point((dx / d * q["dv"] * c.body.mass, dy / d * q["dv"] * c.body.mass),
+                                                    c.body.position)
+                c.stun = max(c.stun, q["stun_s"] * (c.hero.stun_mult if c.hero else 1.0))
         esc = TIMELINE.escalation
         while self.escalation_idx + 1 < len(esc) and self.t >= esc[self.escalation_idx + 1][0]:
             self.escalation_idx += 1
             _, mult, banner = esc[self.escalation_idx]
             self.speed_mult = mult
+            self.hazard_mult = mult ** self.cfg["hazard_escalation_exp"]
             self.event("escalation", [], None, mult=mult, banner=banner)
 
     def _post_frame(self, dt: float) -> None:
@@ -470,7 +484,7 @@ class Sim:
         self._pacing()
         if self.mode == SIDE and self.finish_x is not None and self.t > 3.0:
             # paced so the collapse reaches the finish around the forced-resolution time (faster when behind schedule)
-            esc_units = 9 * 1.0 + 10 * 1.3 + 14 * 1.65
+            esc_units = sum(TIMELINE.speed_at(3.0 + i * 0.1) * 0.1 for i in range(int((self.cfg["pacing"]["chase_finish_s"] - 3.0) * 10)))
             k = min(self.cfg["pacing"]["chase_max"], max(self.cfg["pacing"]["chase_min"], self.pressure))
             self.chase_x += (self.finish_x / esc_units) * self.speed_mult * k * dt
             self.zones["chase_x"] = self.chase_x
@@ -500,7 +514,7 @@ class Sim:
     def _behind_k(self) -> float:
         """LEFT BEHIND distance in view widths: 1.5 (spec), wider while the elimination schedule is ahead, as the
         camera pulls back to keep the pack in frame."""
-        return 1.5 + 1.5 * max(0.0, 1.0 - self.pressure)
+        return self.cfg["pacing"]["left_behind_views"] + 1.5 * max(0.0, 1.0 - self.pressure)
 
     def _pacing(self) -> None:
         """Schedule-driven pressure (like a battle-royale storm): the arena squeezes harder while more contestants remain

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import pymunk
 
+from src.config import TIMELINE
 from src.games.base import SIDE
 
 if TYPE_CHECKING:
@@ -451,7 +452,7 @@ class HexTileDrop(TopArena):
         need = self.CRACK_LOAD / (self.sim.speed_mult * max(0.2, self.sim.pressure))
         for key, tile in self.tiles.items():
             if tile["gone"]:
-                if t < 22.0 and t - tile.get("gone_t", t) > 4.0 and key not in counts:
+                if t < TIMELINE.escalation[2][0] and t - tile.get("gone_t", t) > 4.0 and key not in counts:
                     tile.update(gone=False, hit=None, load=0.0)
                 continue
             n = counts.get(key, 0)
@@ -501,7 +502,7 @@ class BumperRing(TopArena):
         self.frame_top(self.R0)
 
     def _shrink(self, t: float):
-        if t > 12:
+        if t > TIMELINE.escalation[1][0] * 0.5:
             self.R = max(self.R0 * 0.35, self.R - 6.0 * self.sim.speed_mult * self.sim.pressure / 30)
         self.sim.zones["ring_r"] = self.R
 

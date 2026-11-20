@@ -115,7 +115,7 @@ def draw_pick_your_fighter(frame: pygame.Surface, heroes: list[Hero], t: float) 
 
 def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour: tuple[int, int, int], points: str,
                      prompt: str, t: float) -> None:
-    panel = pygame.Rect(90, 520, W - 180, 640)
+    panel = pygame.Rect(90, 520, W - 180, 700)
     shadow = panel.move(10, 12)
     pygame.draw.rect(frame, BLACK, shadow, border_radius=36)
     pygame.draw.rect(frame, (255, 248, 230), panel, border_radius=36)
@@ -128,7 +128,9 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
         pygame.draw.circle(frame, colour, (W / 2, panel.top + 270), 58)
     blit_text(frame, outlined(name.upper(), 72, fill=colour, width=6), center=(W / 2, panel.top + 440))
     blit_text(frame, outlined(points, 40, width=4), center=(W / 2, panel.top + 515))
-    blit_text(frame, outlined(prompt, 38, fill=(255, 255, 255), width=4, face="Fredoka.ttf"), center=(W / 2, panel.top + 585))
+    blit_text(frame, outlined(prompt, 40, fill=(255, 255, 255), width=4, face="Fredoka.ttf"), center=(W / 2, panel.top + 585))
+    bob = 4 * math.sin(t * 6)
+    blit_text(frame, outlined("COMMENT YOUR PICK!", 44, fill=(255, 214, 0), width=5), center=(W / 2, panel.top + 650 + bob))
 
 
 def draw_decor(frame: pygame.Surface, theme, t: float) -> None:
