@@ -113,7 +113,8 @@ DEFAULT_FACES = {
 
 def draw_face(s: pygame.Surface, cx: float, cy: float, r: float, expression: str, face_style: str,
               body_colour: tuple[int, int, int], look: tuple[float, float] = (0.0, 0.0), t: float = 0.0) -> None:
-    er = max(3.0, r * 0.3)
+    er = max(4.6, r * 0.3)
+    r = max(r, 19.0)  # small heroes (Pip) get a slightly oversized, readable face
     ey = r * 0.12
     eyes = [(cx - r * 0.36, cy - ey), (cx + r * 0.36, cy - ey)]
     w = max(2, int(r * 0.11))

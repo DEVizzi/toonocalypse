@@ -30,7 +30,7 @@ def main(out: str = "docs/cast_sheet.png") -> str:
     lab_f = pygame.font.Font(font_path("Fredoka.ttf"), 24)
     rows_h = len(HEROES) * CELL_H
     width = LABEL_W + len(COLS) * CELL_W + 40
-    height = 120 + 50 + rows_h + 330 + 260 + 260
+    height = 120 + 50 + rows_h + 330 + 260 + 470
     sheet = pygame.Surface((width, height))
     sheet.fill((246, 241, 230))
     sheet.blit(title_f.render("TOON TOON CASTLE  —  CAST SHEET", True, (40, 30, 60)), (30, 30))
@@ -77,7 +77,8 @@ def main(out: str = "docs/cast_sheet.png") -> str:
     sheet.blit(title_f.render("POPUPS", True, (40, 30, 60)), (30, py))
     words = list(effects.POPUP_WORDS) + ["SPITE!", "NO BRAKES!"]
     for i, w in enumerate(words):
-        effects.draw_popup(sheet, w, (150 + i * 245, py + 150), 0.2, seed=i)
+        row, col = divmod(i, 4)
+        effects.draw_popup(sheet, w, (230 + col * 440, py + 150 + row * 200), 0.2, seed=i)
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     pygame.image.save(sheet, out)
     small = pygame.transform.smoothscale(sheet, (width // 3, height // 3))   # phone-size check

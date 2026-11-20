@@ -21,7 +21,7 @@ CT_BODY, CT_GROUND, CT_HAZARD, CT_BOUNCY, CT_ITEM = 1, 2, 3, 4, 5
 EXPR = {e: i for i, e in enumerate(EXPRESSIONS)}
 MATERIALS = {  # friction, elasticity
     "ground": (0.9, 0.1), "wall": (0.6, 0.2), "ice": (0.01, 0.05), "mud": (1.0, 0.0), "bouncy": (0.5, 1.25),
-    "conveyor": (1.0, 0.05), "plank": (0.9, 0.1), "bumper": (0.3, 1.4), "prop": (0.7, 0.3),
+    "conveyor": (1.0, 0.05), "plank": (0.9, 0.1), "bumper": (0.3, 1.1), "prop": (0.7, 0.3),
 }
 
 
@@ -57,6 +57,7 @@ class Contestant:
     trait_cd: float = 0.0
     contacts: list[tuple[float, str]] = field(default_factory=list)
     fan_favorite: bool = False
+    drive: tuple[float, float] = (0.0, 0.0)   # force re-applied on every substep (pymunk resets forces per step)
 
     @property
     def is_hero(self) -> bool:
@@ -119,7 +120,9 @@ class Sim:
         self.finish_x: float | None = None
         self.walkable: Callable[[float, float], bool] | None = None
         self.bounds = (-600.0, -1400.0, 6000.0, 700.0)   # x0, y0, x1, y1 for the camera
-        self.view_w = 1440.0
+        self.view_w = 1080.0            # camera zoom 1.0 in SIDE_VIEW (world px across the screen)
+        self.chase_x = -500.0           # SIDE: the collapsing castle floor chasing from the left
+        self.edge_k = 1.0               # TOP: escalation shrinks every arena's walkable edge (§4 "arena shrinks")
         self.cam_x = 0.0
         self.fan_favorite = fan_favorite
         self.arena = arenas.build(self)
@@ -271,7 +274,7 @@ class Sim:
         body, shape = self._make_body(mass, shape_fn, pos, angle_locked=True)
         shape.friction, shape.elasticity = h.friction, h.elasticity
         shape.collision_type = CT_BODY
-        c = Contestant(h.key, h, None, body, shape, h.radius, h.max_speed, h.behaviour, anchor_pos=pos)
+        c = Contestant(h.key, h, None, body, shape, h.radius, self.eff_speed(h.max_speed), h.behaviour, anchor_pos=pos)
         body.velocity_func = self._velocity_func([c])
         shape.contestant = c  # type: ignore[attr-defined]
         return c
@@ -280,10 +283,14 @@ class Sim:
         body, shape = self._make_body(e.mass, lambda b: pymunk.Circle(b, e.radius), pos, angle_locked=True)
         shape.friction, shape.elasticity = e.friction, e.elasticity
         shape.collision_type = CT_BODY
-        c = Contestant(e.key, None, e, body, shape, e.radius, e.max_speed, e.behaviour, anchor_pos=pos)
+        c = Contestant(e.key, None, e, body, shape, e.radius, self.eff_speed(e.max_speed), e.behaviour, anchor_pos=pos)
         body.velocity_func = self._velocity_func([c])
         shape.contestant = c  # type: ignore[attr-defined]
         return c
+
+    def eff_speed(self, stat: float) -> float:
+        c, k = self.cfg["speed_centre"], self.cfg["speed_spread"]
+        return c + (stat - c) * k
 
     def eliminate(self, c: Contestant, cause: str, by: str | None = None) -> None:
         if not c.alive or self.winner:
@@ -359,9 +366,24 @@ class Sim:
 
         hard = max_gameplay or TIMELINE.hard_stop_s
         start = time.time()
-        frame = 0
         brain = ai.Brain(self)
-        post_frames = int(TIMELINE.replay_source_s * FPS)   # nothing; replay reads existing frames
+        pre = int(round(TIMELINE.cold_open_s * FPS))       # cold open: contestants bouncing at the closed gate
+        self.trace.meta["preroll_frames"] = pre
+        for i in range(pre):
+            self.t = (i - pre) / FPS
+            if self.mode == SIDE:
+                brain.think(self)
+            else:
+                for c in self.contestants:
+                    if self.rng.random() < 0.08:
+                        c.squash = 0.6
+            for _ in range(self.cfg["substeps"]):
+                self._apply_drives()
+                self.space.step(self.dt)
+            self._record()
+        self.arena.open_gate()
+        self.event("gate", [], None)
+        frame = 0
         while True:
             self.t = frame / FPS
             self._escalate()
@@ -369,6 +391,7 @@ class Sim:
             for h in self.hooks_frame:
                 h(self.t)
             for _ in range(self.cfg["substeps"]):
+                self._apply_drives()
                 for h in self.hooks_step:
                     h(self.dt)
                 self.space.step(self.dt)
@@ -384,11 +407,20 @@ class Sim:
                 self.goal.force_resolve(self.t, hard=True)
             if self.t > hard + 1.0:
                 break
-        del post_frames
         self.trace.events = self.events
         self.trace.meta.update(winner=self.winner, resolved_at=self.resolved_at, sim_s=round(time.time() - start, 2),
-                               seed=self.seed)
+                               seed=self.seed, ranking=self.goal.ranking(),
+                               props=[{"shapes": p.shapes, "style": p.style} for p in self.props])
         return self.trace
+
+    def _apply_drives(self) -> None:
+        for c in self.contestants:
+            if c.alive and (c.drive[0] or c.drive[1]):
+                c.body.apply_force_at_world_point(c.drive, c.body.position)
+
+    def push(self, c: Contestant, fx: float, fy: float) -> None:
+        """Add a continuous force for the current frame (applied on every substep)."""
+        c.drive = (c.drive[0] + fx, c.drive[1] + fy)
 
     def _escalate(self) -> None:
         esc = TIMELINE.escalation
@@ -427,18 +459,27 @@ class Sim:
             if self.mode == SIDE:
                 if y > self.kill_y:
                     self.eliminate(c, "fell")
-                elif c.pos[0] < self.cam_x - self.view_w * 1.5 and self.finish_x is not None:
+                elif self.finish_x is not None and (c.pos[0] < self.cam_x - self.view_w * 1.5 or c.pos[0] < self.chase_x):
                     self.eliminate(c, "left_behind")
-            elif self.walkable is not None and not self.walkable(x, y):
+            elif self.walkable is not None and not self.walkable(x / self.edge_k, y / self.edge_k):
                 self.eliminate(c, "fell")
             c.contacts = [k for k in c.contacts if self.t - k[0] < 1.5]
+        if self.mode == SIDE and self.finish_x is not None and self.t > 3.0:
+            # paced so the collapse reaches the finish around the forced-resolution time
+            esc_units = 9 * 1.0 + 10 * 1.3 + 14 * 1.65
+            self.chase_x += (self.finish_x / esc_units) * self.speed_mult * dt
+            self.zones["chase_x"] = self.chase_x
+        if self.mode != SIDE and self.t > 12.0:
+            self.edge_k = max(0.42, self.edge_k - 0.011 * self.speed_mult * dt)
+            self.zones["edge_k"] = round(self.edge_k, 4)
         # leader + camera proxy for LEFT BEHIND (mirrors camera framing: leading 40% of surviving heroes)
         alive = self.alive()
         if alive:
             if self.mode == SIDE:
                 xs = sorted((c.pos[0] for c in alive if c.is_hero), reverse=True) or sorted((c.pos[0] for c in alive), reverse=True)
                 lead = xs[: max(1, math.ceil(len(xs) * 0.4))]
-                self.cam_x = max(self.cam_x, sum(lead) / len(lead))
+                target = sum(lead) / len(lead)
+                self.cam_x += (target - self.cam_x) * min(1.0, dt * 2.5)   # eased, like the real camera
             ld = self.goal.leader() if hasattr(self, "goal") else None
             if ld and ld != self.leader:
                 if self.leader is not None:

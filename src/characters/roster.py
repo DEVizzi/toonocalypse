@@ -81,8 +81,8 @@ class Extra:
     number: int                 # 1-based contestant number; cult extras keep theirs forever
     colour: str
     radius: float = 14
-    mass: float = 1.6
-    max_speed: float = 230
+    mass: float = 1.1
+    max_speed: float = 200
     friction: float = 0.6
     elasticity: float = 0.3
     behaviour: Behaviour = field(default_factory=lambda: Behaviour(0.3, 0.4, 0.4, 0.5))
@@ -97,7 +97,8 @@ def make_extras(n: int, rng: random.Random, cult_numbers: set[int] | None = None
     cult_numbers = cult_numbers or set()
     out = []
     for i in range(1, n + 1):
-        b = Behaviour(rng.uniform(0.1, 0.6), rng.uniform(0.2, 0.7), rng.uniform(0.2, 0.7), rng.uniform(0.3, 0.7))
-        out.append(Extra(i, rng.choice(EXTRA_COLOURS), mass=rng.uniform(1.2, 2.2), max_speed=rng.uniform(200, 260),
+        # extras are deliberately less competent than heroes (lower speed, worse jumping and edge sense)
+        b = Behaviour(rng.uniform(0.05, 0.35), rng.uniform(0.0, 0.35), rng.uniform(0.1, 0.4), rng.uniform(0.0, 0.25))
+        out.append(Extra(i, rng.choice(EXTRA_COLOURS), mass=rng.uniform(0.8, 1.4), max_speed=rng.uniform(130, 180),
                          behaviour=b, cult=i in cult_numbers))
     return out

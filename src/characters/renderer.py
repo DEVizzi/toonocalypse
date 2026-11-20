@@ -80,14 +80,14 @@ def body_surface(hero: Hero, expression: str, face_bucket: int, look: tuple[floa
     _shape(s, hero, cx, cy, base, 0)                           # fill
     if hero.key == "glitch":                                   # neon static stripes
         t = face_bucket
-        for i in range(-3, 4):
-            col = (180, 255, 40) if (i + t) % 2 else (255, 40, 220)
-            y = cy + i * hy * 0.3 + ((t * 7 + i * 13) % 5 - 2)
-            pygame.draw.line(s, col, (cx - hx * 0.8, y), (cx + hx * 0.8, y), 2)
+        for i in (-3, 2, 3):
+            col = (150, 230, 40) if (i + t) % 2 else (220, 40, 200)
+            y = cy + i * hy * 0.27 + ((t * 7 + i * 13) % 5 - 2)
+            pygame.draw.line(s, col, (cx - hx * 0.75, y), (cx + hx * 0.75, y), 2)
         _shape(s, hero, cx, cy, BLACK, OUTLINE, grow=OUTLINE / 2)
     # white inner highlight rim on the upper-left
     rim = pygame.Surface(size, pygame.SRCALPHA)
-    _shape(rim, hero, cx, cy, (255, 255, 255, 150), 3, grow=-3)
+    _shape(rim, hero, cx, cy, (255, 255, 255, 215), 4, grow=-4)
     mask = pygame.Surface(size, pygame.SRCALPHA)
     pygame.draw.circle(mask, (255, 255, 255, 255), (cx - hx * 0.55, cy - hy * 0.55), max(hx, hy) * 0.95)
     rim.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)

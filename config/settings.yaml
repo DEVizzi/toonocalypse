@@ -66,6 +66,8 @@ physics:
   unstick_min_px: 18
   bevel_radius: 8
   segment_radius: 6
+  speed_centre: 255        # effective max speed = centre + (stat - centre) * spread (keeps §9.2 ordering)
+  speed_spread: 0.45
 
 mode_mix: {SIDE_VIEW: 0.65, TOP_DOWN: 0.35}
 

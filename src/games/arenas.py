@@ -53,16 +53,28 @@ class Arena:
                 return True
         return any(h.near(c, dist) for h in getattr(self.sim, "hazards", []))
 
-    def edge_distance(self, x: float, y: float) -> float:
+    def edge_vector(self, x: float, y: float) -> tuple[float, float, float]:
+        """(distance, ux, uy): nearest drop (edge or hole) and the unit direction toward it."""
         w = self.sim.walkable
         if w is None:
-            return 999.0
-        for d in range(20, 241, 30):
-            for k in range(8):
-                a = k * math.pi / 4
-                if not w(x + math.cos(a) * d, y + math.sin(a) * d):
-                    return float(d)
-        return 999.0
+            return 999.0, 0.0, 0.0
+        k = self.sim.edge_k
+        for d in range(20, 241, 25):
+            sx = sy = 0.0
+            for i in range(12):
+                a = i * math.pi / 6
+                if not w((x + math.cos(a) * d) / k, (y + math.sin(a) * d) / k):
+                    sx += math.cos(a)
+                    sy += math.sin(a)
+            n = math.hypot(sx, sy)
+            if n > 0:
+                return float(d), sx / n, sy / n
+            if sx or sy:
+                break
+        return 999.0, 0.0, 0.0
+
+    def edge_distance(self, x: float, y: float) -> float:
+        return self.edge_vector(x, y)[0]
 
     def add_gate(self, x: float, top: float = -420.0) -> None:
         self.gate = self.sim.static_segment((x, top), (x, 0), "wall", radius=10)
@@ -135,7 +147,7 @@ class FlatTrack(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for _ in range(self.p.setdefault("sections", r.randint(7, 9))):
+        for _ in range(self.p.setdefault("sections", r.randint(10, 13))):
             kind = r.choice(["hop", "choke", "gap", "flat", "hop"])
             if kind == "hop":
                 self.seg(r.uniform(180, 320))
@@ -158,7 +170,7 @@ class RampDescent(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for i in range(self.p.setdefault("ramps", r.randint(6, 8))):
+        for i in range(self.p.setdefault("ramps", r.randint(8, 10))):
             self.seg(r.uniform(420, 620), r.uniform(150, 240))
             if i % 2 == 0:
                 self.block(r.uniform(30, 50), r.uniform(30, 45))
@@ -174,9 +186,9 @@ class PitPlatforms(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for _ in range(self.p.setdefault("islands", r.randint(10, 13))):
-            self.gap(r.uniform(100, 190), r.uniform(-60, 60))
-            self.seg(r.uniform(160, 320))
+        for _ in range(self.p.setdefault("islands", r.randint(14, 18))):
+            self.gap(r.uniform(80, 150), r.uniform(-50, 50))
+            self.seg(r.uniform(180, 340))
         self.gap(r.uniform(100, 150))
         self.finish(700)
 
@@ -187,7 +199,7 @@ class TieredTower(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for i in range(self.p.setdefault("tiers", r.randint(9, 12))):
+        for i in range(self.p.setdefault("tiers", r.randint(13, 16))):
             if i % 3 == 2:
                 self.seg(r.uniform(90, 130), material="bouncy")    # launch pad
                 self.gap(r.uniform(60, 110), -r.uniform(150, 220))
@@ -211,7 +223,7 @@ class NarrowBridge(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        n = self.p.setdefault("planks", r.randint(24, 32))
+        n = self.p.setdefault("planks", r.randint(34, 42))
         breakaway = set(r.sample(range(2, n - 2), k=max(3, n // 5)))
         for i in range(n):
             w = r.uniform(110, 150)
@@ -242,7 +254,7 @@ class BouncyPadField(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for _ in range(self.p.setdefault("pads", r.randint(10, 14))):
+        for _ in range(self.p.setdefault("pads", r.randint(15, 19))):
             self.seg(r.uniform(120, 200), material="bouncy")
             if r.random() < 0.6:
                 self.gap(r.uniform(80, 160), r.uniform(-40, 40))
@@ -257,7 +269,7 @@ class SeesawGauntlet(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for _ in range(self.p.setdefault("seesaws", r.randint(6, 8))):
+        for _ in range(self.p.setdefault("seesaws", r.randint(8, 10))):
             span = r.uniform(380, 520)
             px, py = self.x + span / 2, self.y + 10
             self.pits.append((self.x, self.x + span))
@@ -281,7 +293,7 @@ class ConveyorChaos(Course):
         r = self.sim.rng
         self.start()
         belts = []
-        for i in range(self.p.setdefault("belts", r.randint(8, 11))):
+        for i in range(self.p.setdefault("belts", r.randint(11, 14))):
             w = r.uniform(300, 460)
             speed = r.choice([-1, 1, 1]) * r.uniform(120, 220)
             s = self.seg(w, material="conveyor", surface_velocity=(-speed, 0))
@@ -315,7 +327,7 @@ class RotatingDisc(TopArena):
     def build(self):
         r = self.sim.rng
         self.R = self.p.setdefault("radius", round(r.uniform(390, 450)))
-        self.omega = self.p.setdefault("omega", round(r.uniform(0.35, 0.65), 2)) * r.choice([-1, 1])
+        self.omega = self.p.setdefault("omega", round(r.uniform(0.22, 0.42), 2)) * r.choice([-1, 1])
         self.spawn_r = self.R * 0.68
         self.sim.walkable = lambda x, y: x * x + y * y < self.R * self.R
         body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
@@ -326,18 +338,20 @@ class RotatingDisc(TopArena):
         for s in spokes:
             s.sensor = True
         self.sim.statics.append({"type": "disc", "c": (0, 0), "r": self.R})
-        self.sim.hooks_frame.append(self._carry)
+        self.sim.hooks_step.append(self._carry)
         self.frame_top(self.R)
         del p
 
-    def _carry(self, t: float):
+    def _carry(self, dt: float):
         w = self.omega * self.sim.speed_mult
         self.disc.angular_velocity = w
         for c in self.sim.alive():
             x, y = c.pos
             tv = pymunk.Vec2d(-y * w, x * w)          # tangential surface velocity at the rider
             dv = tv - c.body.velocity
-            c.body.apply_force_at_world_point((dv.x * c.body.mass * 1.6, dv.y * c.body.mass * 1.6), c.body.position)
+            # friction-like coupling to the disc surface (relative velocity is damped toward the surface velocity)
+            k = 5.0 * (0.3 if c.hero is not None and c.hero.trait == "glide" else 1.0)
+            c.body.apply_force_at_world_point((dv.x * c.body.mass * k, dv.y * c.body.mass * k), c.body.position)
 
 
 class MazeCorridors(TopArena):
@@ -371,7 +385,7 @@ class HexTileDrop(TopArena):
 
     def build(self):
         r = self.sim.rng
-        self.size = self.p.setdefault("tile", round(r.uniform(58, 72)))
+        self.size = self.p.setdefault("tile", round(r.uniform(66, 80)))
         radius = self.p.setdefault("radius", 430)
         self.spawn_r = radius * 0.62
         s = self.size
@@ -407,16 +421,52 @@ class HexTileDrop(TopArena):
         t = self.tiles.get(self._axial(x, y))
         return bool(t and not t["gone"])
 
+    CRACK_LOAD = 2.4      # contestant-seconds of standing weight before a tile cracks
+
     def _tick(self, t: float):
-        crack = 0.6 / self.sim.speed_mult
+        # weight on a tile accumulates (crowds crack tiles faster); cracked tiles vanish 0.6 s later and regrow
+        # after 4 s until overtime, after which the honeycomb collapses for good
+        dt = 1 / 30
+        if t < 2.5:
+            return
+        counts: dict = {}
         for c in self.sim.alive():
-            tile = self.tiles.get(self._axial(*c.pos))
-            if tile and tile["hit"] is None:
-                tile["hit"] = t
-        for tile in self.tiles.values():
-            if tile["hit"] is not None and not tile["gone"] and t - tile["hit"] > crack:
-                tile["gone"] = True
+            k = self._axial(*c.pos)
+            counts[k] = counts.get(k, 0) + 1
+        need = self.CRACK_LOAD / self.sim.speed_mult
+        for key, tile in self.tiles.items():
+            if tile["gone"]:
+                if t < 22.0 and t - tile.get("gone_t", t) > 4.0 and key not in counts:
+                    tile.update(gone=False, hit=None, load=0.0)
+                continue
+            n = counts.get(key, 0)
+            if tile["hit"] is None:
+                tile["load"] = tile.get("load", 0.0) + dt * n if n else max(0.0, tile.get("load", 0.0) - dt * 0.6)
+                if tile["load"] >= need:
+                    tile["hit"] = t
+            elif t - tile["hit"] > 0.6 / self.sim.speed_mult:
+                tile["gone"], tile["gone_t"] = True, t
         self.sim.zones["tiles"] = [0 if v["hit"] is None else (1 if not v["gone"] else 2) for v in self.tiles.values()]
+
+    def safe_target(self, c):
+        """When my tile is half-loaded or cracking, head for the least-loaded intact tile nearby."""
+        tile = self.tiles.get(self._axial(*c.pos))
+        if tile is None or tile["gone"]:
+            return None
+        if tile["hit"] is None and tile.get("load", 0.0) < 0.5 * self.CRACK_LOAD / self.sim.speed_mult:
+            return None
+        x, y = c.pos
+        best, bs = None, 1e9
+        for v in self.tiles.values():
+            if v["gone"] or v["hit"] is not None or v is tile:
+                continue
+            d = math.hypot(v["c"][0] - x, v["c"][1] - y)
+            if d > self.size * 4:
+                continue
+            sc = d + v.get("load", 0.0) * 120
+            if sc < bs:
+                best, bs = v["c"], sc
+        return best
 
 
 class BumperRing(TopArena):
