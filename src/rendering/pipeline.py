@@ -18,7 +18,7 @@ import pygame  # noqa: E402
 
 from src.characters import renderer  # noqa: E402
 from src.characters.roster import EXPRESSIONS, HERO_BY_KEY, Extra  # noqa: E402
-from src.config import FPS, H, LAYOUT, TIMELINE, VIDEO, W  # noqa: E402
+from src.config import FPS, H, LAYOUT, TIMELINE, VIDEO, W, settings  # noqa: E402
 from src.games.themes import THEME_BY_KEY, Theme  # noqa: E402
 from src.physics import trace as T  # noqa: E402
 from src.physics.camera import Cam, track  # noqa: E402
@@ -60,11 +60,12 @@ def plan_shots(ep: Episode, teaser_f: int | None = None) -> list[Shot]:
     winner = tr.meta.get("winner")
     shots: list[Shot] = []
     n_cold = int(round(TIMELINE.cold_open_s * FPS))
+    tz_mult = 1.0 if tr.mode == "TOP_DOWN" else 1.08
     if teaser_f is not None:
         src = 0.3 * FPS
         f0 = teaser_f - src * 0.55
         for i in range(n_cold):
-            shots.append(Shot(max(pre, min(end_f, f0 + src * i / n_cold)), "cold", i / FPS, 1.3, None))
+            shots.append(Shot(max(pre, min(end_f, f0 + src * i / n_cold)), "cold", i / FPS, tz_mult, None))
     else:
         for i in range(n_cold):
             shots.append(Shot(pre, "cold", i / FPS))
@@ -123,6 +124,12 @@ class Renderer:
             elif e.kind == "elimination" and e.data.get("by_hero") and len(e.actors) > 1:
                 self.splat_wins.setdefault(e.actors[0], []).append(e.t)
         self._lowest_slab_y = 0.0
+        self._void = self._build_void() if self.tr.mode == "TOP_DOWN" else None
+        self.finish_t = next((e.t for e in self.tr.events if e.kind in ("finish", "win")), None) \
+            if self.meta.get("finish_x") is not None else None
+        self.popups = self._schedule_popups()
+        self.speech: list = []          # narration lines (set by the audio module): captions + MC Tuno lip-sync
+        self.out_index: dict = {}       # output frame index -> output time (for captions)
 
     # ------------------------------------------------------------------ precomputed presentation state
     def _schedule_banners(self) -> list[tuple[float, str]]:
@@ -163,24 +170,88 @@ class Renderer:
         return out
 
     def _teaser_frame(self) -> int | None:
-        """Cleanest high-impact hero collision for the cold open (chase wall covering < 15% of the frame)."""
-        best, bs = None, -1.0
+        """v3.3 cold open: the frame where the most balls (>= 5 preferred) are packed together inside the middle 60% of
+        the screen, ideally right on a big hero collision."""
+        hits = {}
         for e in self.tr.events:
-            if e.kind != "impact" or not e.data.get("hero_pair") or e.t < 1.0 or e.t > self.end_t - 1.0:
+            if e.kind == "impact" and e.data.get("impulse", 0) > 500:
+                f = self.pre + int(e.t * FPS)
+                hits[f] = max(hits.get(f, 0), e.data.get("impulse", 0))
+        best, bs = None, -1.0
+        lo = self.pre + int(1.0 * FPS)
+        hi = min(self.end_f - int(1.0 * FPS), len(self.cams) - 1)
+        x_lo, x_hi = W * 0.2, W * 0.8
+        vy0, vy1 = LAYOUT["viewport"]
+        y_lo, y_hi = vy0 + (vy1 - vy0) * 0.2, vy1 - (vy1 - vy0) * 0.2
+        for f in range(lo, max(lo + 1, hi), 2):
+            cam = self.cams[f]
+            pts = []
+            for i in range(len(self.tr.keys)):
+                if self.tr.flags[f][i] & T.ALIVE:
+                    sx, sy = cam.to_screen(float(self.tr.frames[f][i][0]), float(self.tr.frames[f][i][1]))
+                    if x_lo <= sx <= x_hi and y_lo <= sy <= y_hi:
+                        pts.append((sx, sy))
+            if not pts:
                 continue
-            f = self.pre + int(e.t * FPS)
-            cam = self.cams[min(f, len(self.cams) - 1)]
-            chase = self.tr.zones[f].get("chase_x")
-            if chase is not None and cam.to_screen(chase, 0)[0] > W * 0.15:
-                continue
-            sc = e.data.get("impulse", 0)
+            dense = max(sum(1 for q in pts if math.hypot(q[0] - p[0], q[1] - p[1]) < 240) for p in pts)
+            near_hit = max((hits.get(g, 0) for g in range(f - 4, f + 5)), default=0)
+            sc = dense * 1000 + min(near_hit, 3000) * 0.2
             if sc > bs:
                 best, bs = f, sc
-        if best is None:
-            el = [e for e in self.elims if e.data.get("hero") and 1.0 <= e.t <= self.end_t - 1.0]
-            if el:
-                best = self.pre + int(el[0].t * FPS)
         return best
+
+    def _build_void(self) -> pygame.Surface:
+        """v3.3 TOP_DOWN background: a deep abyss/moat void (radial gradient, faint ripple rings, drifting motes)."""
+        s = pygame.Surface((W, H))
+        cx, cy = W / 2, 970
+        inner, outer = scenery.mix(self.theme.sky_top, (20, 18, 46), 0.75), (8, 8, 20)
+        maxr = math.hypot(W, H) * 0.62
+        for r in range(int(maxr), 0, -6):
+            pygame.draw.circle(s, scenery.mix(inner, outer, min(1.0, r / maxr)), (cx, cy), r)
+        for k, r in enumerate(range(520, 1100, 110)):
+            pygame.draw.circle(s, scenery.mix(inner, (90, 110, 170), 0.10 + 0.04 * (k % 2)), (cx, cy), r, 2)
+        rng = random.Random(5)
+        for _ in range(70):
+            x, y = rng.uniform(0, W), rng.uniform(260, H)
+            pygame.draw.circle(s, scenery.mix(inner, (200, 220, 255), rng.uniform(0.15, 0.4)), (x, y), rng.choice((1, 2, 2, 3)))
+        return s
+
+    def _schedule_popups(self) -> list[tuple[float, str, tuple[float, float], int]]:
+        """v3.3: comic starbursts ONLY for collisions visible on camera, max one every 0.65 s (no stacking).
+        Returns (gameplay_t, word, world_pos, seed)."""
+        cands = []
+        for e in self.tr.events:
+            if e.pos is None or e.t < 0.2:
+                continue
+            seed = int(e.t * 1000) % 997
+            word = None
+            pos = e.pos
+            if e.kind == "elimination" and e.data.get("hero"):
+                cause = e.data.get("cause", "")
+                if e.data.get("by_hero"):
+                    word = "BETRAYAL!"
+                elif cause == "lava":
+                    word = "SPLAT!"
+                elif cause != "left_behind":
+                    word = "YEET!"
+                prio = 3
+            elif e.kind == "impact" and e.data.get("hero_pair") and e.data.get("impulse", 0) > 900:
+                word, prio = ("BONK!" if seed % 2 else "OOF!"), 1
+            elif e.kind == "trait":
+                word, prio = effects.CONTEXT_POPUPS.get(e.actors[0], "BOING!"), 2
+            if word:
+                cands.append((e.t, -prio, word, pos, seed))
+        out: list[tuple[float, str, tuple[float, float], int]] = []
+        last_t = -9.0
+        for t, _, word, pos, seed in sorted(cands):
+            f = min(len(self.cams) - 1, self.pre + int(t * FPS))
+            if not self.cams[f].on_screen(pos[0], pos[1], pad=30):
+                continue                                   # off-camera collision: drop silently
+            if t - last_t < 0.65:
+                continue
+            out.append((t, word, pos, seed))
+            last_t = t
+        return out
 
     # ------------------------------------------------------------------ world drawing
     def _k(self, zone: dict) -> float:
@@ -235,44 +306,49 @@ class Renderer:
         chains = self._build_track_chains(removed)
         z = cam.zoom
         self._lowest_slab_y = 0.0
-        # 1. Background support pillars / suspension chains (behind all track slabs)
+        # 1. Background supports (behind all track slabs). v3.3: sparse — pillars only under long slabs, >= 620 px apart;
+        #    short step ledges hang from thin chains instead, so the lower half of the frame stays clean and open.
+        placed: list[float] = []
         for pts, mats, _ in chains:
             x0, x1 = pts[0][0], pts[-1][0]
             span = x1 - x0
             if span < 90:
                 continue
-            if span < 460:
+            short = span < 380
+            if span < 700:
                 support_xs = [(x0 + x1) * 0.5]
             else:
-                step = 540.0
-                first = math.ceil((x0 + 95.0) / step) * step
+                step = 760.0
+                first = math.ceil((x0 + 160.0) / step) * step
                 support_xs = []
                 wx = first
-                while wx <= x1 - 95.0:
+                while wx <= x1 - 160.0:
                     support_xs.append(wx)
                     wx += step
                 if not support_xs:
                     support_xs = [(x0 + x1) * 0.5]
             for wx in support_xs:
+                if any(abs(wx - px) < 620 for px in placed):
+                    continue
                 sx_test, _ = cam.to_screen(wx, 0)
                 if sx_test < -90 or sx_test > W + 90:
                     continue
                 wy = self._chain_y_at(pts, wx)
                 if wy is None:
                     continue
-                # Check if another shelf sits directly below this support (e.g. stacked PachinkoDrop tiers)
                 has_lower = any(
                     other_pts is not pts and (ly := self._chain_y_at(other_pts, wx)) is not None and wy + 45 < ly < wy + 720
                     for other_pts, _, _ in chains
                 )
                 sx, sy = cam.to_screen(wx, wy)
-                if has_lower:
+                placed.append(wx)
+                if short or has_lower:
                     has_upper = any(
                         other_pts is not pts and (uy := self._chain_y_at(other_pts, wx)) is not None and wy - 360 < uy < wy - 30
                         for other_pts, _, _ in chains
                     )
                     if not has_upper:
-                        scenery.draw_support_pillar(self.frame, sx, sy + 6 * z, max(LAYOUT["viewport"][0], sy - 220 * z),
+                        scenery.draw_support_pillar(self.frame, sx, sy + 6 * z, max(LAYOUT["viewport"][0], sy - 200 * z),
                                                     z, self.theme, chain=True)
                 else:
                     scenery.draw_support_pillar(self.frame, sx, sy + 56 * z, H, z, self.theme, chain=False)
@@ -347,11 +423,14 @@ class Renderer:
         zone = self.tr.zones[fi]
         removed = set(zone.get("removed_statics", []))
 
-        # v3.2: 3-Layer Parallax Background
-        for surf, factor in ((self.sky_bg, 0.04), (self.far_spires, 0.11), (self.mid_arches, 0.24)):
-            par = (-cam.x * factor) % W
-            fr.blit(surf, (par - W, 0))
-            fr.blit(surf, (par, 0))
+        if self.tr.mode == "TOP_DOWN":
+            fr.blit(self._void, (0, 0))                 # v3.3: clean top-down abyss under the spinning disc
+        else:
+            # v3.2: 3-Layer Parallax Background
+            for surf, factor in ((self.sky_bg, 0.04), (self.far_spires, 0.11), (self.mid_arches, 0.24)):
+                par = (-cam.x * factor) % W
+                fr.blit(surf, (par - W, 0))
+                fr.blit(surf, (par, 0))
 
         fr.set_clip(self.world_rect)
         self._particles(cam, t_anim)
@@ -404,6 +483,13 @@ class Renderer:
                 a, b = cam.to_screen(*s["a"]), cam.to_screen(*s["b"])
                 if max(a[0], b[0]) < -50 or min(a[0], b[0]) > W + 50:
                     continue
+                if self.tr.mode == "SIDE_VIEW" and s["mat"] == "wall":
+                    # v3.3: compact 130 px castle stone bumper instead of a sky-tall grey pole
+                    wx = s["a"][0]
+                    g = self._ground_seg_at(wx + 30) or self._ground_seg_at(wx - 30)
+                    gy = g[0] if g is not None else max(s["a"][1], s["b"][1])
+                    self._stone_bumper(cam, wx, gy)
+                    continue
                 col = scenery.rock_colours(th)[1] if s["mat"] == "wall" else th.terrain_outline
                 w = max(6, int(s["r"] * 2 * z))
                 pygame.draw.line(fr, BLACK, a, b, w + 8)
@@ -425,7 +511,7 @@ class Renderer:
                 pygame.draw.circle(fr, WHITE_, c, rr * 0.62)
                 pygame.draw.circle(fr, (255, 210, 40), c, rr * 0.34)
             elif s["type"] == "finish":
-                self._finish(cam, s["x"], s["y"], t_anim)
+                self._finish(cam, s["x"], s["y"], t_anim, play_t)
             elif s["type"] in ("post", "pivot"):
                 c = cam.to_screen(*s["c"])
                 pygame.draw.circle(fr, BLACK, c, 13 * z)
@@ -433,14 +519,67 @@ class Renderer:
         self._zones(cam, zone, t_anim)
         self._props(cam, fi)
 
-    def _finish(self, cam: Cam, x: float, y: float, t: float) -> None:
-        a, b = cam.to_screen(x, y - 360), cam.to_screen(x, y)
-        sq = max(8.0, 22 * cam.zoom)
-        pygame.draw.line(self.frame, BLACK, (a[0] - sq - 3, a[1] - 8), (b[0] - sq - 3, b[1]), max(4, int(7 * cam.zoom)))
+    def _stone_bumper(self, cam: Cam, wx: float, gy: float) -> None:
+        """Compact castle tower bumper (130 px tall) with crenellations and a dark arched door."""
+        z = cam.zoom
+        sx, sy = cam.to_screen(wx, gy)
+        w, h = 70 * z, 130 * z
+        _, rock, dark, light = scenery.rock_colours(self.theme)
+        body = pygame.Rect(int(sx - w / 2), int(sy - h), int(w), int(h))
+        pygame.draw.rect(self.frame, BLACK, body.inflate(8, 8), border_radius=6)
+        pygame.draw.rect(self.frame, rock, body, border_radius=4)
+        pygame.draw.rect(self.frame, dark, (body.right - int(w * 0.3), body.top, int(w * 0.3), body.height))
+        for k in range(3):
+            cr = pygame.Rect(int(body.left + k * w / 2.5), int(body.top - 16 * z), int(w / 4), int(18 * z))
+            pygame.draw.rect(self.frame, BLACK, cr.inflate(6, 6))
+            pygame.draw.rect(self.frame, rock, cr)
+        for yy in range(int(body.top + 26 * z), body.bottom, max(10, int(26 * z))):
+            pygame.draw.line(self.frame, dark, (body.left + 3, yy), (body.right - 3, yy), max(2, int(2 * z)))
+        door = pygame.Rect(int(sx - w * 0.2), int(sy - h * 0.45), int(w * 0.4), int(h * 0.45))
+        pygame.draw.rect(self.frame, (30, 26, 40), door, border_top_left_radius=int(w * 0.2), border_top_right_radius=int(w * 0.2))
+        pygame.draw.line(self.frame, light, (body.left + 4, body.top + 2), (body.left + 4, body.bottom - 2), max(2, int(3 * z)))
+
+    def _finish(self, cam: Cam, x: float, y: float, t: float, play_t: float = 0.0) -> None:
+        """v3.3 pass-through finish gate: short checkered pylon + a red victory tape that snaps into two flapping halves
+        with a confetti burst the moment the winner crosses (zero physical collision)."""
+        z = cam.zoom
+        top_y = y - 230
+        a, b = cam.to_screen(x, top_y), cam.to_screen(x, y)
+        sq = max(8.0, 20 * z)
+        # checkered pylon set just behind the line
+        px = a[0] + sq * 1.4
         for i in range(int((b[1] - a[1]) / sq) + 1):
             for j in range(2):
                 col = BLACK if (i + j) % 2 else WHITE_
-                pygame.draw.rect(self.frame, col, (a[0] + j * sq - sq, a[1] + i * sq, sq + 1, sq + 1))
+                pygame.draw.rect(self.frame, col, (px + j * sq - sq, a[1] + i * sq, sq + 1, sq + 1))
+        pygame.draw.rect(self.frame, BLACK, (px - sq - 2, a[1] - 2, 2 * sq + 4, b[1] - a[1] + 4), 3)
+        pygame.draw.circle(self.frame, BLACK, (px, a[1] - 10 * z), 12 * z)
+        pygame.draw.circle(self.frame, (255, 208, 40), (px, a[1] - 10 * z), 9 * z)
+        cross_t = self.finish_t
+        lw = max(4, int(7 * z))
+        if cross_t is None or play_t < cross_t:
+            for k in range(int((b[1] - a[1]) / (14 * z)) + 1):          # taut red/white tape across the line
+                y0 = a[1] + k * 14 * z
+                pygame.draw.line(self.frame, (232, 40, 60) if k % 2 == 0 else WHITE_, (a[0], y0),
+                                 (a[0], min(b[1], y0 + 14 * z)), lw)
+            return
+        age = play_t - cross_t
+        if age > 1.6:
+            return
+        mid = (a[1] + b[1]) / 2
+        for side in (-1, 1):                                              # two halves whip away and flutter down
+            ang = side * (0.4 + age * 3.2)
+            L = (b[1] - a[1]) / 2 * max(0.2, 1.0 - age * 0.4)
+            ox = a[0] + age * 140 * z
+            oy = mid + side * (b[1] - a[1]) / 4 + age * age * 240 * z
+            pts = []
+            for u in range(7):
+                d = L * u / 6
+                pts.append((ox + math.sin(ang) * d + math.sin(t * 22 + u) * 5 * z, oy + side * math.cos(ang) * d * 0.5))
+            pygame.draw.lines(self.frame, (232, 40, 60), False, pts, lw)
+        if age < 1.0:
+            effects.draw_confetti(self.frame, age, 41, pygame.Rect(int(a[0] - 220 * z), int(a[1] - 160 * z),
+                                                                     int(440 * z), int((b[1] - a[1]) + 160 * z)), n=40)
 
     # ------------------------------------------------------------------ diegetic surface modifiers (NO debug boxes!)
     def _ground_seg_at(self, x: float) -> tuple[float, float, float] | None:
@@ -531,18 +670,20 @@ class Renderer:
                     pygame.draw.circle(fr, (58, 34, 16), (sx, sy - cap_w * 0.25), br, 1)
 
     def _draw_top_surface_mod(self, cam: Cam, key: str, wx: float, wy: float, wr: float, zone: dict, t: float) -> None:
-        """v3.2: Clear comic surface textures on Rotating Disc (cracked glossy ice sheen, scalloped bubbling mud splat,
-        flush chevron boost pad)."""
-        fr, z = self.frame, cam.zoom
+        """v3.3: comic surface textures on the Rotating Disc at FIXED world spots (0.45R-0.75R), clipped to the shrinking
+        disc so they peel off the rim (cracked glossy ice, glossy scalloped mud puddle, flush chevron boost pad)."""
+        z = cam.zoom
+        clip_r = None
         if self.tr.mode == "TOP_DOWN":
-            k = self._k(zone)
-            wx, wy, wr = wx * k, wy * k, wr * k
-            room = self._platform_r(zone) - math.hypot(wx, wy) - 6
-            wr = min(wr, room)
-            if wr < 14:
+            plat_r = self._platform_r(zone)
+            if math.hypot(wx, wy) - wr > plat_r - 4 or wr < 6:
                 return
-        cx, cy = cam.to_screen(wx, wy)
+            clip_r = plat_r * z
+        scx, scy = cam.to_screen(wx, wy)
         r = max(12, int(wr * z))
+        pad = 24
+        fr = pygame.Surface((2 * r + 2 * pad, 2 * r + 2 * pad), pygame.SRCALPHA)
+        cx = cy = r + pad
         lw = max(2, int(3.5 * z))
 
         if key == "ice_zones":
@@ -571,7 +712,7 @@ class Renderer:
                     pygame.draw.line(fr, WHITE_, (sx - sr, sy), (sx + sr, sy), 2)
                     pygame.draw.line(fr, WHITE_, (sx, sy - sr), (sx, sy + sr), 2)
         elif key == "mud_zones":
-            # Scalloped sticky mud splat with dark brown rim + bubbling mud blisters
+            # v3.3: flat glossy dark-brown scalloped puddle (no stray highlight line)
             lobes = [
                 (cx + math.cos(a) * r * (0.86 + 0.14 * math.sin(i * 2.3 + wx * 0.05)),
                  cy + math.sin(a) * r * (0.86 + 0.14 * math.cos(i * 1.9 + wy * 0.05)))
@@ -579,19 +720,20 @@ class Renderer:
             ]
             lobe_r = max(6, int(r * 0.34))
             for lx, ly in lobes:
-                pygame.draw.circle(fr, (56, 32, 14), (lx, ly), lobe_r + lw)
-            pygame.draw.circle(fr, (56, 32, 14), (cx, cy), int(r * 0.80) + lw)
+                pygame.draw.circle(fr, (40, 22, 10), (lx, ly), lobe_r + lw)
+            pygame.draw.circle(fr, (40, 22, 10), (cx, cy), int(r * 0.80) + lw)
             for lx, ly in lobes:
-                pygame.draw.circle(fr, (112, 70, 34), (lx, ly), lobe_r)
-            pygame.draw.circle(fr, (112, 70, 34), (cx, cy), int(r * 0.80))
-            pygame.draw.arc(fr, (156, 108, 64), (cx - r * 0.55, cy - r * 0.55, r * 1.1, r * 1.1), 1.9, 2.9, max(2, int(4 * z)))
-            for j in range(4):
-                ang = j * 1.6 + t * 0.7
+                pygame.draw.circle(fr, (88, 52, 24), (lx, ly), lobe_r)
+            pygame.draw.circle(fr, (88, 52, 24), (cx, cy), int(r * 0.80))
+            pygame.draw.ellipse(fr, (255, 236, 210, 70), (cx - r * 0.55, cy - r * 0.52, r * 0.62, r * 0.26))
+            pygame.draw.ellipse(fr, (255, 236, 210, 45), (cx + r * 0.12, cy + r * 0.18, r * 0.30, r * 0.12))
+            for j in range(3):
+                ang = j * 2.1 + t * 0.7
                 bx, by = cx + math.cos(ang) * r * 0.42, cy + math.sin(ang * 1.2) * r * 0.38
-                br = max(3, int(r * 0.13 * (0.85 + 0.35 * math.sin(t * 5 + j * 1.7))))
-                pygame.draw.circle(fr, (56, 32, 14), (bx, by), br + 2)
-                pygame.draw.circle(fr, (152, 102, 56), (bx, by), br)
-                pygame.draw.circle(fr, (215, 175, 130), (bx - br * 0.3, by - br * 0.3), max(1, int(br * 0.28)))
+                br = max(3, int(r * 0.11 * (0.85 + 0.35 * math.sin(t * 5 + j * 1.7))))
+                pygame.draw.circle(fr, (40, 22, 10), (bx, by), br + 2)
+                pygame.draw.circle(fr, (118, 76, 40), (bx, by), br)
+                pygame.draw.circle(fr, (230, 200, 160), (bx - br * 0.3, by - br * 0.3), max(1, int(br * 0.28)))
         elif key == "boost_zones":
             pygame.draw.circle(fr, BLACK, (cx, cy), r + lw)
             pygame.draw.circle(fr, (32, 36, 58), (cx, cy), r)
@@ -603,6 +745,13 @@ class Renderer:
                 col_c = (0, 245, 255) if (j + int(t * 6)) % 2 == 0 else (255, 220, 40)
                 pygame.draw.lines(fr, BLACK, False, chev, max(4, int(6 * z)))
                 pygame.draw.lines(fr, col_c, False, chev, max(2, int(3.5 * z)))
+        ox_, oy_ = scx - cx, scy - cy
+        if clip_r is not None:
+            dsx, dsy = cam.to_screen(0, 0)
+            mask = pygame.Surface(fr.get_size(), pygame.SRCALPHA)
+            pygame.draw.circle(mask, (255, 255, 255, 255), (dsx - ox_, dsy - oy_), max(1, clip_r - 3))
+            fr.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+        self.frame.blit(fr, (ox_, oy_))
 
     def _zones(self, cam: Cam, zone: dict, t: float) -> None:
         fr, z = self.frame, cam.zoom
@@ -757,11 +906,7 @@ class Renderer:
                 elif sh["type"] == "seg":
                     pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in (sh["a"], sh["b"])]
                     if st["style"] == "disc_marks":
-                        k = self._k(self.tr.zones[fi])
-                        pts = [cam.to_screen(x + (px * ca - py * sa) * k, y + (px * sa + py * ca) * k)
-                               for px, py in (sh["a"], sh["b"])]
-                        pygame.draw.line(self.frame, scenery.mix(th.terrain, BLACK, 0.25), pts[0], pts[1], 4)
-                        continue
+                        continue                 # v3.3: no thin spoke lines (read as stray artifacts over patches)
                     wd = int(sh["r"] * 2 * cam.zoom)
                     pygame.draw.line(self.frame, BLACK, pts[0], pts[1], wd + 8)
                     if st["style"] == "hammer":
@@ -1012,41 +1157,41 @@ class Renderer:
         pygame.draw.line(self.frame, (160, 120, 80), (x + 8, y - 26), (x + 16, y - 38), 4)
         pygame.draw.circle(self.frame, (255, 200, 40) if int(t * 10) % 2 else (255, 80, 40), (x + 17, y - 40), 6)
 
-    def draw_juice(self, cam: Cam, play_t: float, t_anim: float) -> None:
-        """v3.2: Popups offset 70 px above collision point & strictly clamped to x in [40, 1040], plus Juggernaut corner
-        sparks and Glitch pixel sparks."""
+    def draw_juice(self, cam: Cam, play_t: float, t_anim: float, popups: bool = True) -> None:
+        """v3.3: ghosts/sparks only for KOs that are actually on camera; comic starbursts only from the pre-scheduled,
+        on-screen, non-stacking popup list (offset 70 px above the hit, clamped to x in [40, 1040])."""
         for e in self.tr.events:
             age = play_t - e.t
             if age < 0 or age > 0.9 or e.pos is None:
                 continue
             sx, sy = cam.to_screen(*e.pos)
+            visible = cam.on_screen(e.pos[0], e.pos[1], pad=10)
             seed = int(e.t * 1000) % 997
             if e.kind == "elimination":
                 cause = e.data.get("cause", "")
-                if cause in ("fell", "lava") and self.tr.mode == "SIDE_VIEW":
+                if cause in ("fell", "lava") and self.tr.mode == "SIDE_VIEW" and 0 <= sx <= W:
                     ky = self.meta.get("kill_y", e.pos[1])
-                    iy = min(max(cam.to_screen(e.pos[0], ky)[1], 320), H - 40)
-                    effects.draw_sparks(self.frame, (min(max(sx, 40), W - 40), iy), age, seed)
-                elif cause == "fell" and self.tr.mode == "TOP_DOWN":
-                    effects.draw_sparks(self.frame, (min(max(sx, 40), W - 40), 1640), age, seed)
-                gy = min(max(sy, 330), 1380)
-                gx = min(max(sx, 60), W - 60)
-                col = renderer.hex_rgb(HERO_BY_KEY[e.actors[0]].colour) if e.actors[0] in HERO_BY_KEY else (230, 220, 200)
-                effects.draw_ghost(self.frame, (gx, gy), age, col)
-                if e.data.get("hero") and age < effects.POPUP_S:
-                    word = "BETRAYAL!" if e.data.get("by_hero") else ("SPLAT!" if cause == "lava" else "YEET!")
-                    effects.draw_popup(self.frame, word, (gx, gy - 70), age, seed)
-            elif e.kind == "impact" and age < effects.POPUP_S and e.data.get("impulse", 0) > 900:
+                    iy = cam.to_screen(e.pos[0], ky)[1]
+                    if iy < H - 20:
+                        effects.draw_sparks(self.frame, (sx, max(iy, 320)), age, seed)
+                elif cause == "fell" and self.tr.mode == "TOP_DOWN" and visible:
+                    effects.draw_sparks(self.frame, (sx, sy), age, seed)
+                if visible:
+                    col = renderer.hex_rgb(HERO_BY_KEY[e.actors[0]].colour) if e.actors[0] in HERO_BY_KEY else (230, 220, 200)
+                    effects.draw_ghost(self.frame, (sx, sy), age, col)
+            elif e.kind == "impact" and age < effects.POPUP_S and e.data.get("impulse", 0) > 900 and visible:
                 effects.draw_sparks(self.frame, (sx, sy), age, seed)
-                if e.data.get("hero_pair"):
-                    effects.draw_popup(self.frame, "BONK!" if seed % 2 else "OOF!", (sx, sy - 70), age, seed)
-            elif e.kind == "trait" and age < effects.POPUP_S:
-                word = effects.CONTEXT_POPUPS.get(e.actors[0], "BOING!")
-                effects.draw_popup(self.frame, word, (sx, sy - 70), age, seed)
-            elif e.kind == "heavy_land" and age < 0.28:
+            elif e.kind == "heavy_land" and age < 0.28 and visible:
                 effects.draw_corner_clunk(self.frame, (sx, sy), age, seed)
-            elif e.kind == "glitch" and age < 0.32:
+            elif e.kind == "glitch" and age < 0.32 and visible:
                 effects.draw_pixel_sparks(self.frame, (sx, sy), age, seed, lead=(e.data.get("effect") == "lead"))
+        if not popups:
+            return
+        for t0, word, pos, seed in self.popups:
+            age = play_t - t0
+            if 0 <= age < effects.POPUP_S and cam.on_screen(pos[0], pos[1], pad=10):
+                sx, sy = cam.to_screen(*pos)
+                effects.draw_popup(self.frame, word, (sx, sy - 70), age, seed)
 
     # ------------------------------------------------------------------ frame & Commentator Host state
     def _ranks(self, fi: int) -> dict[str, int]:
@@ -1062,7 +1207,9 @@ class Renderer:
         return {self.tr.keys[i]: r + 1 for r, i in enumerate(alive_heroes)}
 
     def tuno_state(self, play_t: float, segment: str) -> tuple[str, str]:
-        """v3.2: Drives MC Tuno's 6 vivid broadcaster reaction poses + bottom-anchored micro-callout tags."""
+        """v3.2/3.3: MC Tuno's 6 reaction poses + bottom-anchored micro-callout tags. The cold open is always HYPED."""
+        if segment == "cold":
+            return "HYPED_TALKING", "LET'S GO!"
         if segment in ("card", "replay"):
             return "TROPHY_CHEER", ("GG!" if segment == "replay" else "")
         recent = [e for e in self.elims if 0 <= play_t - e.t < 1.15]
@@ -1114,23 +1261,21 @@ class Renderer:
         if shot.segment == "replay":
             effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)
         if shot.segment in ("play", "replay", "cold"):
-            self.draw_juice(cam, play_t if not slow else (tf - self.pre) / FPS, t_anim)
-        self._abyss(cam, fi, t_anim)
+            self.draw_juice(cam, play_t if not slow else (tf - self.pre) / FPS, t_anim, popups=shot.segment != "cold")
+        if self.tr.mode == "SIDE_VIEW":
+            self._abyss(cam, fi, t_anim)
         self.frame.set_clip(None)
-        self._overlays(shot, play_t, t_anim, hud_fi, ranks)
+        self._overlays(shot, play_t, t_anim, hud_fi, ranks, index / FPS)
         return self.frame
 
     def _abyss(self, cam: Cam, fi: int, t: float) -> None:
-        """v3.2: Recessed dark pit trench in front of background pillars & below all track slabs (zero awkward clipping)."""
+        """v3.2: Recessed dark pit trench in front of background pillars & below all track slabs (SIDE_VIEW only)."""
         fr, key = self.frame, self.theme.key
-        if self.tr.mode == "SIDE_VIEW":
-            ky = self.tr.zones[fi].get("lava_y", self.meta.get("kill_y", 500.0))
-            y0 = int(cam.to_screen(0, ky)[1])
-            # Keep pit trench recessed cleanly below active platforms so zero slab undersides clip behind spikes
-            y0 = max(1540, int(self._lowest_slab_y + 28), min(1760, y0))
-            y0 = min(1760, y0)
-        else:
-            y0 = 1650
+        ky = self.tr.zones[fi].get("lava_y", self.meta.get("kill_y", 500.0))
+        y0 = int(cam.to_screen(0, ky)[1])
+        # Keep pit trench recessed cleanly below active platforms so zero slab undersides clip behind spikes
+        y0 = max(1540, int(self._lowest_slab_y + 28), min(1760, y0))
+        y0 = min(1760, y0)
 
         # Recessed dark stone pit lip + deep abyss trench backdrop
         pygame.draw.rect(fr, BLACK, (0, y0 - 8, W, H - y0 + 8))
@@ -1159,7 +1304,20 @@ class Renderer:
                 pygame.draw.line(fr, (224, 232, 246), (tip[0] - 2, tip[1] + 12), (x + 11, y0 + 68), 3)
             pygame.draw.rect(fr, (26, 26, 40), (0, y0 + 74, W, H - y0 - 74))
 
-    def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int, ranks: dict[str, int]) -> None:
+    def _talking(self, out_t: float) -> bool | None:
+        """MC Tuno lip-sync: mouth flaps only while a narrated word is being spoken (None = no narration track)."""
+        if not self.speech:
+            return None
+        for ln in self.speech:
+            if ln["t0"] <= out_t <= ln["t1"]:
+                words = ln.get("words") or []
+                if not words:
+                    return True
+                return any(w0 - 0.03 <= out_t <= w1 + 0.03 for w0, w1, _ in words)
+        return False
+
+    def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int, ranks: dict[str, int],
+                  out_t: float = 0.0) -> None:
         fr = self.frame
         flags = self.tr.flags[fi]
         alive = int(sum(1 for f in flags if (f & T.ALIVE) or (self.tr.mode == "TOP_DOWN" and (f & T.FALLING))))
@@ -1178,7 +1336,8 @@ class Renderer:
             scenery.draw_panel(fr, alive, total, self.heroes, status, ranks, hud.TEXT_BOXES,
                                pulse=1.0 if recent >= 3 else 0.0)
         # Draw header + Commentator Booth Cam AFTER panel so bottom-anchored speech tags are always crisp on top
-        scenery.draw_header(fr, self.castle, self.ep.ep_label, t_st, t_anim, hud.TEXT_BOXES, speech=t_sp)
+        scenery.draw_header(fr, self.castle, self.ep.ep_label, t_st, t_anim, hud.TEXT_BOXES, speech=t_sp,
+                            talking=self._talking(out_t))
 
         if shot.segment == "play":
             for start, txt in self.banners:
@@ -1192,16 +1351,30 @@ class Renderer:
             col = renderer.hex_rgb(hero.colour) if hero else (200, 180, 140)
             hud.draw_winner_card(fr, hero, name, col, self.ep.season_line or "+10 SEASON POINTS",
                                  self.ep.prompt or "Who wins tomorrow?", shot.seg_t, bot=self.extras.get(w) if w else None)
+        if self.speech:
+            from src.rendering import captions
+            captions.draw_caption(fr, self.speech, out_t, hud.TEXT_BOXES)
 
 
-def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0) -> dict:
+def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0, sound: bool = True) -> dict:
     r = Renderer(ep)
     ep.shots = plan_shots(ep, r.teaser_f)
     out.parent.mkdir(parents=True, exist_ok=True)
+    snd_info: dict = {}
+    if sound and audio is None:
+        # M5: comedy commentary (Gemini/templated -> edge-tts) + procedural SFX + chiptune, mixed to -14 LUFS
+        from src.audio.mix import build_soundtrack
+        snd = build_soundtrack(r, ep, out.with_suffix(".wav"))
+        audio = snd["wav"]
+        r.speech = snd["speech"]
+        snd_info = {k: v for k, v in snd.items() if k not in ("speech", "wav")}
+        snd_info["lines"] = [ln["text"] for ln in snd["speech"]]
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
            "-i", "-"]
     if audio:
-        cmd += ["-i", str(audio), "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-shortest"]
+        lufs = settings()["audio"]["loudness_lufs"]
+        cmd += ["-i", str(audio), "-af", f"loudnorm=I={lufs}:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "160k",
+                "-ar", "44100", "-shortest"]
     cmd += ["-c:v", "libx264", "-preset", VIDEO["preset"], "-crf", str(VIDEO["crf"]), "-pix_fmt", "yuv420p",
             "-movflags", "+faststart", str(out)]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
@@ -1222,4 +1395,4 @@ def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0) -
     proc.stdin.close()
     if proc.wait() != 0:
         raise RuntimeError("ffmpeg failed")
-    return {"frames": len(ep.shots), "duration": len(ep.shots) / FPS, "text_boxes": boxes}
+    return {"frames": len(ep.shots), "duration": len(ep.shots) / FPS, "text_boxes": boxes, "sound": snd_info}

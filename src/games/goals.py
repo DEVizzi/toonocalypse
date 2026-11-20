@@ -41,6 +41,8 @@ class Goal:
     def declare(self, key: str, t: float, how: str) -> None:
         if self.sim.winner:
             return
+        if getattr(self.sim.arena, "true_finish", False) and len(self.sim.alive()) > 1 and how != "tiebreak":
+            return                         # v3.3: Rotating Disc only ends at genuine ALIVE: 1
         self.sim.winner = key
         self.sim.resolved_at = t
         self.sim.event("win", [key], self.sim.by_key[key].pos, how=how, podium=self.ranking()[:3])

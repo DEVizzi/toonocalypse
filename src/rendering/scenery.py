@@ -194,7 +194,7 @@ def episode_ribbon(text: str) -> pygame.Surface:
 
 
 def draw_header(frame: pygame.Surface, portrait_bg: pygame.Surface, ep_label: str, tuno_state: str, t: float,
-                text_boxes: list, speech: str = "") -> None:
+                text_boxes: list, speech: str = "", talking: bool | None = None) -> None:
     """Top-left episode ribbon + Top-right MC Tuno Commentator Booth Cam with bottom-anchored speech tag (y ~ 235)."""
     rib = episode_ribbon(ep_label.replace(" - ", " • "))
     r = rib.get_rect(topleft=(28, 30))
@@ -205,7 +205,7 @@ def draw_header(frame: pygame.Surface, portrait_bg: pygame.Surface, ep_label: st
     cx, cy = CAM_RECT.centerx, CAM_RECT.centery - 6
     frame.blit(portrait_bg, portrait_bg.get_rect(center=(cx, cy)))
     buf = pygame.Surface((220, 220), pygame.SRCALPHA)
-    draw_tuno(buf, 110, 214, tuno_state, t, scale=1.62)
+    draw_tuno(buf, 110, 214, tuno_state, t, scale=1.62, talking=talking)
     mask = pygame.Surface((220, 220), pygame.SRCALPHA)
     pygame.draw.circle(mask, (255, 255, 255, 255), (110, 110), 92)
     buf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)

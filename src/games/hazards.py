@@ -322,20 +322,28 @@ class _Zone(Hazard):
                 w = self.r.uniform(240, 380)
                 self.zones.append(("rect", x - w / 2, x + w / 2))
         else:
-            # Place 2 clean non-overlapping patches around the mid-ring (offset ice vs mud angles)
+            # v3.3: mid-to-outer radial offsets (0.45R-0.75R) so patches peel off as the arena shrinks
+            R = float(getattr(self.sim.arena, "R", 430.0))
             base_off = 0.35 if self.style == "ice_zones" else (0.35 + math.pi * 0.5)
-            rad = self.r.uniform(165, 225)
             for i in range(2):
                 a = base_off + i * math.pi + self.r.uniform(-0.22, 0.22)
-                self.zones.append(("circle", (math.cos(a) * rad, math.sin(a) * rad), self.r.uniform(62, 78)))
+                rad = self.r.uniform(0.45, 0.75) * R
+                self.zones.append(("circle", (math.cos(a) * rad, math.sin(a) * rad), self.r.uniform(58, 74)))
         self.sim.surface_mods.append(self.modifier)
+
+    def _fade(self) -> float:
+        """TOP: patches shrink to nothing within 1 s of OVERTIME so the final duel is clean high-knockback combat."""
+        if self.sim.mode == SIDE or not self.sim.overtime:
+            return 1.0
+        return max(0.0, 1.0 - (self.sim.t - self.sim.overtime_t) / 1.0)
 
     def inside(self, c) -> bool:
         x, y = c.pos
+        k = self._fade()
         for z in self.zones:
             if z[0] == "rect" and z[1] <= x <= z[2]:
                 return True
-            if z[0] == "circle" and math.hypot(x - z[1][0], y - z[1][1]) < z[2]:
+            if z[0] == "circle" and math.hypot(x - z[1][0], y - z[1][1]) < z[2] * k:
                 return True
         return False
 
@@ -348,7 +356,10 @@ class _Zone(Hazard):
         return False
 
     def zone_state(self):
-        return {self.style: self.zones}
+        k = self._fade()
+        if k >= 1.0:
+            return {self.style: self.zones}
+        return {self.style: [(z[0], z[1], z[2] * k) if z[0] == "circle" else z for z in self.zones if k > 0.05]}
 
 
 class SlipperyIce(_Zone):

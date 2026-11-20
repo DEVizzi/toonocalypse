@@ -138,6 +138,7 @@ class Sim:
         self.pressure = 1.0             # Lord Tuno's pacing pressure: >1 when more contestants remain than the schedule
         self.hazard_mult = 1.0          # hazards escalate harder than racers (speed_mult ** hazard_escalation_exp)
         self.overtime = False           # OVERTIME CHAOS: <= 3 survivors or the overtime escalation time
+        self.overtime_t = 999.0
         self.cam_x = 0.0
         self.fan_favorite = fan_favorite
         self.arena = arenas.build(self)
@@ -250,6 +251,8 @@ class Sim:
         clamp, wmax = self.cfg["velocity_clamp"], self.cfg["angular_clamp"]
         drag = self.cfg["floater_air_drag"]
         flat_damp = self.cfg.get("juggernaut_flat_damping", 5.2)
+        vy_min = float(self.cfg.get("flight_vy_min", -680))
+        ceiling = float(self.cfg.get("flight_ceiling_px", 360))
 
         def f(body, gravity, damping, dt):
             c = c_ref[0]
@@ -269,6 +272,13 @@ class Sim:
                     body.angular_velocity *= max(0.0, 1.0 - flat_damp * dt)
                     body.velocity = pymunk.Vec2d(body.velocity.x * max(0.0, 1.0 - 1.3 * dt), body.velocity.y)
             v = body.velocity
+            if self.mode == SIDE and c.hero is not None and c.hero.trait in ("auto_hop", "glide"):
+                # v3.3: keep bouncers/gliders in frame with the pack (no orbits into empty clouds)
+                vx_, vy_ = v.x, max(v.y, vy_min)
+                fy = self.arena.floor_y(body.position.x) if hasattr(self.arena, "floor_y") else None
+                if fy is not None and body.position.y < fy - ceiling:
+                    vy_ = max(vy_, 0.0) + 2600.0 * dt
+                body.velocity = v = pymunk.Vec2d(vx_, vy_)
             sp = v.length
             if sp > clamp:
                 body.velocity = v * (clamp / sp)
@@ -494,11 +504,13 @@ class Sim:
             frame += 1
             if self.winner and self.resolved_at is not None and self.t >= self.resolved_at + 0.5:
                 break
-            if self.t >= TIMELINE.forced_resolution_s and not self.winner:
+            true_finish = getattr(self.arena, "true_finish", False)
+            cap = float(self.cfg["disc"]["hard_stop_s"]) if true_finish else hard
+            if not true_finish and self.t >= TIMELINE.forced_resolution_s and not self.winner:
                 self.goal.force_resolve(self.t)
-            if self.t >= hard and not self.winner:
+            if self.t >= cap and not self.winner:
                 self.goal.force_resolve(self.t, hard=True)
-            if self.t > hard + 1.0:
+            if self.t > cap + 1.0:
                 break
         self.trace.events = self.events
         self.trace.meta.update(winner=self.winner, resolved_at=self.resolved_at, sim_s=round(time.time() - start, 2),
@@ -553,6 +565,7 @@ class Sim:
         if self.overtime:
             return
         self.overtime = True
+        self.overtime_t = self.t
         self.hazard_mult = self.cfg["overtime"]["hazard_mult"]
         self.event("escalation", [], None, mult=self.speed_mult, banner=banner or "OVERTIME CHAOS!", overtime=True)
 
@@ -598,41 +611,50 @@ class Sim:
                 floor = self.arena.floor_y(x) if hasattr(self.arena, "floor_y") else None
                 if y > self.kill_y or (floor is not None and y > floor + self.cfg["fall_kill_depth"]):
                     self.eliminate(c, "fell")
-                elif self.finish_x is not None and (c.pos[0] < self.cam_x - self.view_w * self._behind_k()
-                                                    or c.pos[0] < self.chase_x):
-                    self.eliminate(c, "left_behind")
+                elif self.finish_x is not None and c.pos[0] < self.chase_x:
+                    self.eliminate(c, "left_behind")       # v3.3: only the visible fire wall torches stragglers
             elif self.walkable is not None and not self.walkable(x / self.edge_k, y / self.edge_k):
                 self.eliminate(c, "fell")
             c.contacts = [k for k in c.contacts if self.t - k[0] < 1.5]
         self._pacing()
+        alive = self.alive()
+        if self.mode == SIDE and alive:
+            from src.physics.cluster import cluster_center
+            hx = [c.pos[0] for c in alive if c.is_hero] or [c.pos[0] for c in alive]
+            target = cluster_center(hx, settings()["render"]["cluster_window_px"])
+            self.cam_x += (target - self.cam_x) * min(1.0, dt * 2.5)        # mirrors the action-cluster camera
         if self.mode == SIDE and self.finish_x is not None and self.t > 3.0:
             # paced so the collapse reaches the finish around the forced-resolution time (faster when behind schedule)
             esc_units = sum(TIMELINE.speed_at(3.0 + i * 0.1) * 0.1 for i in range(int((self.cfg["pacing"]["chase_finish_s"] - 3.0) * 10)))
             k = min(self.cfg["pacing"]["chase_max"], max(self.cfg["pacing"]["chase_min"], self.pressure))
             self.chase_x += (self.finish_x / esc_units) * self.speed_mult * k * dt
             if self.overtime:       # the floor collapses right behind the last-place survivor
-                alive_x = [c.pos[0] for c in self.alive()]
+                alive_x = [c.pos[0] for c in alive]
                 if alive_x:
-                    target = min(alive_x) - 120
-                    self.chase_x = max(self.chase_x, self.chase_x + (target - self.chase_x) * min(1.0, dt * 1.6))
+                    target_w = min(alive_x) - 120
+                    self.chase_x = max(self.chase_x, self.chase_x + (target_w - self.chase_x) * min(1.0, dt * 1.6))
+            # v3.3 rubber band: never more than wall_lag_px behind the action cluster (eased so it visibly surges)
+            n_heroes = sum(1 for c in alive if c.is_hero)
+            lag = float(self.cfg["wall_lag_px"]) * (1.35 if n_heroes <= 4 else 1.0)
+            lag_floor = self.cam_x - lag
+            if self.t > 6.0 and self.chase_x < lag_floor:
+                self.chase_x += (lag_floor - self.chase_x) * min(1.0, dt * 1.2)
             self.zones["chase_x"] = self.chase_x
         pc = self.cfg["pacing"]
         if self.mode != SIDE and self.t > pc["shrink_start_s"]:
-            rate = pc["shrink_rate"] * self.speed_mult * max(self.pressure, 0.6 if self.overtime else 0.0)
-            if self.overtime:
-                rate *= self.cfg["overtime"]["shrink_mult"]
             tw_k = getattr(self.twist, "k", 1.0) if (self.twist is not None and self.twist.key == "shrinking_arena") else 1.0
-            floor_k = pc["edge_k_min"] / max(0.35, tw_k)
-            self.edge_k = max(floor_k, self.edge_k - rate * dt)
+            sched = getattr(self.arena, "shrink_target", None)
+            if sched is not None:
+                # v3.3 Rotating Disc: scripted shrink of the COMBINED radius down to ~1 hero width
+                self.edge_k = min(1.0, max(0.01, sched(self.t) / max(0.05, tw_k)))
+            else:
+                rate = pc["shrink_rate"] * self.speed_mult * max(self.pressure, 0.6 if self.overtime else 0.0)
+                if self.overtime:
+                    rate *= self.cfg["overtime"]["shrink_mult"]
+                floor_k = pc["edge_k_min"] / max(0.35, tw_k)
+                self.edge_k = max(floor_k, self.edge_k - rate * dt)
             self.zones["edge_k"] = round(self.edge_k, 4)
-        # leader + camera proxy for LEFT BEHIND (mirrors camera framing: leading 40% of surviving heroes)
-        alive = self.alive()
         if alive:
-            if self.mode == SIDE:
-                xs = sorted((c.pos[0] for c in alive if c.is_hero), reverse=True) or sorted((c.pos[0] for c in alive), reverse=True)
-                lead = xs[: max(1, math.ceil(len(xs) * 0.4))]
-                target = sum(lead) / len(lead)
-                self.cam_x += (target - self.cam_x) * min(1.0, dt * 2.5)   # eased, like the real camera
             ld = self.goal.leader() if hasattr(self, "goal") else None
             if ld and ld != self.leader:
                 if self.leader is not None:

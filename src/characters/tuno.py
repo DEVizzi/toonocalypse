@@ -104,7 +104,8 @@ def _trophy(s: pygame.Surface, cx: float, cy: float, r: float) -> None:
     pygame.draw.rect(s, BLACK, base, lw - 1, border_radius=4)
 
 
-def draw_tuno(s: pygame.Surface, cx: float, base_y: float, state: str, t: float, scale: float = 1.0) -> None:
+def draw_tuno(s: pygame.Surface, cx: float, base_y: float, state: str, t: float, scale: float = 1.0,
+              talking: bool | None = None) -> None:
     """Draws Commentator Host MC Tuno inside his portrait frame (clipped by caller if needed)."""
     st = _ALIASES.get(state, state)
     r = 54 * scale
@@ -251,7 +252,7 @@ def draw_tuno(s: pygame.Surface, cx: float, base_y: float, state: str, t: float,
     elif st == "FACEPALM":
         pygame.draw.lines(s, BLACK, False, [(bx - r * 0.24, my + r * 0.08), (bx - r * 0.06, my), (bx + r * 0.16, my + r * 0.10)], lw)
     else:  # HYPED_TALKING: 2-frame animated mouth movement (ready for TTS lip-sync)
-        talk_open = int(t * 7.5) % 2 == 0
+        talk_open = (int(t * 7.5) % 2 == 0) if talking is None else (bool(talking) and int(t * 11) % 3 != 2)
         if talk_open:
             pts = [(bx - r * 0.30, my - r * 0.06), (bx + r * 0.30, my - r * 0.06),
                    (bx + r * 0.18, my + r * 0.22), (bx - r * 0.18, my + r * 0.22)]

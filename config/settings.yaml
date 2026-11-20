@@ -67,6 +67,16 @@ physics:
   fall_kill_depth: 240       # SIDE: this far below the course floor profile = fell off
   top_fall_s: 0.45
   victory_delay_s: 0.55      # TOP: wait after 2nd-to-last falls so zero losers remain on disc
+  disc:                      # v3.3 Rotating Disc true last-player-standing endgame
+    min_radius_px: 44        # shrink until barely 1 hero fits
+    shrink_end_s: 25         # combined radius reaches min_radius around here
+    hard_stop_s: 38          # never resolve while > 1 alive before this cap
+    final_push_s: 10         # centrifugal drift + spin ramp over the final seconds
+    spin_ramp: 0.7           # +70% spin at full ramp
+    centrifugal: 1050        # outward accel (px/s^2) at the rim at full ramp
+  wall_lag_px: 850           # v3.3 SIDE: elimination wall never lags more than this behind the action cluster
+  flight_vy_min: -680        # v3.3 Boing/Floater peak upward speed cap
+  flight_ceiling_px: 360     # v3.3 Boing/Floater soft altitude cap above the local track
   floater_air_drag: 0.42     # per second while airborne (v3.2: floaty long arcs)
   dummy_propulsion: 0.72
   top_dummy_propulsion: 0.60 # v3.2: weaker center-recovery in TOP_DOWN so dummies exit before Final 3
@@ -113,15 +123,17 @@ physics:
   top_quake: {t: 1.5, dv: 380, stun_s: 0.35}   # TOP opening lever: outward floor buck (owner: action in 4 s)
   hero_edge_margin: 1.35     # TOP: heroes keep this much more distance from drops
   shove_top: 240             # TOP shove impulse per unit mass (lunger mass capped at 3x the target's)
-  course_length_scale: 1.35  # SIDE section counts multiplier
+  course_length_scale: 1.9   # SIDE section counts multiplier (v3.3: longer to land in 16-23 s)
   course_ramp: [0.6, 1.1]  # SIDE gap-width multiplier from the start to the finish of a course
 
 render:
-  side_zoom: 0.95         # default SIDE_VIEW zoom (pack-tracking adjusts 0.72x-1.05x)
-  side_zoom_range: [0.72, 1.05]
-  top_zoom: 1.0           # multiplier on the fit-to-arena zoom in TOP_DOWN
-  final3_zoom: 1.45       # SIDE extra zoom when 3 or fewer contestants survive
-  top_zoom_max: 1.95      # v3.2 TOP: smooth zoom ramp 1.0x -> 1.95x (~65% width in final 1v1)
+  side_zoom: 1.0          # default SIDE_VIEW zoom
+  side_zoom_range: [0.86, 1.25]   # v3.3 strict floor: never ant-size balls
+  cluster_window_px: 750  # v3.3 camera frames the densest 4-6 heroes inside this window
+  leader_lock_px: 550     # lock onto #1 only within this distance of the finish (or <= 3 heroes alive)
+  top_zoom: 0.94          # multiplier on the fit-to-arena zoom in TOP_DOWN (cold open fits with margin)
+  final3_zoom: 1.25       # SIDE zoom when 3 or fewer contestants survive
+  top_zoom_max: 2.05      # v3.3 TOP: zoom = initial_radius / current_radius, capped 2.05x
 
 mode_mix: {SIDE_VIEW: 0.65, TOP_DOWN: 0.35}
 
@@ -143,8 +155,15 @@ season:
 fan_buff: false
 
 audio:
+  sample_rate: 44100
   narration_db: 0
   sfx_db: -7
-  music_db: -22
+  music_db: -17           # chiptune bed when nobody is talking
+  duck_db: -8             # extra music ducking under narration
   loudness_lufs: -14
   sfx_cap_per_s: 12
+  voice: "en-US-GuyNeural"    # edge-tts (free) MC Tuno voice
+  voice_rate: "+14%"
+  voice_pitch: "+6Hz"
+  gemini_model: "gemini-2.5-flash"   # free-tier comedy writer; templated lines are the fallback
+  bpm: 150

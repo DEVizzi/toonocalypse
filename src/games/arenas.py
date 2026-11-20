@@ -90,7 +90,7 @@ class Arena:
 
     def finalize_side(self, end_x: float, low_y: float, high_y: float) -> None:
         sim = self.sim
-        sim.finish_x = end_x - 220
+        sim.finish_x = end_x - 450
         sim.kill_y = low_y + 380
         sim.bounds = (-400.0, high_y - 1100, end_x + 600, low_y + 500)
         # back wall + finish banner posts
@@ -472,14 +472,29 @@ class RotatingDisc(TopArena):
         self.frame_top(self.R)
         del p
 
+    true_finish = True       # v3.3: never resolve while > 1 contestant is alive (until the 38 s cap)
+
+    def shrink_target(self, t: float) -> float:
+        """Combined radius scale: 1.0 until 3 s, then down to min_radius_px / R by shrink_end_s (held after)."""
+        dc = self.sim.cfg["disc"]
+        kmin = float(dc["min_radius_px"]) / self.R
+        p = min(1.0, max(0.0, (t - 3.0) / (float(dc["shrink_end_s"]) - 3.0)))
+        return 1.0 - (1.0 - kmin) * p ** 1.1
+
+    def push_progress(self) -> float:
+        dc = self.sim.cfg["disc"]
+        start = float(dc["shrink_end_s"]) - float(dc["final_push_s"]) + 1.0
+        return min(1.0, max(0.0, (self.sim.t - start) / float(dc["final_push_s"])))
+
     def _carry(self, dt: float):
+        dc = self.sim.cfg["disc"]
+        p = self.push_progress()
         k_edge = self.sim.edge_k
-        ot_spin = 1.28 if self.sim.overtime else 1.0
-        w = (self.omega if self.sim.t >= 1.0 else self.omega * 0.3) * self.sim.speed_mult * ot_spin
+        w = (self.omega if self.sim.t >= 1.0 else self.omega * 0.3) * self.sim.speed_mult * (1.0 + float(dc["spin_ramp"]) * p)
         self.disc.angular_velocity = w
         tw = getattr(self.sim, "twist", None)
         k_all = k_edge * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)
-        cur_r = self.R * k_all
+        cur_r = max(1.0, self.R * k_all)
         falls = []
         for idx, bm in enumerate(getattr(self, "bumpers", [])):
             if bm["fall_t"] is None and bm["base"].length > 0.78 * cur_r:
@@ -489,7 +504,10 @@ class RotatingDisc(TopArena):
             falls.append(round(self.sim.t - bm["fall_t"], 3) if bm["fall_t"] is not None else -1.0)
         if falls:
             self.sim.zones["bumper_falls"] = falls
-        for c in self.sim.alive():
+        slosh_a = self.sim.t * 2.6
+        survivors = self.sim.alive()
+        calm = len(survivors) <= 1               # champion's victory hold: no more shoving forces
+        for c in survivors:
             x, y = c.pos
             tv = pymunk.Vec2d(-y * w, x * w)          # tangential surface velocity at the rider
             dv = tv - c.body.velocity
@@ -498,12 +516,24 @@ class RotatingDisc(TopArena):
             k = 4.0 * grip
             c.body.apply_force_at_world_point((dv.x * c.body.mass * k, dv.y * c.body.mass * k), c.body.position)
             c.body.torque += (w - c.body.angular_velocity) * c.body.moment * 3.0 * grip   # riders spin with the disc
+            m = c.body.mass
+            if calm:
+                # champion's victory hold: brake and settle toward the hub so the winner never slips off
+                c.body.velocity = c.body.velocity * 0.82
+                c.body.apply_force_at_world_point((-x * 14.0 * m, -y * 14.0 * m), c.body.position)
+                continue
             if self.sim.t > 7.0:
-                # Rotating disc tilt-slosh breaks up dead-center huddles into real 1v1 sumo knockouts
-                slosh_a = self.sim.t * 2.6
-                slosh_f = (210.0 + (460.0 if self.sim.overtime else 0.0)) * self.sim.speed_mult * c.body.mass
-                c.body.apply_force_at_world_point((math.cos(slosh_a) * slosh_f, math.sin(slosh_a) * slosh_f),
-                                                  c.body.position)
+                # tilt-slosh breaks up dead-centre huddles
+                sf = (180.0 + 320.0 * p) * self.sim.speed_mult * m
+                c.body.apply_force_at_world_point((math.cos(slosh_a) * sf, math.sin(slosh_a) * sf), c.body.position)
+            if p > 0.0:
+                # v3.3 final push: centrifugal outward drift grows with radius and over the final seconds
+                d = math.hypot(x, y)
+                ux, uy = (x / d, y / d) if d > 1.0 else (math.cos(slosh_a), math.sin(slosh_a))
+                a = float(dc["centrifugal"]) * p * (0.35 + min(1.5, d / cur_r))
+                if c.hero is not None and c.hero.trait == "bowling":
+                    a *= 1.45                      # cast iron slides on the spinning metal plate
+                c.body.apply_force_at_world_point((ux * a * m, uy * a * m), c.body.position)
 
 
 class MazeCorridors(TopArena):

@@ -175,7 +175,7 @@ class Brain:
         ek = sim.edge_k * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)
         margin = (55 + 105 * bh.edge_awareness) * (sim.cfg["hero_edge_margin"] if c.is_hero else 0.78) * min(1.0, ek)
         if sim.overtime:
-            margin *= 0.55
+            margin *= 0.8
         if edge < margin * 0.6:
             self._panic(sim, c)
         if edge < margin:
@@ -198,16 +198,16 @@ class Brain:
                     grip = min(grip, 0.95)
                 f = min(ACCEL * 1.3, e * 5.0) * c.body.mass * grip * top_pm
                 sim.push(c, ex / e * f, ey / e * f)
-        ot_agg = 3.2 if sim.overtime else 1.0
+        ot_agg = 1.8 if sim.overtime else 1.0
         if c.shove_cd <= 0 and sim.rng.random() < 0.06 * bh.aggression * ot_agg:
-            rival = self._nearest(sim, c, 140 if sim.overtime else 90)
+            rival = self._nearest(sim, c, 120 if sim.overtime else 90)
             if rival is not None:
                 rx, ry = rival.pos
                 d = math.hypot(rx - x, ry - y) or 1
-                ot_shove = 2.1 if sim.overtime else 1.0
+                ot_shove = 1.4 if sim.overtime else 1.0
                 kk = sim.cfg["shove_top"] * ot_shove * min(c.body.mass, 3.0 * rival.body.mass) * top_pm
                 c.body.apply_impulse_at_world_point(((rx - x) / d * kk, (ry - y) / d * kk), c.body.position)
-                c.shove_cd = 0.70 if sim.overtime else 1.6
+                c.shove_cd = 1.0 if sim.overtime else 1.6
 
     def _nearest(self, sim: Sim, c: Contestant, rng: float) -> Contestant | None:
         best, bd = None, rng

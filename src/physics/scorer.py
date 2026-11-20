@@ -59,7 +59,12 @@ def score(trace: Trace, history: dict | None = None) -> Score:
     hero_elims = [e.t for e in elims if e.data.get("hero")]
     p["all_heroes_early"] = -40 if heroes and len(hero_elims) >= len(heroes) and max(hero_elims) < 10 else 0
     lo, hi = TIMELINE.gameplay_target_min_s, TIMELINE.hard_stop_s
+    disc = trace.meta.get("recipe", {}).get("arena") == "rotating_disc"
+    if disc:
+        hi = 30.0                      # v3.3: disc plays to a genuine last-ball finish (natural 20-26 s)
     p["duration"] = -50 if not (lo <= end <= hi) else 0
+    how = next((e.data.get("how") for e in ev if e.kind == "win"), None)
+    p["forced_finish"] = settings()["scorer"]["reject_penalty"] if (disc and how != "last_standing") else 0
     rate = len(elims) / max(1, len(trace.keys))
     goal = trace.meta.get("recipe", {}).get("goal")
     target_rate = 0.6 if goal not in ("reach_finish", "collect_items", "hold_a_zone") else 0.35
@@ -81,7 +86,7 @@ def score(trace: Trace, history: dict | None = None) -> Score:
 
 def rejected(s: Score) -> bool:
     """Hard-rule violations (Best-of-N never picks these if any valid run exists)."""
-    return any(s.parts.get(k, 0) < 0 for k in ("dummy_win", "late_first_blood", "dead_stretch", "duration"))
+    return any(s.parts.get(k, 0) < 0 for k in ("dummy_win", "late_first_blood", "dead_stretch", "duration", "forced_finish"))
 
 
 def min_score() -> float:
