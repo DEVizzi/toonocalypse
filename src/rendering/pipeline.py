@@ -224,6 +224,7 @@ class Renderer:
         par = (-cam.x * 0.1) % W
         fr.blit(self.sky, (par - W, 0))
         fr.blit(self.sky, (par, 0))
+        fr.set_clip(self.world_rect)               # world geometry/props never bleed into the castle/HUD band
         self._particles(cam, t_anim)
         z = cam.zoom
         if self.tr.mode == "TOP_DOWN":            # eliminated balls tumble down BEHIND the platform
