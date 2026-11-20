@@ -68,6 +68,21 @@ physics:
   segment_radius: 6
   speed_centre: 255        # effective max speed = centre + (stat - centre) * spread (keeps §9.2 ordering)
   speed_spread: 0.45
+  pacing:                   # schedule-driven arena pressure (see Sim._pacing)
+    schedule_end_s: 33
+    schedule_power: 1.6
+    pressure_gain: 4.0
+    pressure_max: 3.0
+    chase_min: 0.6
+    chase_max: 1.8
+    shrink_start_s: 6
+    shrink_rate: 0.011
+    edge_k_min: 0.30
+  extras:                   # extras are fodder: they freeze in cartoon panic at drops and hazards
+    panic_per_s: 2.5
+    panic_s: [0.3, 0.8]
+  course_length_scale: 1.45  # SIDE section counts multiplier
+  course_ramp: [0.55, 1.3]  # SIDE gap-width multiplier from the start to the finish of a course
 
 mode_mix: {SIDE_VIEW: 0.65, TOP_DOWN: 0.35}
 

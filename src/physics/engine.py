@@ -58,6 +58,7 @@ class Contestant:
     contacts: list[tuple[float, str]] = field(default_factory=list)
     fan_favorite: bool = False
     drive: tuple[float, float] = (0.0, 0.0)   # force re-applied on every substep (pymunk resets forces per step)
+    panic_until: float = -9.0   # extras freeze in cartoon panic at drops and hazards
 
     @property
     def is_hero(self) -> bool:
@@ -123,6 +124,7 @@ class Sim:
         self.view_w = 1080.0            # camera zoom 1.0 in SIDE_VIEW (world px across the screen)
         self.chase_x = -500.0           # SIDE: the collapsing castle floor chasing from the left
         self.edge_k = 1.0               # TOP: escalation shrinks every arena's walkable edge (§4 "arena shrinks")
+        self.pressure = 1.0             # Lord Tuno's pacing pressure: >1 when more contestants remain than the schedule
         self.cam_x = 0.0
         self.fan_favorite = fan_favorite
         self.arena = arenas.build(self)
@@ -459,18 +461,22 @@ class Sim:
             if self.mode == SIDE:
                 if y > self.kill_y:
                     self.eliminate(c, "fell")
-                elif self.finish_x is not None and (c.pos[0] < self.cam_x - self.view_w * 1.5 or c.pos[0] < self.chase_x):
+                elif self.finish_x is not None and (c.pos[0] < self.cam_x - self.view_w * self._behind_k()
+                                                    or c.pos[0] < self.chase_x):
                     self.eliminate(c, "left_behind")
             elif self.walkable is not None and not self.walkable(x / self.edge_k, y / self.edge_k):
                 self.eliminate(c, "fell")
             c.contacts = [k for k in c.contacts if self.t - k[0] < 1.5]
+        self._pacing()
         if self.mode == SIDE and self.finish_x is not None and self.t > 3.0:
-            # paced so the collapse reaches the finish around the forced-resolution time
+            # paced so the collapse reaches the finish around the forced-resolution time (faster when behind schedule)
             esc_units = 9 * 1.0 + 10 * 1.3 + 14 * 1.65
-            self.chase_x += (self.finish_x / esc_units) * self.speed_mult * dt
+            k = min(self.cfg["pacing"]["chase_max"], max(self.cfg["pacing"]["chase_min"], self.pressure))
+            self.chase_x += (self.finish_x / esc_units) * self.speed_mult * k * dt
             self.zones["chase_x"] = self.chase_x
-        if self.mode != SIDE and self.t > 12.0:
-            self.edge_k = max(0.42, self.edge_k - 0.011 * self.speed_mult * dt)
+        pc = self.cfg["pacing"]
+        if self.mode != SIDE and self.t > pc["shrink_start_s"]:
+            self.edge_k = max(pc["edge_k_min"], self.edge_k - pc["shrink_rate"] * self.speed_mult * self.pressure * dt)
             self.zones["edge_k"] = round(self.edge_k, 4)
         # leader + camera proxy for LEFT BEHIND (mirrors camera framing: leading 40% of surviving heroes)
         alive = self.alive()
@@ -491,6 +497,19 @@ class Sim:
         else:
             self.zones.pop("reversed", None)
 
+    def _behind_k(self) -> float:
+        """LEFT BEHIND distance in view widths: 1.5 (spec), wider while the elimination schedule is ahead, as the
+        camera pulls back to keep the pack in frame."""
+        return 1.5 + 1.5 * max(0.0, 1.0 - self.pressure)
+
+    def _pacing(self) -> None:
+        """Schedule-driven pressure (like a battle-royale storm): the arena squeezes harder while more contestants remain
+        than the elimination schedule expects, and eases off when ahead of it. It never picks who goes out."""
+        pc = self.cfg["pacing"]
+        target = max(0.03, 1.0 - (max(0.0, self.t) / pc["schedule_end_s"]) ** pc["schedule_power"])
+        frac = len(self.alive()) / max(1, len(self.contestants))
+        self.pressure = min(pc["pressure_max"], max(0.0, 1.0 + pc["pressure_gain"] * (frac - target)))
+
     def _expression(self, c: Contestant) -> str:
         if not c.alive:
             return "eliminated"
@@ -499,6 +518,8 @@ class Sim:
         if c.stun > 0 or self.t - c.last_stun_end < 1.2:
             return "dizzy"
         if self.arena.danger(c, 90):
+            return "scared"
+        if self.t < c.panic_until:
             return "scared"
         if self.t < c.angry_until:
             return "angry"

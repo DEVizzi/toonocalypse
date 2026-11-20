@@ -119,6 +119,15 @@ class Course(Arena):
         self.low, self.high = max(self.low, self.y), min(self.high, self.y)
         return s
 
+    def count(self, key: str, lo: int, hi: int) -> int:
+        """Section count, scaled so fast heroes need ~30 s of gameplay to reach the finish."""
+        return self.p.setdefault(key, round(self.sim.rng.randint(lo, hi) * self.sim.cfg["course_length_scale"]))
+
+    def ramp(self, i: int, n: int) -> float:
+        """Course difficulty ramp: gaps start narrow and widen toward the finish so eliminations spread out."""
+        lo, hi = self.sim.cfg["course_ramp"]
+        return lo + (hi - lo) * i / max(1, n - 1)
+
     def gap(self, w: float, dy: float = 0.0) -> None:
         self.pits.append((self.x, self.x + w))
         self.x += w
@@ -147,7 +156,8 @@ class FlatTrack(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for _ in range(self.p.setdefault("sections", r.randint(10, 13))):
+        n = self.count("sections", 10, 13)
+        for i in range(n):
             kind = r.choice(["hop", "choke", "gap", "flat", "hop"])
             if kind == "hop":
                 self.seg(r.uniform(180, 320))
@@ -159,7 +169,7 @@ class FlatTrack(Course):
                 self.seg(r.uniform(260, 380), h)
             elif kind == "gap":
                 self.seg(r.uniform(200, 320))
-                self.gap(r.uniform(90, 150))
+                self.gap(r.uniform(90, 150) * self.ramp(i, n))
             self.seg(r.uniform(260, 460))
         self.finish(800)
 
@@ -170,13 +180,14 @@ class RampDescent(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for i in range(self.p.setdefault("ramps", r.randint(8, 10))):
+        n = self.count("ramps", 8, 10)
+        for i in range(n):
             self.seg(r.uniform(420, 620), r.uniform(150, 240))
             if i % 2 == 0:
                 self.block(r.uniform(30, 50), r.uniform(30, 45))
             self.seg(r.uniform(120, 220))
             if r.random() < 0.4:
-                self.gap(r.uniform(80, 130), r.uniform(20, 60))
+                self.gap(r.uniform(80, 130) * self.ramp(i, n), r.uniform(20, 60))
         self.finish(700)
 
 
@@ -186,8 +197,9 @@ class PitPlatforms(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for _ in range(self.p.setdefault("islands", r.randint(14, 18))):
-            self.gap(r.uniform(80, 150), r.uniform(-50, 50))
+        n = self.count("islands", 14, 18)
+        for i in range(n):
+            self.gap(r.uniform(80, 150) * self.ramp(i, n), r.uniform(-50, 50))
             self.seg(r.uniform(180, 340))
         self.gap(r.uniform(100, 150))
         self.finish(700)
@@ -199,10 +211,11 @@ class TieredTower(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for i in range(self.p.setdefault("tiers", r.randint(13, 16))):
+        n = self.count("tiers", 13, 16)
+        for i in range(n):
             if i % 3 == 2:
                 self.seg(r.uniform(90, 130), material="bouncy")    # launch pad
-                self.gap(r.uniform(60, 110), -r.uniform(150, 220))
+                self.gap(r.uniform(60, 110) * self.ramp(i, n), -r.uniform(150, 220))
             else:
                 self.seg(r.uniform(260, 380))
                 self.sim.static_poly([(self.x, self.y), (self.x + 40, self.y), (self.x + 40, self.y - r.uniform(90, 140)),
@@ -223,8 +236,8 @@ class NarrowBridge(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        n = self.p.setdefault("planks", r.randint(34, 42))
-        breakaway = set(r.sample(range(2, n - 2), k=max(3, n // 5)))
+        n = self.count("planks", 34, 42)
+        breakaway = set(r.sample(range(n // 4, n - 2), k=max(3, n // 5)))   # the far end is the fragile part
         for i in range(n):
             w = r.uniform(110, 150)
             s = self.seg(w, material="plank")
@@ -254,10 +267,11 @@ class BouncyPadField(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for _ in range(self.p.setdefault("pads", r.randint(15, 19))):
+        n = self.count("pads", 15, 19)
+        for i in range(n):
             self.seg(r.uniform(120, 200), material="bouncy")
             if r.random() < 0.6:
-                self.gap(r.uniform(80, 160), r.uniform(-40, 40))
+                self.gap(r.uniform(80, 160) * self.ramp(i, n), r.uniform(-40, 40))
             else:
                 self.seg(r.uniform(80, 160))
         self.finish(700)
@@ -269,7 +283,7 @@ class SeesawGauntlet(Course):
     def build(self):
         r = self.sim.rng
         self.start()
-        for _ in range(self.p.setdefault("seesaws", r.randint(8, 10))):
+        for _ in range(self.count("seesaws", 8, 10)):
             span = r.uniform(380, 520)
             px, py = self.x + span / 2, self.y + 10
             self.pits.append((self.x, self.x + span))
@@ -293,14 +307,15 @@ class ConveyorChaos(Course):
         r = self.sim.rng
         self.start()
         belts = []
-        for i in range(self.p.setdefault("belts", r.randint(11, 14))):
+        n = self.count("belts", 11, 14)
+        for i in range(n):
             w = r.uniform(300, 460)
             speed = r.choice([-1, 1, 1]) * r.uniform(120, 220)
             s = self.seg(w, material="conveyor", surface_velocity=(-speed, 0))
             self.sim.statics[-2]["belt"] = speed
             belts.append(s)
             if r.random() < 0.5:
-                self.gap(r.uniform(90, 140))
+                self.gap(r.uniform(90, 140) * self.ramp(i, n))
         self.finish(700)
 
 
@@ -427,13 +442,13 @@ class HexTileDrop(TopArena):
         # weight on a tile accumulates (crowds crack tiles faster); cracked tiles vanish 0.6 s later and regrow
         # after 4 s until overtime, after which the honeycomb collapses for good
         dt = 1 / 30
-        if t < 2.5:
+        if t < 4.0:
             return
         counts: dict = {}
         for c in self.sim.alive():
             k = self._axial(*c.pos)
             counts[k] = counts.get(k, 0) + 1
-        need = self.CRACK_LOAD / self.sim.speed_mult
+        need = self.CRACK_LOAD / (self.sim.speed_mult * max(0.2, self.sim.pressure))
         for key, tile in self.tiles.items():
             if tile["gone"]:
                 if t < 22.0 and t - tile.get("gone_t", t) > 4.0 and key not in counts:
@@ -487,7 +502,7 @@ class BumperRing(TopArena):
 
     def _shrink(self, t: float):
         if t > 12:
-            self.R = max(self.R0 * 0.35, self.R - 6.0 * self.sim.speed_mult / 30)
+            self.R = max(self.R0 * 0.35, self.R - 6.0 * self.sim.speed_mult * self.sim.pressure / 30)
         self.sim.zones["ring_r"] = self.R
 
 

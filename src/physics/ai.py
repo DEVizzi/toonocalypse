@@ -31,7 +31,7 @@ class Brain:
             self._grounded(sim, c)
             if c.hero is not None:
                 self._traits(sim, c)
-            if c.stun > 0 or c.finished:
+            if c.stun > 0 or c.finished or sim.t < c.panic_until:
                 continue
             if sim.mode == SIDE:
                 self._side(sim, c)
@@ -54,13 +54,22 @@ class Brain:
         c.grounded = grounded if sim.mode == SIDE else True
         c.air_time = 0.0 if c.grounded else c.air_time + 1 / 30
 
-    def _drive(self, sim: Sim, c: Contestant, dx: float, dy: float, mult: float = 1.0) -> None:
+    @staticmethod
+    def reversed(sim: Sim, c: Contestant) -> bool:
+        return sim.reversed_until > sim.t and (c.hero is None or c.hero.trait != "glitch")
+
+    def _panic(self, sim: Sim, c: Contestant) -> None:
+        """Extras sometimes freeze in cartoon panic at a drop or hazard (they're fodder, heroes are the show)."""
+        if c.extra is not None and sim.rng.random() < sim.cfg["extras"]["panic_per_s"] / 30:
+            c.panic_until = sim.t + sim.rng.uniform(*sim.cfg["extras"]["panic_s"])
+
+    def _drive(self, sim: Sim, c: Contestant, dx: float, dy: float, mult: float = 1.0, reversible: bool = True) -> None:
         """Apply a capped force toward (dx, dy) only while speed in that direction < max_speed."""
         n = math.hypot(dx, dy)
         if n < 1e-6:
             return
         dx, dy = dx / n, dy / n
-        if sim.reversed_until > sim.t and (c.hero is None or c.hero.trait != "glitch"):
+        if reversible and self.reversed(sim, c):
             dx, dy = -dx, -dy
         surf = 1.0
         for mod in sim.surface_mods:
@@ -116,8 +125,9 @@ class Brain:
         danger = any(h.near(c, look + 40) for h in sim.hazards)
         wants_jump = (ground_ahead is None) or (wall_ahead is not None and getattr(wall_ahead.shape, "contestant", None) is None) or danger
         if wants_jump and c.grounded:
+            self._panic(sim, c)
             p_jump = (0.5 + 0.5 * bh.jumpiness) if c.is_hero else (0.12 + 0.35 * bh.jumpiness)
-            if sim.rng.random() < p_jump:
+            if sim.rng.random() < p_jump and sim.t >= c.panic_until:
                 self._jump(c, vx_boost=60 * target_dx, k=(1.08 if c.is_hero else 1.0) + (0.12 if ground_ahead is None else 0.0))
         caution = 1.0 - 0.35 * bh.caution if danger else 1.0
         self._drive(sim, c, target_dx, 0.0, caution)
@@ -143,9 +153,13 @@ class Brain:
         if safe is not None:
             tx, ty = safe
         dx, dy = tx - x, ty - y
+        if self.reversed(sim, c):        # reversed controls flip the intent; survival instinct still pulls off the edge
+            dx, dy = -dx, -dy
         # edge avoidance: steer inward when close to the walkable boundary
         edge, ux, uy = sim.arena.edge_vector(x, y)
         margin = 60 + 120 * bh.edge_awareness
+        if edge < margin * 0.6:
+            self._panic(sim, c)
         if edge < margin:
             # steer away from the nearest drop (edge or hole), scaled to the target distance
             n = math.hypot(dx, dy) or 1.0
@@ -153,7 +167,7 @@ class Brain:
             dx, dy = dx - ux * w, dy - uy * w
         jitter = sim.rng.uniform(-0.3, 0.3)
         dx, dy = dx * math.cos(jitter) - dy * math.sin(jitter), dx * math.sin(jitter) + dy * math.cos(jitter)
-        self._drive(sim, c, dx, dy)
+        self._drive(sim, c, dx, dy, reversible=False)
         # shove attempts weighted by aggression
         if c.shove_cd <= 0 and sim.rng.random() < 0.06 * bh.aggression:
             rival = self._nearest(sim, c, 90)

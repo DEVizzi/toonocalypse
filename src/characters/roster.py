@@ -99,6 +99,6 @@ def make_extras(n: int, rng: random.Random, cult_numbers: set[int] | None = None
     for i in range(1, n + 1):
         # extras are deliberately less competent than heroes (lower speed, worse jumping and edge sense)
         b = Behaviour(rng.uniform(0.05, 0.35), rng.uniform(0.0, 0.35), rng.uniform(0.1, 0.4), rng.uniform(0.0, 0.25))
-        out.append(Extra(i, rng.choice(EXTRA_COLOURS), mass=rng.uniform(0.8, 1.4), max_speed=rng.uniform(130, 180),
+        out.append(Extra(i, rng.choice(EXTRA_COLOURS), mass=rng.uniform(0.8, 1.4), max_speed=rng.uniform(110, 165),
                          behaviour=b, cult=i in cult_numbers))
     return out

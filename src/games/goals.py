@@ -189,16 +189,17 @@ class HoldAZone(Goal):
 
     def center(self) -> tuple[float, float]:
         t = self.sim.t
-        return math.cos(t * 0.25 + self.phase) * 170, math.sin(t * 0.33 + self.phase) * 150
+        k = self.sim.edge_k
+        return math.cos(t * 0.45 + self.phase) * 190 * k, math.sin(t * 0.58 + self.phase) * 170 * k
 
     def check(self, t: float) -> None:
         zx, zy = self.center()
-        for c in self.sim.alive():
-            if math.hypot(c.pos[0] - zx, c.pos[1] - zy) < self.r:
-                c.score += 1 / 30
-                if c.score >= self.need:
-                    self.declare(c.key, t, "zone")
-                    return
+        inside = [c for c in self.sim.alive() if math.hypot(c.pos[0] - zx, c.pos[1] - zy) < self.r]
+        if len(inside) == 1:          # king of the hill: a contested zone scores for nobody
+            c = inside[0]
+            c.score += 1 / 30
+            if c.score >= self.need:
+                self.declare(c.key, t, "zone")
 
     def score(self, c):
         return c.score * 10000 + self.tiebreak(c)
@@ -281,7 +282,17 @@ class HotPotatoBomb(Goal):
                 return min(others, key=lambda o: math.hypot(o.pos[0] - x, o.pos[1] - y)).pos
         elif self.holder:
             hx, hy = self.sim.by_key[self.holder].pos
-            return x + (x - hx), y + (y - hy)
+            d = math.hypot(x - hx, y - hy) or 1.0
+            if d > 260:
+                return super().target(c)
+            # sidestep away from the bomb, but stay on the safe inner part of the arena
+            tx, ty = x + (x - hx) / d * 120, y + (y - hy) / d * 120
+            cx, cy = self.sim.arena.center
+            lim = getattr(self.sim.arena, "spawn_r", 250) * self.sim.edge_k
+            r = math.hypot(tx - cx, ty - cy)
+            if r > lim:
+                tx, ty = cx + (tx - cx) * lim / r, cy + (ty - cy) * lim / r
+            return tx, ty
         return super().target(c)
 
     def zone_state(self):
