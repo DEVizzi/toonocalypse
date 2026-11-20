@@ -181,6 +181,9 @@ def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[H
         nm = small.render(h.name, True, col)
         rn = small.render(_ordinal(ranks[h.key]) if h.key in ranks else "", True, (255, 214, 0) if st != "out" else col)
         if two_rows:
+            room = step - 2 * rad - 16
+            if nm.get_width() > room:          # long names (JUGGERNAUT) shrink to fit their cell
+                nm = pygame.transform.smoothscale(nm, (int(room), int(nm.get_height() * room / nm.get_width())))
             ra = frame.blit(nm, nm.get_rect(bottomleft=(cx + rad + 6, cy + 2)))
             rb = frame.blit(rn, rn.get_rect(topleft=(cx + rad + 6, cy + 2)))
         else:

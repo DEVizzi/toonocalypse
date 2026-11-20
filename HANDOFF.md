@@ -40,6 +40,8 @@ The governing spec is **"Toon Toon Castle: Master Build Brief & Technical Specif
     castle header with Lord Tuno's balcony, white episode pill, bottom status panel with hero portraits and live
     ranks, floating rocky capped cliffs, floating top-down platforms with shadows), camera zoom 1.4 in SIDE and
     zoom-in as TOP arenas shrink (config `render`).
+  - Latest samples (seeds 42 / 7 / 5): 38.1 s, 36.1 s, 44.2 s. Known: tiered_tower two-stage rumbles often end < 26 s
+    (seeds 99/12 had no in-range run); TOP Juggernaut ~25% win share; the apt ffmpeg step occasionally times out (rerun).
   - Render takes ~10-20 s per video on Actions. `--stills N` saves half-size PNGs for review (I can't play mp4s).
 - **M5–M8: not started.** Commentary/TTS/audio, state and lore, workflows and tokens, publishing.
 
