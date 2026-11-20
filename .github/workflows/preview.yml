@@ -1,0 +1,40 @@
+name: Preview
+
+# Run a render command on Actions and publish everything it writes to output/ to the rolling 'preview' pre-release.
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Command to run"
+        default: "python tests/render_cast_sheet.py output/cast_sheet.png"
+
+permissions:
+  contents: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: sudo apt-get install -y -q ffmpeg
+      - run: pip install -r requirements.txt
+      - name: Run
+        env:
+          CMD: ${{ inputs.command }}
+        run: mkdir -p output && bash -c "$CMD"
+      - name: Publish to the preview pre-release
+        run: |
+          shopt -s nullglob
+          files=(output/*)
+          gh release view preview >/dev/null 2>&1 || gh release create preview --prerelease --title "Preview" --notes "Rolling preview renders."
+          gh release upload preview "${files[@]}" --clobber
+          for f in "${files[@]}"; do echo "https://github.com/${GITHUB_REPOSITORY}/releases/download/preview/$(basename "$f")"; done
