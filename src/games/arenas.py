@@ -78,8 +78,10 @@ class Arena:
         return self.edge_vector(x, y)[0]
 
     def add_gate(self, x: float, top: float = -420.0) -> None:
-        self.gate = self.sim.static_segment((x, top), (x, 0), "wall", radius=10)
+        gy = self.ground_y_at(x - 4)
+        self.gate = self.sim.static_segment((x, gy - 155), (x, gy), "wall", radius=10)
         self.sim.statics[-1]["mat"] = "gate"
+        self.sim.statics.append({"type": "drop_gate", "x": x, "y": gy})
 
     def open_gate(self) -> None:
         if self.gate is not None:
@@ -143,13 +145,13 @@ class Course(Arena):
         self.low, self.high = max(self.low, self.y), min(self.high, self.y)
         return s
 
-    def wave(self, length: float, amp: float = 45.0, drift: float = 30.0) -> None:
-        """Undulating ground (gentle net downhill) instead of dead-flat floors: balls visibly roll, crest and dip."""
+    def wave(self, length: float, amp: float = 36.0, drift: float = 42.0) -> None:
+        """Undulating net-downhill ground: crests stay mild (dy >= -14) so rolling balls never stall in V-pockets."""
         r = self.sim.rng
         n = max(2, int(length / 150))
         for i in range(n):
-            dy = (amp if i % 2 else -amp) * r.uniform(0.5, 1.0) + drift / n
-            self.seg(length / n, dy)
+            dy = (amp * r.uniform(0.55, 1.0) if i % 2 == 0 else -amp * r.uniform(0.25, 0.45)) + drift / n
+            self.seg(length / n, max(-14.0, dy))
 
     def pegs(self, count: int, height: tuple[float, float] = (70, 130)) -> None:
         """Pinball pegs/bumpers above the floor ahead of the cursor: balls ricochet off them."""
@@ -180,14 +182,14 @@ class Course(Arena):
         self.seg(w)
 
     def start(self) -> None:
-        """Spawn ledge -> gate -> steep launch chute -> short landing -> the first lethal gap within 300 px."""
+        """Spawn ledge -> compact drop-gate -> steep launch chute -> tilted run-out -> first lethal gap within 300 px."""
         r = self.sim.rng
-        self.seg(360)
-        self.add_gate(self.x - 30, top=self.LEDGE_Y - 420)
+        self.seg(360, 12)
+        self.add_gate(self.x - 26, top=self.LEDGE_Y - 155)
         self.seg(380, 320)                       # steep chute (40 deg)
-        self.seg(220, 240)                       # flattening run-out
-        self.seg(r.uniform(90, 160), 0)
-        self.gap(r.uniform(110, 150))            # first blood: within ~300 px of the drop zone
+        self.seg(220, 210)                       # continuous downhill run-out
+        self.seg(r.uniform(90, 145), 14)
+        self.gap(r.uniform(115, 155), 24)        # first blood: within ~300 px of the drop zone
 
     def finish(self, length: float = 700) -> None:
         self.seg(length)
@@ -204,21 +206,21 @@ class FlatTrack(Course):
         self.start()
         n = self.count("sections", 10, 13)
         for i in range(n):
-            kind = r.choice(["hop", "choke", "gap", "flat", "hop"])
-            if kind == "hop":
-                self.seg(r.uniform(180, 320))
-                self.block(r.uniform(40, 70), r.uniform(26, 48))
-            elif kind == "choke":
-                h = r.uniform(70, 130)
-                self.seg(r.uniform(260, 380), -h)
-                self.seg(r.uniform(80, 160))
-                self.seg(r.uniform(260, 380), h)
+            kind = r.choice(["kicker", "crest", "gap", "roll", "kicker"])
+            if kind == "kicker":
+                self.seg(r.uniform(160, 260), r.uniform(15, 35))
+                self.seg(r.uniform(85, 115), -18, material="bouncy")
+                self.gap(r.uniform(85, 135) * self.ramp(i, n), r.uniform(25, 55))
+            elif kind == "crest":
+                self.seg(r.uniform(200, 300), -26)
+                self.sim.static_circle((self.x, self.y - 24), 16, "bumper")
+                self.seg(r.uniform(260, 360), r.uniform(75, 120))
             elif kind == "gap":
-                self.seg(r.uniform(200, 320))
-                self.gap(r.uniform(90, 150) * self.ramp(i, n))
+                self.seg(r.uniform(200, 320), r.uniform(20, 45))
+                self.gap(r.uniform(90, 150) * self.ramp(i, n), r.uniform(20, 45))
             if r.random() < 0.45:
                 self.pegs(r.randint(2, 4))
-            self.wave(r.uniform(260, 460))
+            self.wave(r.uniform(260, 440))
         self.finish(800)
 
 
@@ -226,18 +228,24 @@ class RampDescent(Course):
     key = "ramp_descent"
 
     def build(self):
+        """v3.2: continuous downhill slope continuity + spring launch lips & dip bumpers (zero V-pocket traffic jams)."""
         r = self.sim.rng
         self.start()
         n = self.count("ramps", 8, 10)
         for i in range(n):
-            self.seg(r.uniform(420, 620), r.uniform(150, 240))
+            self.seg(r.uniform(420, 580), r.uniform(165, 245))
+            if r.random() < 0.55:
+                self.pegs(r.randint(2, 3), (65, 115))
             if i % 2 == 0:
-                self.block(r.uniform(30, 50), r.uniform(30, 45))
-            if r.random() < 0.5:
-                self.pegs(r.randint(2, 3), (60, 110))
-            self.seg(r.uniform(120, 220))
-            if r.random() < 0.4:
-                self.gap(r.uniform(80, 130) * self.ramp(i, n), r.uniform(20, 60))
+                # bouncy spring launch pad at ramp foot -> launches pack cleanly across downhill gap
+                self.seg(r.uniform(110, 150), r.uniform(16, 34), material="bouncy")
+                self.gap(r.uniform(90, 140) * self.ramp(i, n), r.uniform(35, 75))
+            else:
+                # smooth downhill connector + embedded spring bumper at the joint so zero balls can stall
+                self.sim.static_circle((self.x + 26, self.y - 22), 17, "bumper")
+                self.seg(r.uniform(150, 230), r.uniform(35, 70))
+                if r.random() < 0.45:
+                    self.gap(r.uniform(80, 125) * self.ramp(i, n), r.uniform(25, 60))
         self.finish(700)
 
 
@@ -334,19 +342,18 @@ class SeesawGauntlet(Course):
         self.start()
         for _ in range(self.count("seesaws", 8, 10)):
             span = r.uniform(380, 520)
-            px, py = self.x + span / 2, self.y + 10
+            px, py = self.x + span / 2, self.y + 14
             self.pits.append((self.x, self.x + span))
             self.span(self.x, self.y, self.x + span, self.y)
-            body = pymunk.Body(12.0, pymunk.moment_for_box(12.0, (span, 18)))
+            body = pymunk.Body(14.0, pymunk.moment_for_box(14.0, (span, 30)))
             body.position = (px, py)
-            plank = pymunk.Poly.create_box(body, (span + 40, 18), radius=6)
+            plank = pymunk.Poly.create_box(body, (span + 40, 30), radius=6)
             self.sim.add_prop(body, [plank], "seesaw", material="plank")
             pivot = pymunk.PivotJoint(self.sim.space.static_body, body, (px, py))
             limit = pymunk.RotaryLimitJoint(self.sim.space.static_body, body, -0.45, 0.45)
             self.sim.space.add(pivot, limit)
-            self.sim.statics.append({"type": "pivot", "c": (px, py + 30)})
             self.x += span
-            self.seg(r.uniform(160, 260))
+            self.seg(r.uniform(160, 260), r.uniform(15, 35))
         self.finish(700)
 
 
@@ -389,20 +396,19 @@ class PachinkoDrop(Course):
                 self.seg(rest, rest * 0.16)
             elif kind == "spring":
                 self.seg(length * 0.6, length * 0.1)
-                self.seg(110, 0, material="bouncy")
+                self.seg(110, 8, material="bouncy")
                 self.seg(length * 0.4 - 110, length * 0.06)
             elif kind == "seesaw":
                 self.seg(length * 0.35, length * 0.06)
                 span = r.uniform(300, 380)
-                px, py = self.x + span / 2, self.y + 10
+                px, py = self.x + span / 2, self.y + 14
                 self.pits.append((self.x, self.x + span))
                 self.span(self.x, self.y, self.x + span, self.y)
-                body = pymunk.Body(10.0, pymunk.moment_for_box(10.0, (span, 18)))
+                body = pymunk.Body(12.0, pymunk.moment_for_box(12.0, (span, 30)))
                 body.position = (px, py)
-                self.sim.add_prop(body, [pymunk.Poly.create_box(body, (span + 40, 18), radius=6)], "seesaw", material="plank")
+                self.sim.add_prop(body, [pymunk.Poly.create_box(body, (span + 40, 30), radius=6)], "seesaw", material="plank")
                 self.sim.space.add(pymunk.PivotJoint(self.sim.space.static_body, body, (px, py)),
                                    pymunk.RotaryLimitJoint(self.sim.space.static_body, body, -0.45, 0.45))
-                self.sim.statics.append({"type": "pivot", "c": (px, py + 30)})
                 self.x += span
                 self.seg(length * 0.25, length * 0.04)
             else:

@@ -74,13 +74,19 @@ class Brain:
             surf *= mod(c)
         v = c.max_speed * sim.speed_mult * surf
         if c.hero is not None and c.hero.trait == "bowling" and sim.mode == SIDE:
-            # slow start, terrifying momentum: top speed builds while he keeps rolling forward
-            v *= 1.0 + sim.cfg["juggernaut_momentum"] * min(1.0, max(0.0, c.body.velocity.x) / max(1.0, c.max_speed))
+            # v3.2: slow lumbering flat roll, crushing downhill momentum when slope tilts downward
+            gn = getattr(c, "ground_n", pymunk.Vec2d(0, 1))
+            downhill = max(0.0, float(gn.x))
+            if downhill > 0.14:
+                v *= 1.0 + sim.cfg["juggernaut_momentum"] * min(1.3, max(0.2, c.body.velocity.x / max(1.0, c.max_speed)))
         return v
 
     def _jump(self, c: Contestant, vx_boost: float = 0.0, k: float = 1.0) -> None:
         if c.jump_cd > 0 or not c.grounded:
             return
+        if c.hero is not None and c.hero.trait == "glide":
+            k *= 1.12
+            vx_boost *= 1.35
         c.body.apply_impulse_at_world_point((vx_boost * c.body.mass, -JUMP_V * k * c.body.mass), c.body.position)
         c.jump_cd = 0.6
 
@@ -105,14 +111,22 @@ class Brain:
         wall_ahead = wall is not None and getattr(wall.shape, "contestant", None) is None
         danger = any(h.near(c, look + 40) for h in sim.hazards)
         if not c.grounded:
-            return                                   # airborne: no propulsion, pure ballistic flight
+            if c.hero is not None and c.hero.trait == "glide" and c.body.velocity.x * dirx < c.max_speed * 1.15:
+                # v3.2: Floater catches a gentle forward breeze while gliding high in 0.24x gravity
+                sim.push(c, dirx * PUSH_ACCEL * sim.cfg.get("floater_air_control", 0.55) * c.body.mass, 0.0)
+            return                                   # airborne: pure ballistic / glide flight
         if ground_ahead is None or wall_ahead or danger:
             self._panic(sim, c)
             p = (0.45 + 0.5 * bh.jumpiness) if c.is_hero else (0.1 + 0.3 * bh.jumpiness)
             if sim.rng.random() < p and sim.t >= c.panic_until:
                 k = (1.0 if c.is_hero else sim.cfg["extras"]["jump_k"]) + (0.12 if ground_ahead is None else 0.0)
                 self._jump(c, vx_boost=70 * dirx, k=k)
-        vmax = self._vmax(sim, c) * c.prop_mult * ((1.0 - 0.3 * bh.caution) if danger else 1.0)
+        # Juggernaut recovers propulsion speed on steep downhills, stays 0.65x on flats
+        gn = c.ground_n  # type: ignore[attr-defined]
+        pm = c.prop_mult
+        if c.hero is not None and c.hero.trait == "bowling" and gn.x * dirx > 0.16:
+            pm = min(1.05, pm + gn.x * dirx * 0.9)
+        vmax = self._vmax(sim, c) * pm * ((1.0 - 0.3 * bh.caution) if danger else 1.0)
         v = c.body.velocity
         along = v.x * dirx
         if along >= vmax:
@@ -120,13 +134,12 @@ class Brain:
         k = min(1.0, (vmax - along) / max(1.0, vmax * 0.3))
         # rolling torque toward the target spin (grip-limited: slippery balls just spin their wheels)
         w_target = dirx * vmax / max(8.0, c.radius)
-        tau_cap = c.body.mass * c.radius * ROLL_ACCEL * 1.5 * c.traction * c.prop_mult * k
+        tau_cap = c.body.mass * c.radius * ROLL_ACCEL * 1.5 * c.traction * pm * k
         err = w_target - c.body.angular_velocity
         c.drive_torque = max(-tau_cap, min(tau_cap, err * c.body.moment * 10.0))
         # mild push along the surface tangent
-        n = c.ground_n  # type: ignore[attr-defined]
-        tx, ty = (n.y, -n.x) if dirx > 0 else (-n.y, n.x)
-        f = PUSH_ACCEL * c.body.mass * c.prop_mult * k
+        tx, ty = (gn.y, -gn.x) if dirx > 0 else (-gn.y, gn.x)
+        f = PUSH_ACCEL * c.body.mass * pm * k
         if c.hero is not None and c.hero.trait == "traction":
             sim.push(c, 0.0, sim.cfg["magneto_downforce"] * abs(sim.space.gravity.y) * c.body.mass)
         sim.push(c, tx * f, ty * f)
@@ -136,7 +149,7 @@ class Brain:
             if rival is not None:
                 rx, ry = rival.pos
                 d = math.hypot(rx - x, ry - y) or 1
-                kk = 180 * c.body.mass * c.prop_mult
+                kk = 180 * c.body.mass * pm
                 c.body.apply_impulse_at_world_point(((rx - x) / d * kk, -30 * c.body.mass), c.body.position)
                 c.shove_cd = 1.5
 
@@ -158,32 +171,34 @@ class Brain:
         if self.reversed(sim, c):
             dx, dy = -dx, -dy
         edge, ux, uy = sim.arena.edge_vector(x, y)
-        margin = (60 + 120 * bh.edge_awareness) * (sim.cfg["hero_edge_margin"] if c.is_hero else 1.0)
+        margin = (60 + 120 * bh.edge_awareness) * (sim.cfg["hero_edge_margin"] if c.is_hero else 0.78)
         if edge < margin * 0.6:
             self._panic(sim, c)
         if edge < margin:
             n = math.hypot(dx, dy) or 1.0
-            w = (margin - edge) / margin * (1.5 + 2 * bh.edge_awareness) * max(n, 80.0)
+            ew = 1.0 if c.is_hero else 0.55
+            w = (margin - edge) / margin * (1.5 + 2 * bh.edge_awareness) * ew * max(n, 80.0)
             dx, dy = dx - ux * w, dy - uy * w
         jitter = sim.rng.uniform(-0.3, 0.3)
         dx, dy = dx * math.cos(jitter) - dy * math.sin(jitter), dx * math.sin(jitter) + dy * math.cos(jitter)
         nrm = math.hypot(dx, dy)
+        top_pm = c.prop_mult if c.is_hero else sim.cfg.get("top_dummy_propulsion", 0.60)
         if nrm > 1e-6:
-            vmax = self._vmax(sim, c)
+            vmax = self._vmax(sim, c) * (1.0 if c.is_hero else 0.85)
             v = c.body.velocity
             ex, ey = dx / nrm * vmax - v.x, dy / nrm * vmax - v.y
             e = math.hypot(ex, ey)
             if e > 1e-6:
                 # traction x mass: slippery balls drift wildly, heavy balls are freight trains, grippy ones cling
                 grip = c.traction * (1.3 if (c.hero and c.hero.trait == "traction") else 1.0)
-                f = min(ACCEL * 1.3, e * 5.0) * c.body.mass * grip * c.prop_mult
+                f = min(ACCEL * 1.3, e * 5.0) * c.body.mass * grip * top_pm
                 sim.push(c, ex / e * f, ey / e * f)
         if c.shove_cd <= 0 and sim.rng.random() < 0.06 * bh.aggression:
             rival = self._nearest(sim, c, 90)
             if rival is not None:
                 rx, ry = rival.pos
                 d = math.hypot(rx - x, ry - y) or 1
-                kk = sim.cfg["shove_top"] * min(c.body.mass, 3.0 * rival.body.mass) * c.prop_mult
+                kk = sim.cfg["shove_top"] * min(c.body.mass, 3.0 * rival.body.mass) * top_pm
                 c.body.apply_impulse_at_world_point(((rx - x) / d * kk, (ry - y) / d * kk), c.body.position)
                 c.shove_cd = 1.6
 

@@ -32,8 +32,8 @@ timeline:
   replay_speed: 0.3
   replay_source_s: 0.45
   replay_zoom: 1.35
-  winner_card_s: 1.6
-  loop_tail_s: 0.4
+  winner_card_s: 2.0
+  loop_tail_s: 0.0
   two_stage_chance: 0.30
   two_stage_qualifier_s: 8
   two_stage_survivors: 6
@@ -67,9 +67,12 @@ physics:
   fall_kill_depth: 240       # SIDE: this far below the course floor profile = fell off
   top_fall_s: 0.45
   victory_delay_s: 0.55      # TOP: wait after 2nd-to-last falls so zero losers remain on disc
-  floater_air_drag: 0.9      # per second while airborne
+  floater_air_drag: 0.42     # per second while airborne (v3.2: floaty long arcs)
   dummy_propulsion: 0.72
-  glitch_period_s: 2.5
+  top_dummy_propulsion: 0.60 # v3.2: weaker center-recovery in TOP_DOWN so dummies exit before Final 3
+  juggernaut_propulsion: 0.65 # v3.2: lumbering self-propulsion, relies on downhill mass momentum
+  juggernaut_flat_damping: 5.2 # v3.2: flat-ground rotational resistance for iron cube corners
+  glitch_period_s: 2.0
   magneto_downforce: 0.3
   magneto_tug: 160
   overtime: {survivors: 3, hazard_mult: 2.0, shrink_mult: 4.0}
@@ -97,10 +100,10 @@ physics:
     panic_per_s: 3.5
     panic_s: [0.3, 0.8]
     jump_k: 0.9              # bots jump lower than heroes
-    mill_radius: 1.15         # TOP: bots mill about this far out (x spawn radius), near the rim
+    mill_radius: 1.18         # TOP: bots mill about this far out (x spawn radius), near the rim
     goal_sight_px: 180       # TOP: extras ignore goal targets farther than this
-  juggernaut_momentum: 0.45  # SIDE: Juggernaut's top speed grows up to +45% while rolling at speed
-  floater_air_control: 0.45  # SIDE: Floater drifts; it steers poorly in the air
+  juggernaut_momentum: 0.55  # SIDE: Juggernaut's top speed builds while rolling downhill at speed
+  floater_air_control: 0.55  # SIDE: gentle forward air drift while gliding
   hazard_escalation_exp: 1.5  # hazards scale with speed_mult ** exp (overtime 1.65x -> 2.5x hazards)
   goal_timers:                # survive/collect timers and zone hold, sized to the gameplay window
     survive_s: [21, 25]
@@ -118,7 +121,7 @@ render:
   side_zoom_range: [0.72, 1.05]
   top_zoom: 1.0           # multiplier on the fit-to-arena zoom in TOP_DOWN
   final3_zoom: 1.45       # SIDE extra zoom when 3 or fewer contestants survive
-  top_zoom_max: 2.15      # TOP: zoom grows 1.0x -> 2.15x as the arena shrinks
+  top_zoom_max: 1.95      # v3.2 TOP: smooth zoom ramp 1.0x -> 1.95x (~65% width in final 1v1)
 
 mode_mix: {SIDE_VIEW: 0.65, TOP_DOWN: 0.35}
 

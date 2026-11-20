@@ -51,7 +51,7 @@ def track(trace: T.Trace) -> list[Cam]:
     for e in trace.events:
         if (e.kind == "elimination" and e.data.get("hero")) or (e.kind == "impact" and e.data.get("impulse", 0) > 1400):
             chaos.append((pre + int(e.t * FPS), 1.0 if e.kind == "elimination" else 0.7))
-    thuds = [pre + int(e.t * FPS) for e in trace.events if e.kind == "heavy_land"]    # Juggernaut micro-shake
+    thuds = [pre + int(e.t * FPS) for e in trace.events if e.kind == "heavy_land" and e.data.get("shake", True)]
     if trace.mode == "TOP_DOWN":
         span = max(x1 - x0, (y1 - y0) * W / (VIEW_BOTTOM - VIEW_TOP))
         base_zoom = min(1.15, W / span) * settings()["render"]["top_zoom"]
@@ -112,19 +112,27 @@ def track(trace: T.Trace) -> list[Cam]:
             z0 = trace.zones[f]
             ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * z0.get("ring_r", 1.0) / max(1.0, trace.zones[0].get("ring_r", 1.0))
             zmax = settings()["render"]["top_zoom_max"]
-            tz = base_zoom * min(zmax, 1.0 / max(ek, 1.0 / zmax))
-        tx_lead, ty_lead = tx, ty
-        if 0 < len(everyone) <= 3:
-            xs, ys = rows[everyone, 0], rows[everyone, 1]
-            tx, ty = float(xs.mean()), float(ys.mean())
-            spanx = float(xs.max() - xs.min()) + 360
-            spany = float(ys.max() - ys.min()) + 420
-            fit = min(W / spanx, (VIEW_BOTTOM - VIEW_TOP) / spany)
-            if fit >= zmin:
-                tz = max(tz, min(base_zoom * final_zoom, fit))
-                focus = None
-            else:
-                tx, ty = tx_lead, ty_lead
+            # v3.2: smooth ramp 1.0x -> 1.95x as current_radius shrinks so final 1v1 disc fills ~65% of screen width
+            prog = min(1.0, max(0.0, (1.0 - ek) / 0.58))
+            tz = base_zoom * (1.0 + (zmax - 1.0) * prog)
+            if 0 < len(everyone) <= 2:
+                xs, ys = rows[everyone, 0], rows[everyone, 1]
+                tx = 0.80 * tx + 0.20 * float(xs.mean())
+                ty = 0.80 * ty + 0.20 * float(ys.mean())
+                tz = max(tz, base_zoom * min(zmax, 1.62))
+        else:
+            tx_lead, ty_lead = tx, ty
+            if 0 < len(everyone) <= 3:
+                xs, ys = rows[everyone, 0], rows[everyone, 1]
+                tx, ty = float(xs.mean()), float(ys.mean())
+                spanx = float(xs.max() - xs.min()) + 360
+                spany = float(ys.max() - ys.min()) + 420
+                fit = min(W / spanx, (VIEW_BOTTOM - VIEW_TOP) / spany)
+                if fit >= zmin:
+                    tz = max(tz, min(base_zoom * final_zoom, fit))
+                    focus = None
+                else:
+                    tx, ty = tx_lead, ty_lead
         strength = 0.0
         for cf, s in chaos:
             if 0 <= f - cf < int(0.6 * FPS):

@@ -11,7 +11,7 @@ def test_segments_inside_limits():
     assert starts == sorted(starts) and starts[0] == 0 and starts[-1] < t.forced_resolution_s
     assert [e[1] for e in t.escalation] == [1.0, 1.3, 1.65]
     assert abs(t.replay_source_s / t.replay_s - t.replay_speed) < 0.01
-    assert 1.5 <= t.winner_card_s <= 3.0 and t.loop_tail_s == 0.4
+    assert 1.5 <= t.winner_card_s <= 3.0 and t.loop_tail_s == 0.0
 
 
 def test_total_duration_range():

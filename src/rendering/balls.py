@@ -1,7 +1,6 @@
-"""v3.0 ball renderer: every contestant is a physical ball whose surface art rotates with the TRUE body angle, a
-spring-stabilised face (dizzy spirals and free spin above 9 rad/s) and cosmetic stick limbs posed only from live
-physics telemetry (tuck / flail / splat / brace / victory). No walk cycles. Drawn directly at screen scale (crisp at
-any zoom).
+"""v3.2 ball renderer: every contestant is a physical ball whose surface art rotates with the TRUE body angle, a
+spring-stabilised face (dizzy spirals and free spin above 9 rad/s), goofy Crash Dummy faces, and retractable event-only
+arms (flail / splat / victory). Zero legs anywhere. Drawn directly at screen scale (crisp at any zoom).
 """
 from __future__ import annotations
 
@@ -14,6 +13,8 @@ from src.characters.roster import Extra, Hero
 BLACK = (17, 17, 17)
 WHITE = (255, 255, 255)
 OUTLINE = 4
+GLITCH_CYAN = (0, 245, 255)
+GLITCH_CRIMSON = (255, 35, 65)
 
 
 def rgb(h: str) -> tuple[int, int, int]:
@@ -91,7 +92,8 @@ def _pattern(s: pygame.Surface, key: str, cx: float, cy: float, r: float, th: fl
     elif key == "dash":                                          # ice-puck crystal facets
         for off in (-0.5, 0.0, 0.5):
             a, b = _rot(cx, cy, r * 0.9, th + off + 0.3), _rot(cx, cy, r * 0.9, th + off + math.pi - 0.3)
-            pygame.draw.line(s, (210, 255, 255), a, b, 2)
+            pygame.draw.line(s, (215, 255, 255), a, b, 2)
+        pygame.draw.ellipse(s, (180, 250, 255), (cx - r * 0.75, cy - r * 0.42, r * 1.5, r * 0.84), 2)
     elif key == "magneto":                                       # hex plates + bolts + spark glint
         inner = _poly_pts(cx, cy, "hexagon", r * 0.62, r * 0.62, th)
         pygame.draw.polygon(s, (120, 70, 150), inner)
@@ -120,20 +122,21 @@ def _pattern(s: pygame.Surface, key: str, cx: float, cy: float, r: float, th: fl
                     pygame.draw.line(s, (255, 205, 0) if j % 2 == 0 else BLACK, p0, p1, max(3, int(r * 0.12)))
             pygame.draw.circle(s, (150, 160, 170), _rot(cx, cy, r * 0.62, a), r * 0.08)
             pygame.draw.circle(s, BLACK, _rot(cx, cy, r * 0.62, a), r * 0.08, 1)
-    elif key == "glitch":                                        # CRT scanlines, RGB flicker
-        neon = (150, 255, 40) if phase != "LEAD" else (255, 40, 200)
+    elif key == "glitch":                                        # CRT scanlines: Cyan (FEATHER) vs Crimson (LEAD)
+        neon = GLITCH_CRIMSON if phase == "LEAD" else GLITCH_CYAN
         for k in range(-3, 4):
             a, b = _rot(cx, cy, r, th + k * 0.18 - math.pi / 2), _rot(cx, cy, r, th - k * 0.18 + math.pi / 2)
-            pygame.draw.line(s, shade(neon, 0.35), a, b, 1)
-    elif key == "dummy":                                         # crash-test quadrant decal
+            pygame.draw.line(s, shade(neon, 0.50), a, b, max(1, int(r * 0.07)))
+    elif key == "dummy":                                         # yellow/grey 4-quadrant crash-test shell
         for k in (0, 2):
             a0 = th + k * math.pi / 2
             pts = [(cx, cy)] + [_rot(cx, cy, r * 1.2, a0 + u * (math.pi / 2) / 6) for u in range(7)]
             pygame.draw.polygon(s, (255, 205, 20), pts)
-        for k in range(2):
-            a, b = _rot(cx, cy, r, th + k * math.pi / 2), _rot(cx, cy, r, th + k * math.pi / 2 + math.pi)
-            pygame.draw.line(s, BLACK, a, b, max(2, int(r * 0.1)))
-        pygame.draw.circle(s, BLACK, (cx, cy), r * 0.2, max(2, int(r * 0.08)))
+        # Outer rim quadrant ticks (keeps center open so goofy cartoon faces read with high contrast)
+        lw = max(2, int(r * 0.09))
+        for k in range(4):
+            ang = th + k * math.pi / 2
+            pygame.draw.line(s, BLACK, _rot(cx, cy, r * 0.56, ang), _rot(cx, cy, r * 1.02, ang), lw)
 
 
 # ------------------------------------------------------------------------------------------------ face
@@ -153,23 +156,60 @@ def _star(s, c, rr, col=(255, 210, 0)):
 
 
 def draw_face(s, cx, cy, r, fa: float, expression: str, style: str, look=(0.0, 0.0), t: float = 0.0,
-              force_grin: bool = False, dummy: bool = False) -> None:
+              force_grin: bool = False, dummy: bool = False, falling: bool = False) -> None:
     """Face in its own frame rotated by fa (radians). Readable at every size."""
     def P(x, y):
         return cx + x * math.cos(fa) - y * math.sin(fa), cy + x * math.sin(fa) + y * math.cos(fa)
 
     ex, ey, er = r * 0.34, -r * 0.12, r * 0.24
     lw = max(2, int(r * 0.09))
-    if dummy:                                                   # crash dummies: dot eyes / X_X
-        for sx in (-1, 1):
-            c = P(sx * ex, ey)
-            if expression in ("eliminated", "dizzy", "scared"):
-                k = r * 0.13
-                pygame.draw.line(s, BLACK, (c[0] - k, c[1] - k), (c[0] + k, c[1] + k), lw)
-                pygame.draw.line(s, BLACK, (c[0] - k, c[1] + k), (c[0] + k, c[1] - k), lw)
-            else:
-                pygame.draw.circle(s, BLACK, c, r * 0.1)
+    if dummy:
+        # v3.2 Crash Dummy goofy faces: FALLING (O_O scream) | HIT (X_X + tongue) | NORMAL (googly + tiny "o")
+        my = r * 0.34
+        if falling or expression == "scared":
+            for sx in (-1, 1):
+                c = P(sx * r * 0.36, -r * 0.14)
+                rr = er * 1.38
+                pygame.draw.circle(s, BLACK, c, rr + 2)
+                pygame.draw.circle(s, WHITE, c, rr)
+                pygame.draw.circle(s, BLACK, c, max(2, int(rr * 0.24)))
+            mc = P(0, my + r * 0.04)
+            scream = pygame.Rect(mc[0] - r * 0.22, mc[1] - r * 0.26, r * 0.44, r * 0.52)
+            pygame.draw.ellipse(s, BLACK, scream.inflate(4, 4))
+            pygame.draw.ellipse(s, (95, 16, 32), scream)
+            pygame.draw.ellipse(s, (245, 92, 115), (mc[0] - r * 0.13, mc[1] + r * 0.04, r * 0.26, r * 0.18))
+        elif expression in ("dizzy", "eliminated"):
+            for sx in (-1, 1):
+                c = P(sx * ex, ey)
+                rr = er * 1.08
+                pygame.draw.circle(s, WHITE, c, rr)
+                pygame.draw.circle(s, BLACK, c, rr, max(1, lw - 1))
+                k = rr * 0.62
+                pygame.draw.line(s, BLACK, (c[0] - k, c[1] - k), (c[0] + k, c[1] + k), lw + 1)
+                pygame.draw.line(s, BLACK, (c[0] - k, c[1] + k), (c[0] + k, c[1] - k), lw + 1)
+            # Dazed mouth + pink tongue sticking out
+            pygame.draw.line(s, BLACK, P(-r * 0.28, my), P(r * 0.28, my), lw + 1)
+            tc = P(r * 0.08, my + r * 0.16)
+            pygame.draw.circle(s, BLACK, tc, r * 0.15 + 2)
+            pygame.draw.circle(s, (250, 90, 118), tc, r * 0.15)
+            pygame.draw.line(s, BLACK, P(r * 0.08, my + r * 0.03), P(r * 0.08, my + r * 0.22), max(1, lw - 1))
+        else:
+            # Vacant wide googly eyes + tiny clueless "o" mouth
+            for idx, sx in enumerate((-1, 1)):
+                c = P(sx * r * 0.35, ey)
+                rr = er * (1.24 if idx == 0 else 1.08)
+                pygame.draw.circle(s, BLACK, c, rr + 2)
+                pygame.draw.circle(s, WHITE, c, rr)
+                # Derpy wall-eyed off-kilter pupils
+                wob = math.sin(t * 4.5 + idx * 2.3) * rr * 0.14
+                px = c[0] + sx * rr * 0.34 + wob
+                py = c[1] + (-rr * 0.18 if idx == 0 else rr * 0.22)
+                pygame.draw.circle(s, BLACK, (px, py), max(2, int(rr * 0.42)))
+            mc = P(0, my + r * 0.02)
+            pygame.draw.circle(s, BLACK, mc, max(3, int(r * 0.13)) + 2)
+            pygame.draw.circle(s, (80, 20, 30), mc, max(2, int(r * 0.11)))
         return
+
     if style == "visor" and expression in ("neutral", "angry"):    # Magneto's visor
         a, b = P(-r * 0.62, ey), P(r * 0.62, ey)
         pygame.draw.line(s, BLACK, a, b, int(r * 0.42) + 4)
@@ -241,7 +281,7 @@ def _limb(s, a, b, w):
 
 
 def draw_limbs(s, cx, cy, r, fa, pose: str, vel, angvel: float, t: float, zoom: float, hit_dir=None) -> None:
-    """v3.1: ZERO legs anywhere. Retractable event-only arms: ONLY on flail (falling/launched), splat (heavy impact),
+    """v3.1+: ZERO legs anywhere. Retractable event-only arms: ONLY on flail (falling/launched), splat (heavy impact),
     and victory (winner card). Normal rolling/bouncing draws NO arms at all."""
     if pose not in ("flail", "splat", "victory"):
         return
@@ -279,10 +319,10 @@ def draw_limbs(s, cx, cy, r, fa, pose: str, vel, angvel: float, t: float, zoom: 
 
 # ------------------------------------------------------------------------------------------------ the ball
 def pose_for(falling: bool, vy: float, over_drop: bool, heavy_impact: bool, winner_card: bool) -> str:
-    """Strict event-only arm states (v3.1): none during normal rolling/sliding/bouncing."""
+    """Strict event-only arm states (v3.1+): none during normal rolling/sliding/bouncing."""
     if winner_card:
         return "victory"
-    if falling or (over_drop and vy > 480):
+    if falling or (over_drop and vy > 420):
         return "flail"
     if heavy_impact:
         return "splat"
@@ -291,7 +331,8 @@ def pose_for(falling: bool, vy: float, over_drop: bool, heavy_impact: bool, winn
 
 def draw_ball(frame: pygame.Surface, hero: Hero | None, extra: Extra | None, pos, angle_deg: float, face_deg: float,
               vel, angvel: float, expression: str, pose: str, t: float, zoom: float, squash: float = 0.0,
-              scale: float = 1.0, alpha: int = 255, force_grin: bool = False, phase: str = "", look=(0.0, 0.0)) -> None:
+              scale: float = 1.0, alpha: int = 255, force_grin: bool = False, phase: str = "", look=(0.0, 0.0),
+              tint: tuple[int, int, int] | None = None) -> None:
     key = hero.key if hero else "dummy"
     shape = hero.shape if hero else "circle"
     if hero:
@@ -302,14 +343,23 @@ def draw_ball(frame: pygame.Surface, hero: Hero | None, extra: Extra | None, pos
     w, h = w0 * k, h0 * k
     r = max(w, h)
     rr = r if shape != "square" else w * 1.15
-    size = int(rr * 2 + 24)
+    size = int(rr * 2 + 32)
     s = pygame.Surface((size, size), pygame.SRCALPHA)
     cx = cy = size / 2
     th = math.radians(angle_deg)
     fa = math.radians(face_deg)
-    base = rgb(hero.colour) if hero else (213, 217, 222)
+    if tint is not None:
+        # Pure flat chromatic silhouette ghost (used for Glitch RGB split & Dash ice afterimages)
+        _silhouette(s, cx, cy, shape, w, h, th, (*tint, alpha))
+        frame.blit(s, s.get_rect(center=(int(pos[0]), int(pos[1]))))
+        return
+
+    base = rgb(hero.colour) if hero else (216, 220, 226)
     if hero and hero.key == "glitch":
-        base = (17, 17, 17)
+        base = (17, 17, 22)
+        neon = GLITCH_CRIMSON if phase == "LEAD" else GLITCH_CYAN
+        # Outer neon aura ring toggling Cyan (Featherweight) <-> Crimson Red (Lead Heavy)
+        pygame.draw.circle(s, (*neon, 85), (cx, cy), w * 1.24)
     # outline + fill
     _silhouette(s, cx, cy, shape, w, h, th, BLACK, grow=OUTLINE * max(0.6, min(1.3, zoom)))
     _silhouette(s, cx, cy, shape, w, h, th, base)
@@ -320,24 +370,33 @@ def draw_ball(frame: pygame.Surface, hero: Hero | None, extra: Extra | None, pos
     _silhouette(mask, cx, cy, shape, w - 1, h - 1, th, (255, 255, 255, 255))
     pat.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
     s.blit(pat, (0, 0))
-    if hero and hero.key == "glitch":                       # jagged neon outer ring (rotates) + RGB flicker
-        neon = (150, 255, 40) if phase != "LEAD" else (255, 40, 200)
-        pts = [_rot(cx, cy, w * (1.0 if i % 2 else 1.14), th + i * math.pi / 9) for i in range(18)]
-        pygame.draw.polygon(s, neon, pts, max(2, int(3 * zoom)))
+    if hero and hero.key == "glitch":
+        neon = GLITCH_CRIMSON if phase == "LEAD" else GLITCH_CYAN
+        pts = [_rot(cx, cy, w * (1.0 if i % 2 else 1.18), th + i * math.pi / 9) for i in range(18)]
+        pygame.draw.polygon(s, neon, pts, max(2, int(3.5 * zoom)))
     # lighting: static specular highlight (upper-left) and soft lower shade
     hl = pygame.Surface((size, size), pygame.SRCALPHA)
-    pygame.draw.ellipse(hl, (255, 255, 255, 120 if key != "dummy" else 80), (cx - r * 0.72, cy - r * 0.78, r * 0.62, r * 0.36))
+    pygame.draw.ellipse(hl, (255, 255, 255, 120 if key != "dummy" else 90), (cx - r * 0.72, cy - r * 0.78, r * 0.62, r * 0.36))
     pygame.draw.circle(hl, (0, 0, 0, 38), (cx + r * 0.25, cy + r * 0.3), r * 0.8)
     hl.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
     s.blit(hl, (0, 0))
     draw_face(s, cx, cy, min(w, h) * (1.0 if shape != "oval" else 1.15), fa, expression,
-              hero.face if hero else "dot", look, t, force_grin, dummy=hero is None)
+              hero.face if hero else "dot", look, t, force_grin, dummy=hero is None, falling=(pose == "flail"))
     # squash & stretch along the velocity / impact axis
     vx, vy = vel
     sp = math.hypot(vx, vy)
-    along = 1.0 + 0.30 * squash if squash > 0 else 1.0 + 0.12 * min(1.0, max(0.0, (sp - 300) / 600))
-    across = 1.0 - 0.28 * squash if squash > 0 else 1.0 - 0.10 * min(1.0, max(0.0, (sp - 300) / 600))
-    if abs(along - 1) > 0.02:
+    if key == "dash":
+        # v3.2: sleek rigid ice puck — zero vertical jellybean bloat
+        along = 1.0 + 0.05 * squash
+        across = 1.0 - 0.04 * squash
+    elif key == "boing":
+        # v3.2: exaggerated rubber superball squash-stretch
+        along = 1.0 + 0.48 * squash if squash > 0 else 1.0 + 0.24 * min(1.0, max(0.0, (sp - 220) / 480))
+        across = 1.0 - 0.36 * squash if squash > 0 else 1.0 - 0.18 * min(1.0, max(0.0, (sp - 220) / 480))
+    else:
+        along = 1.0 + 0.30 * squash if squash > 0 else 1.0 + 0.12 * min(1.0, max(0.0, (sp - 300) / 600))
+        across = 1.0 - 0.28 * squash if squash > 0 else 1.0 - 0.10 * min(1.0, max(0.0, (sp - 300) / 600))
+    if abs(along - 1) > 0.02 and key != "dash":
         vdeg = math.degrees(math.atan2(vy, vx)) if sp > 1 else 0.0
         s = pygame.transform.rotate(s, vdeg)
         s = pygame.transform.smoothscale(s, (max(1, int(s.get_width() * across if squash > 0 else s.get_width() * along)),

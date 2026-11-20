@@ -64,10 +64,12 @@ class Contestant:
     panic_until: float = -9.0   # extras freeze in cartoon panic at drops and hazards
     drive_torque: float = 0.0   # SIDE rolling torque re-applied every substep
     traction: float = 1.0       # 0..1.3 from surface friction: scales grip-limited propulsion
-    prop_mult: float = 1.0      # crash dummies push at 0.72x
+    prop_mult: float = 1.0      # crash dummies push at 0.72x; Juggernaut at 0.65x
     phase: str = ""             # Glitch: FEATHER | LEAD
     phase_t: float = 0.0
     last_land_t: float = -9.0
+    hit_until: float = -9.0     # v3.2: 0.4 s HIT window (X_X + tongue on Dummies)
+    bounce_cd: float = -9.0     # v3.2: cooldown for Boing / Floater lift impulses
 
     @property
     def is_hero(self) -> bool:
@@ -247,6 +249,7 @@ class Sim:
     def _velocity_func(self, c_ref: list[Contestant]) -> Callable:
         clamp, wmax = self.cfg["velocity_clamp"], self.cfg["angular_clamp"]
         drag = self.cfg["floater_air_drag"]
+        flat_damp = self.cfg.get("juggernaut_flat_damping", 5.2)
 
         def f(body, gravity, damping, dt):
             c = c_ref[0]
@@ -255,7 +258,16 @@ class Sim:
                 g = (gravity[0] * c.hero.gravity_mult, gravity[1] * c.hero.gravity_mult)
             pymunk.Body.update_velocity(body, g, damping, dt)
             if c.hero is not None and c.hero.trait == "glide" and not c.grounded and self.mode == SIDE:
-                body.velocity = body.velocity * max(0.0, 1.0 - drag * dt)       # beach ball: high air drag
+                # v3.2: low horizontal drag so Floater sails far, soft vertical drag for slow floaty arcs
+                vx = body.velocity.x * max(0.0, 1.0 - drag * 0.35 * dt)
+                vy = body.velocity.y * max(0.0, 1.0 - drag * dt)
+                body.velocity = pymunk.Vec2d(vx, vy)
+            elif c.hero is not None and c.hero.trait == "bowling" and c.grounded and self.mode == SIDE:
+                gn = getattr(c, "ground_n", pymunk.Vec2d(0, 1))
+                if abs(float(gn.x)) < 0.17:
+                    # v3.2: heavy square corners resist rolling on flat ground; downhill gravity unlocks full speed
+                    body.angular_velocity *= max(0.0, 1.0 - flat_damp * dt)
+                    body.velocity = pymunk.Vec2d(body.velocity.x * max(0.0, 1.0 - 1.3 * dt), body.velocity.y)
             v = body.velocity
             sp = v.length
             if sp > clamp:
@@ -300,11 +312,17 @@ class Sim:
         shape.collision_type = CT_BODY
         self.space.add(body, shape)
         c = Contestant(key, hero, extra, body, shape, radius, self.eff_speed(vmax), bh, anchor_pos=pos)
-        c.prop_mult = 1.0 if hero is not None else self.cfg["dummy_propulsion"]
+        if hero is not None and hero.trait == "bowling":
+            c.prop_mult = self.cfg.get("juggernaut_propulsion", 0.65)
+        elif hero is not None:
+            c.prop_mult = 1.0
+        else:
+            c.prop_mult = self.cfg["dummy_propulsion"]
         body.velocity_func = self._velocity_func([c])
         shape.contestant = c  # type: ignore[attr-defined]
         if hero is not None and hero.trait == "glitch":
             self._glitch_phase(c, "LEAD" if self.rng.random() < 0.5 else "FEATHER", event=False)
+            c.phase_t = -1.1        # first visible RGB phase shift triggers around t = 0.9 s
         return c
 
     def _make_hero(self, h: Hero, pos) -> Contestant:
@@ -315,14 +333,14 @@ class Sim:
 
     def _glitch_phase(self, c: Contestant, phase: str, event: bool = True) -> None:
         """Glitch phase-shift: FEATHER (tiny mass, hyper-bounce) <-> LEAD (heavy, dead thud) + erratic micro-impulse."""
-        lo, hi = c.hero.mass_range or (0.6, 4.0)  # type: ignore[union-attr]
-        mass, el = (lo, 0.98) if phase == "FEATHER" else (hi, 0.30)
+        lo, hi = c.hero.mass_range or (0.55, 4.4)  # type: ignore[union-attr]
+        mass, el = (lo, 0.98) if phase == "FEATHER" else (hi, 0.25)
         c.body.mass, c.body.moment = mass, self._moment(c.shape, mass)
         c.shape.elasticity = el
         c.phase, c.phase_t = phase, self.t
         if event:
             a = self.rng.uniform(0, 2 * math.pi)
-            c.body.apply_impulse_at_world_point((math.cos(a) * 90 * mass, math.sin(a) * 90 * mass), c.body.position)
+            c.body.apply_impulse_at_world_point((math.cos(a) * 105 * mass, math.sin(a) * 105 * mass), c.body.position)
             self.event("glitch", [c.key], c.pos, effect=phase.lower())
 
     def eff_speed(self, stat: float) -> float:
@@ -355,6 +373,9 @@ class Sim:
             for x, y in ((ca, cb), (cb, ca)):
                 x.last_toucher, x.last_touch_t = y.key, self.t
                 x.contacts.append((self.t, y.key))
+                if self.mode == SIDE and x.hero and x.hero.trait == "glide" and imp / x.body.mass > 85 and self.t >= x.bounce_cd:
+                    x.bounce_cd = self.t + 0.32
+                    x.body.apply_impulse_at_world_point((45 * x.body.mass, -170 * x.body.mass), x.body.position)
             self._impact(ca, imp, cb)
             self._impact(cb, imp, ca)
             if (ca.is_hero or cb.is_hero) and imp > 300:
@@ -370,28 +391,39 @@ class Sim:
             if c:
                 imp = arb.total_impulse.length
                 self._impact(c, imp, None)
-                if (c.hero and c.hero.trait == "bowling" and imp / c.body.mass > 160 and self.mode == SIDE
-                        and self.t - c.last_land_t > 0.6):
+                if (c.hero and c.hero.trait == "bowling" and imp / c.body.mass > 62 and self.mode == SIDE
+                        and self.t - c.last_land_t > 0.25):
                     c.last_land_t = self.t
-                    self.event("heavy_land", [c.key], c.pos)
+                    self.event("heavy_land", [c.key], (c.pos[0], c.pos[1] + c.radius * 0.82),
+                               shake=bool(imp / c.body.mass > 165))
+                if (c.hero and c.hero.trait == "glide" and self.mode == SIDE and imp / c.body.mass > 70
+                        and self.t >= c.bounce_cd):
+                    c.bounce_cd = self.t + 0.30
+                    c.body.apply_impulse_at_world_point((55 * c.body.mass, -185 * c.body.mass), c.body.position)
                 if c.hero and c.hero.trait == "no_brakes" and imp > 260 * c.body.mass and abs(arb.normal.x) > 0.7:
                     self.trait(c, "wall_slam")
 
-        def begin_bouncy(arb: pymunk.Arbiter, space, data):
-            pass
-
         def boing(arb: pymunk.Arbiter, space, data):
-            # Boing, the perpetual pinball: every collision faster than 180 px/s rebounds at 1.06x (capped)
+            # v3.2: Boing perpetual bouncer — minimum lively vertical rebound on grounded hits so he never sits flat
             for s in arb.shapes:
                 c = getattr(s, "contestant", None)
-                if c and c.hero and c.hero.trait == "auto_hop" and arb.is_first_contact:
-                    v = c.body.velocity
-                    if v.length > 180:
-                        n = arb.normal if s is arb.shapes[0] else -arb.normal
-                        boost = min(1100.0, v.length * 1.06) - v.length
-                        c.body.apply_impulse_at_world_point((-n.x * boost * c.body.mass * 0.5, -n.y * boost * c.body.mass * 0.5),
+                if not (c and c.hero and c.hero.trait == "auto_hop"):
+                    continue
+                n = arb.normal if s is arb.shapes[0] else -arb.normal
+                v = c.body.velocity
+                if self.mode == SIDE and n.y > 0.30 and self.t >= c.bounce_cd:
+                    c.bounce_cd = self.t + 0.16
+                    target_vy = min(-355.0, -abs(v.y) * 1.08)
+                    if v.y > target_vy:
+                        c.body.apply_impulse_at_world_point((36 * c.body.mass, (target_vy - v.y) * c.body.mass),
                                                             c.body.position)
-                        c.squash = 1.0
+                    c.squash = 1.0
+                elif arb.is_first_contact and (v.length > 140 or self.mode != SIDE):
+                    sp = max(250.0 if self.mode != SIDE else 180.0, min(1100.0, v.length * 1.08))
+                    boost = max(60.0, sp - v.length)
+                    c.body.apply_impulse_at_world_point((-n.x * boost * c.body.mass * 0.55, -n.y * boost * c.body.mass * 0.55),
+                                                        c.body.position)
+                    c.squash = 1.0
 
         for ct in (CT_BODY, CT_GROUND, CT_HAZARD, CT_BOUNCY):
             self.space.on_collision(CT_BODY, ct, post_solve=boing)
@@ -402,6 +434,8 @@ class Sim:
 
     def _impact(self, c: Contestant, impulse: float, other: Contestant | None) -> None:
         per_mass = impulse / max(0.3, c.body.mass)
+        if per_mass > 105:
+            c.hit_until = self.t + 0.40
         if per_mass > 120:
             c.squash = max(c.squash, min(1.0, per_mass / 400))
         thr = self.cfg["stun_threshold"]
@@ -537,6 +571,12 @@ class Sim:
             x, y = c.pos
             if c.hero is not None and c.hero.trait == "glitch" and self.t - c.phase_t >= self.cfg["glitch_period_s"]:
                 self._glitch_phase(c, "FEATHER" if c.phase == "LEAD" else "LEAD")
+            if (self.mode == SIDE and c.hero is not None and c.hero.trait == "auto_hop" and c.grounded
+                    and c.body.velocity.y > -120 and self.t >= c.bounce_cd and not c.finished):
+                # v3.2: Boing never sits passively in flat clumps — perpetual rubber superball hop
+                c.bounce_cd = self.t + 0.18
+                c.squash = 1.0
+                c.body.apply_impulse_at_world_point((44 * c.body.mass, -355 * c.body.mass), c.body.position)
             c.traction = min(1.3, max(0.03, c.shape.friction / 0.8))
             # anti-stuck: rolling 1.5 s displacement < 45 px -> crisp upward-and-forward eject impulse
             win = self.cfg["unstick_window_s"]
@@ -620,6 +660,17 @@ class Sim:
             return "eliminated"
         if self.winner == c.key:
             return "celebrating"
+        if c.extra is not None:
+            # v3.2 Crash Dummies: FALLING (O_O scream) > HIT for 0.4 s (X_X + tongue) > NORMAL (googly + "o")
+            if (self.mode == SIDE and not c.grounded and c.body.velocity.y > 380) or (
+                self.mode == TOP and self.arena.edge_distance(*c.pos) < 42
+            ):
+                return "scared"
+            if self.t < c.hit_until:
+                return "dizzy"
+            if self.mode == SIDE and not c.grounded and self.arena.danger(c, 85):
+                return "scared"
+            return "neutral"
         if c.stun > 0 or self.t - c.last_stun_end < 1.2:
             return "dizzy"
         if self.arena.danger(c, 90):

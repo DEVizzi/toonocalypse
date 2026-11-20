@@ -67,12 +67,12 @@ HEROES: tuple[Hero, ...] = (
          "no_brakes", "focused", "screech", Behaviour(0.3, 0.05, 0.4, 0.2)),
     Hero("magneto", "Magneto", "🟣", "Magnetic Hex Bolt", "hexagon", (25, 25), "#9B59B6", 2.70, 250, 1.25, 0.42,
          "traction", "visor", "clunk", Behaviour(0.45, 0.5, 0.3, 0.75)),
-    Hero("floater", "Floater", "⚪", "Helium Beach Ball", "circle", (29, 29), "#F8F9FA", 0.62, 240, 0.35, 0.86,
-         "glide", "chill", "whistle", Behaviour(0.15, 0.4, 0.5, 0.5), gravity_mult=0.35),
+    Hero("floater", "Floater", "⚪", "Helium Beach Ball", "circle", (29, 29), "#F8F9FA", 0.62, 240, 0.35, 0.92,
+         "glide", "chill", "whistle", Behaviour(0.15, 0.4, 0.55, 0.5), gravity_mult=0.24),
     Hero("juggernaut", "Juggernaut", "🩶", "Cast-Iron Wrecking Cube", "square", (29, 29), "#5D6D7E", 8.50, 200, 0.95,
          0.20, "bowling", "furrowed", "horn", Behaviour(0.9, 0.2, 0.15, 0.45), stun_mult=0.35),
     Hero("glitch", "Glitch", "⬛", "Unstable Quantum Ball", "circle", (23, 23), "#111111", 2.0, 290, 0.45, 0.6,
-         "glitch", "dizzy", "modem", Behaviour(0.5, 0.2, 0.5, 0.35), mass_range=(0.6, 4.0)),
+         "glitch", "dizzy", "modem", Behaviour(0.5, 0.2, 0.5, 0.35), mass_range=(0.55, 4.4)),
 )
 HERO_BY_KEY = {h.key: h for h in HEROES}
 

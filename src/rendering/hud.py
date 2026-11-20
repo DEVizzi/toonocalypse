@@ -1,5 +1,5 @@
-"""HUD and overlays (§8): header with Lord Tuno, episode badge, survivors counter, hero status strip, banners,
-winner card. All text stays inside safe zones (checked by tests/test_layout.py through `TEXT_BOXES`)."""
+"""HUD and overlays (§8, v3.2): auto-fitted event banners (max_width = 900 px, zero edge clipping) and bold game-show
+Winner Card with spinning comic sunburst glow, stylized header ribbon, crowned champion, and lively confetti."""
 from __future__ import annotations
 
 import math
@@ -11,10 +11,12 @@ from src.characters import renderer
 from src.characters.expressions import BLACK, WHITE
 from src.characters.roster import Hero
 from src.characters.tuno import draw_tuno
-from src.config import LAYOUT, W, font_path
+from src.config import H, LAYOUT, W, font_path
+from src.rendering import effects
 
 HEADER_TOP, HEADER_BOTTOM = LAYOUT["header"]
 TEXT_BOXES: list[pygame.Rect] = []      # every text rect drawn this frame (for safe-zone tests)
+MAX_BANNER_W = 900
 
 
 @lru_cache(maxsize=32)
@@ -33,6 +35,14 @@ def outlined(text: str, size: int, fill=WHITE, outline=BLACK, width: int = 6, fa
     return out
 
 
+def fit_width(surf: pygame.Surface, max_w: int = MAX_BANNER_W) -> pygame.Surface:
+    """v3.2: Strictly auto-scale centered banner surfaces to fit inside max_w with zero edge clipping."""
+    if surf.get_width() <= max_w:
+        return surf
+    ratio = max_w / max(1, surf.get_width())
+    return pygame.transform.smoothscale(surf, (max_w, max(1, int(surf.get_height() * ratio))))
+
+
 def blit_text(frame: pygame.Surface, surf: pygame.Surface, **anchor) -> pygame.Rect:
     r = surf.get_rect(**anchor)
     frame.blit(surf, r)
@@ -42,107 +52,149 @@ def blit_text(frame: pygame.Surface, surf: pygame.Surface, **anchor) -> pygame.R
 
 def draw_header(frame: pygame.Surface, ep_label: str, survivors: int, total: int, heroes: list[Hero],
                 status: dict[str, str], tuno_state: str, t: float, pulse: float = 0.0) -> None:
-    """status per hero key: alive | out | crown."""
-    # translucent header plate
+    """Legacy fallback header."""
     plate = pygame.Surface((W, HEADER_BOTTOM - HEADER_TOP + 10), pygame.SRCALPHA)
     plate.fill((20, 14, 40, 110))
     frame.blit(plate, (0, HEADER_TOP))
     draw_tuno(frame, W / 2, HEADER_TOP + 118, tuno_state, t, scale=0.82)
-    # episode badge (left)
     badge = outlined(ep_label, 30, width=4)
     blit_text(frame, badge, topleft=(28, HEADER_TOP + 14))
-    # survivors (right) — pulses red on mass eliminations
     col = (255, 80, 80) if pulse > 0 else WHITE
-    k = 1.0 + 0.18 * max(0.0, pulse)
     s = outlined(f"SURVIVORS {survivors}/{total}", 30, fill=col, width=4)
-    if k != 1.0:
-        s = pygame.transform.rotozoom(s, 0, k)
     blit_text(frame, s, topright=(W - 28, HEADER_TOP + 14))
-    # compact hero strip: 3 left of Tuno, 3 right (more on Sundays wrap evenly)
-    n = len(heroes)
-    left = heroes[: (n + 1) // 2]
-    right = heroes[(n + 1) // 2:]
-    for group, x0, step in ((left, 40, 1), (right, W - 40, -1)):
-        for i, h in enumerate(group):
-            cx = x0 + step * (i * 78 + 32)
-            cy = HEADER_TOP + 112
-            _status_chip(frame, h, (cx, cy), status.get(h.key, "alive"))
 
 
-def _status_chip(frame, hero: Hero, c, state: str) -> None:
-    r = 28
-    col = renderer.hex_rgb(hero.colour) if state != "out" else (90, 86, 100)
-    pygame.draw.circle(frame, BLACK, c, r + 4)
-    pygame.draw.circle(frame, col, c, r)
-    letter = font(30).render(hero.initial, True, BLACK if hero.key in ("pip", "floater", "dash") else WHITE)
-    frame.blit(letter, letter.get_rect(center=(c[0], c[1] + 2)))
-    if state == "out":
-        pygame.draw.line(frame, (230, 40, 60), (c[0] - 20, c[1] - 20), (c[0] + 20, c[1] + 20), 7)
-        pygame.draw.line(frame, (230, 40, 60), (c[0] - 20, c[1] + 20), (c[0] + 20, c[1] - 20), 7)
-    elif state == "crown":
-        pts = [(c[0] - 16, c[1] - 26), (c[0] - 16, c[1] - 38), (c[0] - 8, c[1] - 31), (c[0], c[1] - 42),
-               (c[0] + 8, c[1] - 31), (c[0] + 16, c[1] - 38), (c[0] + 16, c[1] - 26)]
-        pygame.draw.polygon(frame, (255, 205, 40), pts)
-        pygame.draw.polygon(frame, BLACK, pts, 2)
-
-
-def draw_banner(frame: pygame.Surface, text: str, age: float, y: float = 560, colour=(255, 214, 0)) -> None:
-    """Big slam-in banner for 1.2 s (SPEED UP!, OVERTIME CHAOS!, FINAL!, twist names)."""
+def draw_banner(frame: pygame.Surface, text: str, age: float, y: float = 540, colour=(255, 214, 0)) -> None:
+    """Big slam-in banner for 1.2 s (SPEED BOOST ZONES!, OVERTIME CHAOS!, FINAL!), auto-fitted to <= 900 px."""
     if age < 0 or age > 1.2:
         return
-    k = 1.6 - 0.6 * min(1.0, age / 0.12) if age < 0.12 else (1.0 if age < 0.95 else max(0.0, 1 - (age - 0.95) / 0.25))
-    s = outlined(text, 92, fill=colour, width=8)
-    s = pygame.transform.rotozoom(s, -4, k)
+    k = 1.45 - 0.45 * min(1.0, age / 0.12) if age < 0.12 else (1.0 if age < 0.95 else max(0.0, 1 - (age - 0.95) / 0.25))
+    if k <= 0.02:
+        return
+    base = fit_width(outlined(text, 86, fill=colour, width=8), 780)
+    s = fit_width(pygame.transform.rotozoom(base, -3, k), MAX_BANNER_W)
     blit_text(frame, s, center=(W / 2, y))
 
 
-def draw_pick_your_fighter(frame: pygame.Surface, heroes: list[Hero], t: float) -> None:
-    s = outlined("PICK YOUR FIGHTER!", 78, fill=(255, 214, 0), width=7)
-    blit_text(frame, pygame.transform.rotozoom(s, -3, 1.0 + 0.04 * math.sin(t * 20)), center=(W / 2, 520))
-    pills = [renderer.name_pill(h, size=30) for h in heroes]
-    rows = [pills[:3], pills[3:6], pills[6:]]
-    y = 640
-    for row in rows:
-        if not row:
-            continue
-        total = sum(p.get_width() for p in row) + 20 * (len(row) - 1)
-        x = W / 2 - total / 2
-        for p in row:
-            blit_text(frame, p, topleft=(x, y))
-            x += p.get_width() + 20
-        y += 64
+def _crown_badge(frame: pygame.Surface, cx: float, cy: float, w: float) -> None:
+    pts = [
+        (cx - w * 0.5, cy + w * 0.28),
+        (cx - w * 0.56, cy - w * 0.26),
+        (cx - w * 0.22, cy + w * 0.02),
+        (cx, cy - w * 0.42),
+        (cx + w * 0.22, cy + w * 0.02),
+        (cx + w * 0.56, cy - w * 0.26),
+        (cx + w * 0.5, cy + w * 0.28),
+    ]
+    pygame.draw.polygon(frame, (255, 210, 36), pts)
+    pygame.draw.polygon(frame, BLACK, pts, 5)
+    for gx, col in ((cx - w * 0.24, (235, 45, 75)), (cx, (40, 175, 255)), (cx + w * 0.24, (46, 214, 115))):
+        pygame.draw.circle(frame, col, (gx, cy + w * 0.08), max(4, int(w * 0.09)))
+        pygame.draw.circle(frame, BLACK, (gx, cy + w * 0.08), max(4, int(w * 0.09)), 2)
 
 
 def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour: tuple[int, int, int], points: str,
                      prompt: str, t: float, bot=None) -> None:
-    panel = pygame.Rect(90, 520, W - 180, 700)
-    shadow = panel.move(10, 12)
-    pygame.draw.rect(frame, BLACK, shadow, border_radius=36)
-    pygame.draw.rect(frame, (255, 248, 230), panel, border_radius=36)
-    pygame.draw.rect(frame, BLACK, panel, 6, border_radius=36)
-    pop = 1.0 + 0.35 * math.exp(-t * 5) * math.cos(t * 18)          # springy winner bounce
-    blit_text(frame, pygame.transform.rotozoom(outlined("WINNER!", 96, fill=(255, 214, 0), width=8), 0, pop),
-              center=(W / 2, panel.top + 80))
+    """v3.2: Bold game-show victory card with spinning comic sunburst, stylized header ribbon, and lively confetti."""
+    # Background celebratory confetti behind & around the card
+    effects.draw_confetti(frame, t + 0.4, 19, pygame.Rect(0, 260, W, H - 260), n=120)
+
+    panel = pygame.Rect(74, 470, W - 148, 760)
+    pygame.draw.rect(frame, (0, 0, 0, 150), panel.move(12, 16), border_radius=40)
+    pygame.draw.rect(frame, BLACK, panel.inflate(14, 14), border_radius=42)
+
+    # Rich game-show card interior with spinning comic sunburst clipped inside
+    card = pygame.Surface(panel.size, pygame.SRCALPHA)
+    cw, ch = panel.size
+    for row in range(0, ch, 4):
+        kk = row / max(1, ch)
+        col_row = (int(36 + 28 * kk), int(22 + 16 * kk), int(78 + 44 * kk))
+        pygame.draw.rect(card, col_row, (0, row, cw, 4))
+
+    # Spinning comic sunburst glow behind the champion
+    scx, scy = cw / 2, 290
+    n_rays = 16
+    base_ang = t * 0.95
+    ray_r = max(cw, ch) * 0.95
+    burst = pygame.Surface(panel.size, pygame.SRCALPHA)
+    for i in range(n_rays):
+        a0 = base_ang + 2 * math.pi * i / n_rays
+        a1 = base_ang + 2 * math.pi * (i + 0.52) / n_rays
+        pts = [(scx, scy), (scx + math.cos(a0) * ray_r, scy + math.sin(a0) * ray_r),
+               (scx + math.cos(a1) * ray_r, scy + math.sin(a1) * ray_r)]
+        pygame.draw.polygon(burst, (255, 214, 40, 95 if i % 2 == 0 else 45), pts)
+    pygame.draw.circle(burst, (255, 230, 90, 140), (scx, scy), 155)
+    pygame.draw.circle(burst, (255, 255, 255, 110), (scx, scy), 112)
+    card.blit(burst, (0, 0))
+
+    # Mask card to rounded rect + gold marquee border
+    mask = pygame.Surface(panel.size, pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=36)
+    card.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+    frame.blit(card, panel.topleft)
+    pygame.draw.rect(frame, BLACK, panel, 7, border_radius=36)
+    pygame.draw.rect(frame, (255, 208, 36), panel.inflate(-18, -18), 5, border_radius=28)
+
+    # Thick stylized game-show header ribbon across the top of the card
+    pop = 1.0 + 0.28 * math.exp(-t * 5) * math.cos(t * 18)
+    rib_w, rib_h = 680, 108
+    rx, ry = W / 2 - rib_w / 2, panel.top - 26
+    # Ribbon side tails
+    for side in (-1, 1):
+        tx = W / 2 + side * (rib_w / 2 - 12)
+        tail = [
+            (tx, ry + 26),
+            (tx + side * 56, ry + 26),
+            (tx + side * 36, ry + 62),
+            (tx + side * 56, ry + 98),
+            (tx, ry + 98),
+        ]
+        pygame.draw.polygon(frame, (175, 24, 52), tail)
+        pygame.draw.polygon(frame, BLACK, tail, 5)
+    rib = pygame.Rect(int(rx), int(ry), rib_w, rib_h)
+    pygame.draw.rect(frame, BLACK, rib.move(0, 6), border_radius=24)
+    pygame.draw.rect(frame, (232, 42, 74), rib, border_radius=24)
+    pygame.draw.rect(frame, (255, 212, 44), rib.inflate(-12, -12), 4, border_radius=18)
+    pygame.draw.rect(frame, BLACK, rib, 6, border_radius=24)
+    win_txt = fit_width(pygame.transform.rotozoom(outlined("CHAMPION!", 82, fill=(255, 224, 48), width=7), 0, pop), 610)
+    blit_text(frame, win_txt, center=rib.center)
+
+    # Champion character + bouncing crown
+    champ_y = panel.top + 295
+    hop = abs(math.sin(t * 7.5)) * 24
     if hero is not None:
         from src.rendering import balls
-        hop = abs(math.sin(t * 7)) * 26
-        balls.draw_ball(frame, hero, None, (W / 2, panel.top + 280 - hop), 0.0, 0.0, (0, 0), 0.0, "celebrating",
-                        "victory", t, 2.6 / max(0.6, hero.radius / 25) * pop, force_grin=True)
+        balls.draw_ball(frame, hero, None, (W / 2, champ_y - hop), 0.0, 0.0, (0, 0), 0.0, "celebrating",
+                        "victory", t, 2.7 / max(0.6, hero.radius / 25) * pop, force_grin=True)
+        _crown_badge(frame, W / 2, champ_y - hop - 108, 74)
     elif bot is not None:
         from src.rendering import balls
-        balls.draw_ball(frame, None, bot, (W / 2, panel.top + 280), 0.0, 0.0, (0, 0), 0.0, "neutral", "victory", t, 2.8)
+        balls.draw_ball(frame, None, bot, (W / 2, champ_y - hop), 0.0, 0.0, (0, 0), 0.0, "neutral", "victory", t, 2.8)
     else:
-        pygame.draw.circle(frame, BLACK, (W / 2, panel.top + 270), 64)
-        pygame.draw.circle(frame, colour, (W / 2, panel.top + 270), 58)
-    blit_text(frame, outlined(name.upper(), 72, fill=colour, width=6), center=(W / 2, panel.top + 440))
-    blit_text(frame, outlined(points, 40, width=4), center=(W / 2, panel.top + 515))
-    blit_text(frame, outlined(prompt, 40, fill=(255, 255, 255), width=4, face="Fredoka.ttf"), center=(W / 2, panel.top + 585))
-    bob = 4 * math.sin(t * 6)
-    blit_text(frame, outlined("COMMENT YOUR PICK!", 44, fill=(255, 214, 0), width=5), center=(W / 2, panel.top + 650 + bob))
+        pygame.draw.circle(frame, BLACK, (W / 2, champ_y), 64)
+        pygame.draw.circle(frame, colour, (W / 2, champ_y), 58)
+
+    # Champion Name + Season Points Pill + CTA Ribbon
+    name_col = colour if sum(colour) > 160 else (0, 245, 255)
+    blit_text(frame, fit_width(outlined(name.upper(), 76, fill=name_col, width=7), 780), center=(W / 2, panel.top + 468))
+
+    pts_pill = pygame.Rect(W // 2 - 250, panel.top + 522, 500, 62)
+    pygame.draw.rect(frame, BLACK, pts_pill.move(0, 4), border_radius=20)
+    pygame.draw.rect(frame, (22, 18, 44), pts_pill, border_radius=20)
+    pygame.draw.rect(frame, (0, 229, 255), pts_pill, 3, border_radius=20)
+    blit_text(frame, fit_width(outlined(points, 38, fill=(255, 255, 255), width=4), 460), center=pts_pill.center)
+
+    blit_text(frame, fit_width(outlined(prompt, 38, fill=(220, 235, 255), width=4, face="Fredoka.ttf"), 820),
+              center=(W / 2, panel.top + 628))
+    bob = 4 * math.sin(t * 6.5)
+    blit_text(frame, fit_width(outlined("COMMENT YOUR PICK!", 46, fill=(255, 214, 0), width=5), 820),
+              center=(W / 2, panel.top + 694 + bob))
+
+    # Foreground celebratory confetti accents
+    effects.draw_confetti(frame, t, 73, panel.inflate(80, 60), n=36)
 
 
 def draw_decor(frame: pygame.Surface, theme, t: float) -> None:
-    """Decorative battlements in the top sky band and castle wall in the bottom band (no information)."""
     top = LAYOUT["top_sky"][1]
     castle = theme.castle
     dark = tuple(max(0, int(c * 0.7)) for c in castle)
