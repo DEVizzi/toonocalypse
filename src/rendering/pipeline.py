@@ -471,7 +471,7 @@ class Renderer:
             g = self._ground_seg_at(wx)
             if g is not None:
                 sx, sy = cam.to_screen(wx, g[0])
-                if not runs:
+                if not runs or (runs[-1] and abs(sy - runs[-1][-1][1]) > 22 * z):
                     runs.append([])
                 runs[-1].append((sx, sy, g[1], g[2]))
             elif runs and runs[-1]:

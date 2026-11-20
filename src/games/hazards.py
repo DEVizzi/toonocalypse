@@ -319,11 +319,15 @@ class _Zone(Hazard):
         self.zones = []
         if self.sim.mode == SIDE:
             for x in self.side_spots(self.r.randint(3, 5), lo=800):
-                w = self.r.uniform(260, 420)
+                w = self.r.uniform(240, 380)
                 self.zones.append(("rect", x - w / 2, x + w / 2))
         else:
-            for p in self.top_spots(self.r.randint(2, 3), self.r.uniform(100, 250)):
-                self.zones.append(("circle", p, self.r.uniform(80, 120)))
+            # Place 2 clean non-overlapping patches around the mid-ring (offset ice vs mud angles)
+            base_off = 0.35 if self.style == "ice_zones" else (0.35 + math.pi * 0.5)
+            rad = self.r.uniform(165, 225)
+            for i in range(2):
+                a = base_off + i * math.pi + self.r.uniform(-0.22, 0.22)
+                self.zones.append(("circle", (math.cos(a) * rad, math.sin(a) * rad), self.r.uniform(62, 78)))
         self.sim.surface_mods.append(self.modifier)
 
     def inside(self, c) -> bool:

@@ -474,7 +474,8 @@ class RotatingDisc(TopArena):
 
     def _carry(self, dt: float):
         k_edge = self.sim.edge_k
-        w = (self.omega if self.sim.t >= 1.0 else self.omega * 0.3) * self.sim.speed_mult
+        ot_spin = 1.28 if self.sim.overtime else 1.0
+        w = (self.omega if self.sim.t >= 1.0 else self.omega * 0.3) * self.sim.speed_mult * ot_spin
         self.disc.angular_velocity = w
         tw = getattr(self.sim, "twist", None)
         k_all = k_edge * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)

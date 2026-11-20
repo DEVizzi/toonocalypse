@@ -621,7 +621,9 @@ class Sim:
             rate = pc["shrink_rate"] * self.speed_mult * max(self.pressure, 0.6 if self.overtime else 0.0)
             if self.overtime:
                 rate *= self.cfg["overtime"]["shrink_mult"]
-            self.edge_k = max(pc["edge_k_min"], self.edge_k - rate * dt)
+            tw_k = getattr(self.twist, "k", 1.0) if (self.twist is not None and self.twist.key == "shrinking_arena") else 1.0
+            floor_k = pc["edge_k_min"] / max(0.35, tw_k)
+            self.edge_k = max(floor_k, self.edge_k - rate * dt)
             self.zones["edge_k"] = round(self.edge_k, 4)
         # leader + camera proxy for LEFT BEHIND (mirrors camera framing: leading 40% of surviving heroes)
         alive = self.alive()
