@@ -94,8 +94,8 @@ physics:
     chase_min: 0.4
     chase_max: 1.15
     shrink_start_s: 3
-    shrink_rate: 0.016
-    edge_k_min: 0.40
+    shrink_rate: 0.018
+    edge_k_min: 0.42
   extras:                   # extras are fodder: they freeze in cartoon panic at drops and hazards
     panic_per_s: 3.5
     panic_s: [0.3, 0.8]

@@ -111,6 +111,13 @@ class ReachFinish(Goal):
 class LastOneStanding(Goal):
     key = "last_one_standing"
 
+    def target(self, c):
+        others = [o for o in self.sim.alive() if o is not c]
+        if others and (self.sim.overtime or len(others) <= 3) and c.is_hero:
+            x, y = c.pos
+            return min(others, key=lambda o: math.hypot(o.pos[0] - x, o.pos[1] - y)).pos
+        return super().target(c)
+
 
 class SurviveTimer(Goal):
     key = "survive_timer"

@@ -498,6 +498,12 @@ class RotatingDisc(TopArena):
             k = 4.0 * grip
             c.body.apply_force_at_world_point((dv.x * c.body.mass * k, dv.y * c.body.mass * k), c.body.position)
             c.body.torque += (w - c.body.angular_velocity) * c.body.moment * 3.0 * grip   # riders spin with the disc
+            if self.sim.t > 7.0:
+                # Rotating disc tilt-slosh breaks up dead-center huddles into real 1v1 sumo knockouts
+                slosh_a = self.sim.t * 2.6
+                slosh_f = (210.0 + (460.0 if self.sim.overtime else 0.0)) * self.sim.speed_mult * c.body.mass
+                c.body.apply_force_at_world_point((math.cos(slosh_a) * slosh_f, math.sin(slosh_a) * slosh_f),
+                                                  c.body.position)
 
 
 class MazeCorridors(TopArena):
