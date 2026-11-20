@@ -72,6 +72,8 @@ def track(trace: T.Trace) -> list[Cam]:
                 lead = order[: max(1, math.ceil(len(order) * 0.4))]
                 w = np.array([1.0 + 0.5 * (k == 0) for k in range(len(lead))])
                 tx = float(np.average(rows[lead, 0], weights=w)) + 120
+                # never lose the race leader off the right edge (keep ~170 px of screen margin ahead of them)
+                tx = max(tx, float(rows[order[0], 0]) - (W / 2 - 170) / base_zoom)
                 ty = float(np.average(rows[lead, 1], weights=w)) - 80
             tx = min(max(tx, x0 + W / 2 / base_zoom), x1 - W / 2 / base_zoom)
             ty = min(max(ty, y0 + 300), y1 - 500)
@@ -86,7 +88,7 @@ def track(trace: T.Trace) -> list[Cam]:
                 tz = tz * 1.15
         if cx is None:
             cx, cy = tx, ty
-        cx, vx = _spring(cx, vx, tx, 3.2, dt)
+        cx, vx = _spring(cx, vx, tx, 4.5, dt)
         cy, vy = _spring(cy, vy, ty, 2.6, dt)
         cz, vz = _spring(cz, vz, tz, 7.0, dt)
         shake = (0.0, 0.0)
