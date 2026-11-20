@@ -128,7 +128,11 @@ physics:
 
 render:
   side_zoom: 1.0          # default SIDE_VIEW zoom
-  side_zoom_range: [0.86, 1.25]   # v3.3 strict floor: never ant-size balls
+  side_zoom_range: [0.86, 1.30]   # v4.3: general-play floor 0.86x; close duels may zoom IN to 1.30x
+  duel_min_zoom: 0.76     # v4.3: final 2-3 moderately spaced (650-1100 px) may pull back to 0.76x, never below
+  cam_max_vx: 680         # v4.3 smooth-damp max pan velocity (px/s, world)
+  cam_max_vy: 520
+  cam_switch_hysteresis_s: 0.85   # v4.3: a new #1 must hold the lead this long before the camera re-targets
   cluster_window_px: 750  # v3.3 camera frames the densest 4-6 heroes inside this window
   leader_lock_px: 550     # lock onto #1 only within this distance of the finish (or <= 3 heroes alive)
   top_zoom: 0.94          # multiplier on the fit-to-arena zoom in TOP_DOWN (cold open fits with margin)

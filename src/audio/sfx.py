@@ -217,3 +217,63 @@ def fanfare() -> np.ndarray:
     chord = sum(_tone(f, 0.9, "pulse") for f in (523.3, 659.3, 784.0)) * 0.5
     parts.append(chord * _env(chord.size, a=0.01, r=0.7, curve=2.0))
     return _norm(np.concatenate(parts), 0.8)
+
+
+# ------------------------------------------------------------------------------------------------ v4.3 accents
+@lru_cache(maxsize=4)
+def record_scratch() -> np.ndarray:
+    """Quick vinyl record-scratch (sudden reversal punchline): noisy wobbling band-pass chirp back & forth."""
+    t = _t(0.30)
+    wob = np.sin(2 * np.pi * (3.2 * t + 9.0 * t * t))
+    f = 900 + 1500 * wob
+    tone = np.sin(2 * np.pi * np.cumsum(f) / SR).astype(np.float32)
+    grit = smooth(_noise(0.30), 4) * (0.55 + 0.45 * np.abs(wob)).astype(np.float32)
+    env = np.clip(t / 0.01, 0, 1) * np.clip((0.30 - t) / 0.05, 0, 1)
+    return _norm(((tone * 0.55 + grit * 0.8) * env).astype(np.float32), 0.6)
+
+
+@lru_cache(maxsize=4)
+def sad_slide_whistle() -> np.ndarray:
+    """Tiny sad descending slide-whistle (dummy/self-KO punchline)."""
+    t = _t(0.55)
+    f = 880 * (330 / 880) ** (t / 0.55) * (1 + 0.035 * np.sin(2 * np.pi * 6.5 * t))
+    x = np.sin(2 * np.pi * np.cumsum(f) / SR).astype(np.float32)
+    env = np.clip(t / 0.02, 0, 1) * np.clip((0.55 - t) / 0.12, 0, 1)
+    return _norm((x * env * 0.8).astype(np.float32), 0.5)
+
+
+@lru_cache(maxsize=4)
+def comic_bonk() -> np.ndarray:
+    """Crisp hollow wood-block cartoon bonk (betrayal punchline)."""
+    body = _sweep(980, 520, 0.09, "tri") * _env(int(SR * 0.09), r=0.035)
+    knock = _sweep(1900, 1300, 0.03) * _env(int(SR * 0.03), r=0.01) * 0.5
+    return _norm(_mix(body, knock), 0.7)
+
+
+@lru_cache(maxsize=4)
+def glitch_zip() -> np.ndarray:
+    """Short electronic 'bzzt-zip' for Glitch's lag-blink: bit-crushed buzz then a rising zip."""
+    buzz_t = _t(0.07)
+    buzz = np.sign(np.sin(2 * np.pi * 140 * buzz_t)) * 0.6 + smooth(_noise(0.07), 2) * 0.4
+    buzz = np.round(buzz * 4) / 4 * _env(buzz_t.size, a=0.002, r=0.06, curve=2.0)
+    zip_ = _sweep(500, 3800, 0.08, "square") * _env(int(SR * 0.08), a=0.002, r=0.07, curve=2.5)
+    return _norm(np.concatenate([buzz.astype(np.float32), np.round(zip_ * 5) / 5]).astype(np.float32), 0.55)
+
+
+@lru_cache(maxsize=2)
+def grand_fanfare() -> np.ndarray:
+    """Louder, longer Grand Final championship fanfare (brass triad climb + held major chord + timpani)."""
+    notes = [(392.0, 0.14), (523.3, 0.14), (659.3, 0.14), (784.0, 0.22), (659.3, 0.12), (1046.5, 0.7)]
+    parts = []
+    for f, d in notes:
+        x = _tone(f, d, "saw") + 0.6 * _tone(f / 2, d, "pulse") + 0.3 * _tone(f * 2, d, "tri")
+        parts.append(x * _env(x.size, a=0.006, r=d * 0.95, curve=1.6))
+    chord = sum(_tone(f, 1.4, "saw") for f in (523.3, 659.3, 784.0, 1046.5)) * 0.4
+    parts.append(chord * _env(chord.size, a=0.02, r=1.2, curve=1.8))
+    out = np.concatenate(parts)
+    for k in range(3):                                  # timpani rolls under the climb
+        tp = _sweep(98, 60, 0.25) * _env(int(SR * 0.25), r=0.12)
+        s = int(SR * 0.14 * k * 2)
+        out[s:s + tp.size] += tp[: max(0, min(tp.size, out.size - s))] * 0.9
+    return _norm(out.astype(np.float32), 0.9)
+

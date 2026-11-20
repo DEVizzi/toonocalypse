@@ -93,11 +93,18 @@ BANK: dict[str, list[str]] = {
     "final2": ["{a} versus {b}—only one survives this!", "Last two standing—{a} or {b}?"],
     "lead": ["{name} just snatched first place!", "{name} storms to the front!"],
     "trait": ["{name} is showing off now!", "Look at {name} doing absolute nonsense!"],
+    # v4.3 Crusher Gauntlet squash (deadpan) + Glitch lag-blink (normal)
+    "squash": ["{B} just got pancaked. Flat as a coaster!", "The crusher stamped {B}'s passport!",
+               "{B} is now officially two-dimensional!"],
+    "blink": ["Glitch just lagged through reality!", "Somebody restart Glitch's router!",
+              "Glitch teleported—that's a ping problem!"],
     # Openers (~1.4 s, spoken over the live starting gate)
     "intro": ["{L}'s clinging to first, {R} wants blood!", "{L} leads, {R} is hunting—drop 'em!",
               "{R}'s chasing {L}'s crown—gates up!", "Title on the line—{L} versus {R}!"],
     "intro_playoff": ["Playoffs! Lose here and you're done!", "Knockout time—no second chances, drop 'em!"],
-    "intro_final": ["Grand Final! One trophy, three lunatics!", "Season decider! Somebody's going home crying!"],
+    # v4.3: the Grand Final opener ALWAYS names all three finalists
+    "intro_final": ["Grand Final! {a}, {b}, {c}—only one wears the crown!",
+                    "{a}, {b}, {c}—one trophy, zero mercy! Grand Final!"],
     # Winner (hype)
     "winner": ["{winner} takes it! Absolute scenes!", "{winner} wins! Somebody frame that!",
                "{winner} survives the madness and wins!"],
@@ -105,24 +112,57 @@ BANK: dict[str, list[str]] = {
     "winner_lead_other": ["{winner} wins, {leader} grabs top spot!"],
     "winner_champion": ["{winner} is your Season {season} Champion!", "Crown them! {winner} wins Season {season}!"],
     "winner_carnage": ["Last-second carnage—{winner} walks away!", "Everyone else exploded—{winner} wins!"],
-    # Outro CTA (<= 9 words)
+    # Outro CTA (<= 9 words) — Episodes 1-29 only ("next race"/"tomorrow", NEVER "next season")
     "outro": ["{a} or {b} next? Comment below!", "{a} or {b} tomorrow? Pick one!", "Team {a} or Team {b}? Comment!"],
-    "outro_final": ["Season {next_season} starts tomorrow—who's your pick?"],
+    # v4.3 Grand Final: winner-only championship tribute (8-12 words, ZERO comment CTA)
+    "outro_final": ["Bow to your Season {season} king—{winner} owns the castle!",
+                    "All hail {winner}, Season {season} champion! Season {next_season} starts tomorrow!",
+                    "{winner} rules the castle! Season {next_season} kicks off tomorrow!"],
+    # v4.3 action-aware ironic fail swaps (confident call on a hero who is falling / about to die)
+    "ironic": ["{X} got cocky—and immediately ate dirt!", "Well, that aged terribly for {X}!",
+               "{X} celebrated early. Massive mistake."],
     # Title-race suspense fillers (normal)
     "filler": [
         "Nobody's blinking—points leader's sweating!", "One shove changes the whole season!",
         "Sweaty palms in the booth right now!", "This is getting properly spicy!",
         "Somebody's about to get absolutely binned!", "I can't watch... okay, I'm watching!",
+        "My blood pressure can't take this!", "Mum, get the camera—it's kicking off!",
     ],
     "filler_lead": ["{L}'s title lead is on the line!", "{L} needs this one badly!"],
     "filler_disc": ["Disc is the size of a coaster now!", "That floor's shrinking like cheap jeans!"],
 }
 
+# v4.3 strict cross-episode cliché cooldown: each may be spoken at most once every 7 episodes
+CLICHES: dict[str, re.Pattern] = {
+    "properly_spicy": re.compile(r"\bproperly spicy\b", re.IGNORECASE),
+    "total_carnage": re.compile(r"\btotal carnage\b", re.IGNORECASE),
+    "prepare_carnage": re.compile(r"\bprepare (for )?(total )?carnage\b", re.IGNORECASE),
+    "hunting_blood": re.compile(r"\bhunting (for )?blood\b|\bhunting\b.*\bblood\b", re.IGNORECASE),
+}
+CLICHE_COOLDOWN_EPISODES = 7
+
+
+def cliches_in(texts) -> list[str]:
+    """Cliché keys present in the given spoken lines (persisted to episode_history for the 7-episode cooldown)."""
+    found: list[str] = []
+    for txt in texts:
+        for key, rx in CLICHES.items():
+            if rx.search(txt or "") and key not in found:
+                found.append(key)
+    return found
+
 FAMILY_STYLE_PREFIX: list[tuple[str, str]] = [
     ("kill.", "hype"), ("drama", "hype"), ("multi", "hype"), ("winner", "hype"), ("overtime", "hype"),
-    ("final", "hype"), ("torched", "hype"), ("intro", "hype"), ("first_hero", "hype"),
-    ("roast.", "deadpan"), ("host", "deadpan"), ("dummy", "deadpan"),
+    ("final", "hype"), ("torched", "hype"), ("intro", "hype"), ("first_hero", "hype"), ("outro_final", "hype"),
+    ("roast.", "deadpan"), ("host", "deadpan"), ("dummy", "deadpan"), ("ironic", "deadpan"), ("squash", "deadpan"),
 ]
+
+# v4.3 copy guards
+_LEAGUE_N = re.compile(r"\bleague (one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|"
+                       r"fifteen|sixteen|seventeen|eighteen|nineteen|twenty[\w\-]*|thirty|\d+)\b", re.IGNORECASE)
+_NEXT_SEASON = re.compile(r"\bnext season\b", re.IGNORECASE)
+_CONFIDENT = re.compile(r"\b(showboat\w*|show(ing)? off|cruis\w*|coast\w*|peaking|strolling|untouchable|"
+                        r"in control|flying|easy money|doing absolute nonsense)\b", re.IGNORECASE)
 
 
 def family_style(family: str) -> str:
@@ -185,12 +225,14 @@ def _name(key: str | None) -> str:
 class Picker:
     """Per-episode template picker: one use per family, 7-day line-ID cooldown, deterministic per seed."""
 
-    def __init__(self, rng: random.Random, recent_ids: set[str] | None = None) -> None:
+    def __init__(self, rng: random.Random, recent_ids: set[str] | None = None,
+                 recent_cliches: set[str] | None = None) -> None:
         self.rng = rng
         self.recent = set(recent_ids or ())
         self.used_families: set[str] = set()
         self.used_ids: list[str] = []
         self.used_text: set[str] = set()
+        self.blocked_cliches: set[str] = set(recent_cliches or ())   # 7-episode cooldown + once per episode
 
     def pick(self, families: list[str], ctx: dict, max_words: int = 9) -> tuple[str, str, str] | None:
         for fam in families:
@@ -205,6 +247,8 @@ class Picker:
                     continue
                 if txt in self.used_text or len(txt.split()) > max(max_words, 9):
                     continue
+                if any(k in self.blocked_cliches for k in cliches_in([txt])):
+                    continue
                 opts.append((lid in self.recent, lid, txt))
             if not opts:
                 continue
@@ -213,6 +257,7 @@ class Picker:
             self.used_families.add(fam)
             self.used_ids.append(lid)
             self.used_text.add(txt)
+            self.blocked_cliches.update(cliches_in([txt]))
             return fam, lid, txt
         return None
 
@@ -289,11 +334,17 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
     def add(t_out, kind: str, prio: int, families: list[str], ctx: dict, event_t: float | None = None, mw: int = 8):
         beats.append(Beat(t_out, kind, prio, ctx, mw, "", event_t if event_t is not None else t_out, families))
 
-    # 1. Opener over the live starting gate (~1.4 s)
+    # 1. Opener over the live starting gate (~1.4 s). v4.3: the Grand Final opener names ALL THREE finalists.
     L = league_ctx.get("pre_leader_name") or "The leader"
     R = league_ctx.get("rival_name") or "the pack"
     intro_fams = ["intro_final"] if stage == "grand_final" else (["intro_playoff"] if stage != "league" else ["intro"])
-    add(0.04, "intro", 10, intro_fams, {"L": L, "R": R, "count": len(tr.keys)}, 0.04, mw=8)
+    intro_ctx: dict = {"L": L, "R": R, "count": len(tr.keys)}
+    fin = [_name(k) for k in (league_ctx.get("finalists") or [])][:3]
+    if stage == "grand_final":
+        fin = (fin + [_name(k) for k in tr.meta.get("heroes", []) if _name(k) not in fin])[:3]
+        if len(fin) == 3:
+            intro_ctx.update(a=fin[0], b=fin[1], c=fin[2])
+    add(0.04, "intro", 10, intro_fams, intro_ctx, 0.04, mw=10 if stage == "grand_final" else 8)
 
     react_cutoff = card_t - 1.45
     LEAD_IN = 0.15
@@ -302,7 +353,7 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
         t_out = to_out(gp_t)
         if t_out is None or t_out > react_cutoff or t_out < 1.0:
             return
-        add(max(1.0, t_out - LEAD_IN), kind, prio, families, ctx, t_out)
+        add(max(1.0, t_out - LEAD_IN), kind, prio, families, {**ctx, "_gp": gp_t}, t_out)
 
     elims = [e for e in ev if e.kind == "elimination"]
     first_done = False
@@ -353,6 +404,13 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
         elif e.kind == "twist":
             tw = e.data.get("twist", "").replace("_", " ")
             react(e.t, "twist", 6, ["twist"], {"twist": tw, "twist_cap": tw.capitalize()})
+        elif e.kind == "crush_hit" and e.data.get("hero") and e.actors:
+            ak = e.actors[0]
+            if _alive(r, ak, _frame_of(r, e.t)) and _on_camera(r, e.t, e.pos):
+                react(e.t, "self_ko", 5, ["squash"], {"B": _name(ak)})
+        elif e.kind == "glitch_blink" and e.data.get("moved") and e.actors:
+            if _alive(r, e.actors[0], _frame_of(r, e.t)) and _on_camera(r, e.t, e.pos):
+                react(e.t, "blink", 4, ["blink"], {"name": _name(e.actors[0])})
         elif e.kind == "trait" and e.actors:
             ak = e.actors[0]
             fi = _frame_of(r, e.t)
@@ -393,10 +451,12 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
     win_t = max(replay_t + 0.05, card_t - 0.40)
     add(win_t, "winner", 10, wf, {"winner": winner, "leader": leader_name, "season": season_num}, win_t, mw=8)
 
-    # 3. Outro CTA (<= 9 words)
-    of = ["outro_final"] if stage == "grand_final" else ["outro"]
-    add(card_t + 0.55, "outro", 10, of, {"a": prompt_pair[0], "b": prompt_pair[1], "next_season": season_num + 1},
-        card_t + 0.55, mw=9)
+    # 3. Outro: Episodes 1-29 -> comment CTA (<= 9 words); Episode 30 -> winner-only championship tribute (8-12 words)
+    if stage == "grand_final":
+        add(card_t + 0.55, "outro_final", 10, ["outro_final"],
+            {"winner": winner, "season": season_num, "next_season": season_num + 1}, card_t + 0.55, mw=12)
+    else:
+        add(card_t + 0.55, "outro", 10, ["outro"], {"a": prompt_pair[0], "b": prompt_pair[1]}, card_t + 0.55, mw=9)
 
     # Thin out: >= 1.55 s apart; same kind >= 4.0 s apart
     kept: list[Beat] = []
@@ -412,7 +472,8 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
             b.max_words = int(max(5, min(9, (nxt - b.t - 0.14) * WORDS_PER_S)))
 
     rng = random.Random(int(tr.meta.get("seed", 0)) * 7919 + len(tr.events))
-    pk = picker or Picker(rng, set(league_ctx.get("recent_line_ids") or ()))
+    pk = picker or Picker(rng, set(league_ctx.get("recent_line_ids") or ()),
+                          recent_cliches=set(league_ctx.get("recent_cliches") or ()))
     out: list[Beat] = []
     for b in sorted(kept, key=lambda b: (-b.prio, b.t)):
         got = pk.pick(b.families, b.ctx, b.max_words)
@@ -429,13 +490,19 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
 _SAFE = re.compile(r"^[A-Za-z0-9 ,.!?'\-:—]+$")
 
 
-def _valid_llm_line(b: Beat, ln: str) -> bool:
+def _valid_llm_line(b: Beat, ln: str, blocked_cliches: set[str] | None = None) -> bool:
     low = f" {ln.lower()} "
     words = ln.split()
-    max_allow = 9 if b.kind.startswith("outro") else (b.max_words + 1)
+    max_allow = 12 if b.kind == "outro_final" else (9 if b.kind.startswith("outro") else (b.max_words + 1))
     if not (2 <= len(words) <= max_allow) or not _SAFE.match(ln):
         return False
     if any(p in low for p in BANNED_PHRASES) or _DOWN_TO_N.search(ln) or _STIFF_DOUBLE_ADJ.search(ln):
+        return False
+    if _LEAGUE_N.search(ln):                                  # "league twelve" -> must be "race twelve"
+        return False
+    if _NEXT_SEASON.search(ln) and b.kind != "outro_final":   # Episodes 1-29 never say "next season"
+        return False
+    if blocked_cliches and any(k in blocked_cliches for k in cliches_in([ln])):
         return False
     mentioned = {k for k, h in HERO_BY_KEY.items() if h.name.lower() in low}
     if "bowling" in low and "bonk" not in mentioned:
@@ -447,6 +514,8 @@ def _valid_llm_line(b: Beat, ln: str) -> bool:
         for n_num, w_num in NUMBER_WORDS.items():
             if n_num != cnt and f" {w_num.lower()} " in low:
                 return False
+        if b.family == "intro_final" and any(str(b.ctx.get(k, "")).lower() not in low for k in ("a", "b", "c")):
+            return False                                      # Grand Final opener must name ALL three finalists
     if b.kind.startswith(("winner", "multi_ko")) and b.ctx.get("winner", "").lower() not in low:
         return False
     if b.kind == "winner" and b.family == "winner_lead_other" and b.ctx.get("leader", "").lower() not in low:
@@ -459,6 +528,14 @@ def _valid_llm_line(b: Beat, ln: str) -> bool:
     if b.kind == "outro":
         a, bb = b.ctx.get("a", "").lower(), b.ctx.get("b", "").lower()
         if (a and a not in low) or (bb and bb not in low):
+            return False
+    if b.kind == "outro_final":
+        if len(words) < 7 or b.ctx.get("winner", "").lower() not in low:
+            return False
+        if re.search(r"\b(comment|comments|pick|vote|below|who's your|tell (me|us))\b", low):
+            return False                                      # Episode 30: winner-only glory, zero CTA
+        others = {h.name.lower() for h in HERO_BY_KEY.values()} - {b.ctx.get("winner", "").lower()}
+        if any(f" {o}" in low or f"{o} " in low for o in others):
             return False
     return True
 
@@ -490,21 +567,35 @@ def _gemini_http(url: str, key: str, payload: dict | None = None, timeout: float
 
 def _prompt(beats: list[Beat], league_ctx: dict | None) -> str:
     lore_ref = "; ".join(f"{HERO_BY_KEY[k].name}: {d}" for k, d in HERO_LORE.items())
-    facts = [{"i": i, "event": b.kind, "facts": {k: v for k, v in b.ctx.items() if k != "count"},
-              "max_words": b.max_words, "draft": b.text} for i, b in enumerate(beats)]
+    facts = [{"i": i, "event": b.kind,
+              "facts": {k: v for k, v in b.ctx.items() if k != "count" and not str(k).startswith("_")},
+              "max_words": 12 if b.kind == "outro_final" else b.max_words, "draft": b.text} for i, b in enumerate(beats)]
     stakes = ""
+    final = False
     if league_ctx:
+        final = str(league_ctx.get("stage")) == "grand_final"
         stakes = (f"Season {league_ctx.get('season_number')} race {league_ctx.get('episode_number')}/30, "
                   f"stage {league_ctx.get('stage')}, leader after race {league_ctx.get('current_leader_name')}. "
                   + ("The season lead CHANGED HANDS this race: the winner line must say "
                      f"{league_ctx.get('current_leader_name')} TAKES the lead (never 'keeps'/'still').\n"
                      if league_ctx.get("lead_changed") else
                      "The season lead did NOT change: never claim a new leader.\n"))
+    recent = sorted(league_ctx.get("recent_cliches") or []) if league_ctx else []
+    rules = (
+        "Say 'race N' or 'round N', NEVER 'league N'. "
+        + ("" if final else "NEVER say 'next season' (say 'next race' or 'tomorrow'). ")
+        + "Avoid tired cliches: 'properly spicy', 'total carnage', 'prepare carnage', 'hunting for blood'"
+        + (f" (strictly banned this week: {', '.join(recent)})" if recent else "") + ".\n"
+    )
+    if final:
+        rules += ("GRAND FINAL: the 'intro' line must name ALL THREE finalists facts.a, facts.b, facts.c. The "
+                  "'outro_final' line is an 8-12 word hyped tribute to facts.winner ONLY - no other names, NEVER ask "
+                  "viewers to comment or pick.\n")
     return (
         "You are MC Tuno, an unhinged Takeshi's Castle / Ozzy Man Reviews style booth caster for a cartoon ball-race "
         "YouTube Short. Rewrite each draft to be FUNNIER: cheeky, punchy, roasty, 5-9 words, contractions, "
         "pub-banter energy.\n"
-        f"Characters (for vibe only, NEVER describe them literally): {lore_ref}.\n{stakes}"
+        f"Characters (for vibe only, NEVER describe them literally): {lore_ref}.\n{stakes}{rules}"
         "HARD BANS: never describe a character's material/colour/shape; never say 'I see', 'I am', 'zero room for "
         "error', 'pure chaos in the pack', 'double wipeout', 'who blinks first', 'down to N', 'Lord Tuno'.\n"
         "Keep every name from facts EXACTLY as given. 'winner' lines must name facts.winner. 'outro' lines must "
@@ -592,12 +683,71 @@ def punch_up(beats: list[Beat], league_ctx: dict | None = None, log=print) -> in
         return 0
     n = 0
     seen: set[str] = {b.text for b in beats}
-    for b, ln in zip(beats, lines):
+    blocked: set[str] = set((league_ctx or {}).get("recent_cliches") or ())
+    for b, ln in sorted(zip(beats, lines), key=lambda p: p[0].t):
         if isinstance(ln, str):
             ln = " ".join(ln.replace("\u2014", "—").split())
-            if ln not in seen and _valid_llm_line(b, ln):
+            if ln not in seen and _valid_llm_line(b, ln, blocked_cliches=blocked):
                 seen.add(ln)
                 b.text = ln
                 n += 1
+        blocked.update(cliches_in([b.text]))           # each cliché at most once per episode
     log(f"  [LLM LIVE] {used} punched up {n}/{len(beats)} lines")
     return n
+
+
+def apply_guards(beats: list[Beat], r, league_ctx: dict | None = None, log=print) -> int:
+    """v4.3 action-aware guardrails (run AFTER the LLM punch-up, before TTS):
+    - never call a hero 'showboating'/'cruising'/... while they're falling (vy > 280) or within 0.8 s of their death:
+      swap in an ironic fail line instead;
+    - final cliché sweep: any cliché on the 7-episode cooldown or already spoken this episode -> swap/drop the line;
+    - never 'league N' / never 'next season' before Episode 30 (BANK drafts included)."""
+    league_ctx = league_ctx or {}
+    tr = r.tr
+    deaths: dict[str, float] = {}
+    for e in tr.events:
+        if e.kind == "elimination" and e.actors:
+            deaths.setdefault(e.actors[0], e.t)
+    pk = getattr(r, "_picker", None) or Picker(random.Random(7), recent_cliches=set(league_ctx.get("recent_cliches") or ()))
+    swaps = 0
+    blocked: set[str] = set(league_ctx.get("recent_cliches") or ())
+    keep: list[Beat] = []
+    for b in sorted(beats, key=lambda x: x.t):
+        gp = b.ctx.get("_gp")
+        if gp is not None and _CONFIDENT.search(b.text or ""):
+            low = b.text.lower()
+            fi = _frame_of(r, float(gp))
+            for k, h in HERO_BY_KEY.items():
+                if h.name.lower() not in low:
+                    continue
+                try:
+                    vy = float(tr.frames[fi][tr.index(k)][4])
+                except (ValueError, IndexError):
+                    continue
+                dies_soon = k in deaths and float(gp) - 0.05 <= deaths[k] <= float(gp) + 0.8
+                if vy > 280.0 or dies_soon or not _alive(r, k, fi):
+                    tpl = BANK["ironic"][(sum(map(ord, k)) + int(float(gp) * 10)) % len(BANK["ironic"])]
+                    b.text = tpl.format(X=h.name)
+                    b.kind, b.family, b.style = "ironic", "ironic", "deadpan"
+                    b.line_id = "ironic:" + str(BANK["ironic"].index(tpl))
+                    swaps += 1
+                    break
+        bad = (_LEAGUE_N.search(b.text or "") or (_NEXT_SEASON.search(b.text or "") and b.kind != "outro_final")
+               or any(c in blocked for c in cliches_in([b.text])))
+        if bad:
+            got = pk.pick([f for f in b.families if f != b.family] + [b.family], b.ctx, b.max_words) \
+                if b.families else None
+            if got is None or any(c in blocked for c in cliches_in([got[2]])):
+                if b.prio < 10:
+                    swaps += 1
+                    continue                              # drop a non-essential stale line entirely
+            else:
+                b.family, b.line_id, b.text = got
+                b.style = family_style(b.family)
+            swaps += 1
+        blocked.update(cliches_in([b.text]))
+        keep.append(b)
+    beats[:] = keep
+    if swaps:
+        log(f"  [GUARD] action-aware/cliché guard adjusted {swaps} line(s)")
+    return swaps

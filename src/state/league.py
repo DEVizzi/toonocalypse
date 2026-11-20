@@ -99,6 +99,13 @@ def sorted_standings(stats: dict[str, dict[str, Any]]) -> list[tuple[str, dict[s
     return sorted(stats.items(), key=key_fn)
 
 
+def assert_standings_sorted(points: list[int]) -> None:
+    """Winner Card guard: standings[i].pts >= standings[i+1].pts must hold for every row before rendering."""
+    for i in range(len(points) - 1):
+        if points[i] < points[i + 1]:
+            raise AssertionError(f"standings out of order at row {i + 1}: {points[i]} < {points[i + 1]} ({points})")
+
+
 def stage_for_race(race_number: int) -> str:
     if race_number <= LEAGUE_RACES:
         return "league"
@@ -299,7 +306,9 @@ def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict
         po["champion"] = winner_key
         win_pill = "SEASON CHAMPION!"
 
+    # v4.3 P0: ALL post-race points (+10/+5/+3 & +2 KO) are applied above BEFORE this sort; re-assert strict order
     new_standings = sorted_standings(st["stats"])
+    assert_standings_sorted([int(s["points"]) for _, s in new_standings])
     leader_key, leader_stat = new_standings[0]
     runner_pts = int(new_standings[1][1]["points"]) if len(new_standings) > 1 else 0
     leader_pts = int(leader_stat["points"])

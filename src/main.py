@@ -170,6 +170,9 @@ def main(argv: list[str] | None = None) -> int:
     for e in entries:
         if isinstance(e, dict) and int(e.get("day", -999)) > day - 7:
             recent_ids.update(e.get("line_ids") or [])
+    recent_cliches: set[str] = set()
+    for e in [x for x in entries if isinstance(x, dict)][-7:]:      # v4.3: each cliché max once every 7 episodes
+        recent_cliches.update(e.get("cliches") or [])
     recipe, relaxed = recipe_generator.generate(
         entries,
         day,
@@ -227,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
         "spotlights": spotlights,
         "finalists": [h.key for h in heroes] if is_grand_final else [],
         "recent_line_ids": sorted(recent_ids),
+        "recent_cliches": sorted(recent_cliches),
     }
 
     out = Path(a.out)
@@ -247,12 +251,14 @@ def main(argv: list[str] | None = None) -> int:
         "leader": outcome.leader_key,
         "leader_pts": outcome.leader_pts,
         "top3": outcome.top3,
+        "top4": outcome.top4,
         "ko_bonus": outcome.ko_bonus_key,
         "lead_changed": outcome.lead_changed,
         "resolved_at": trace.meta["resolved_at"],
         "candidates": report,
     }
     line_ids: list[str] = []
+    cliches: list[str] = []
     if not a.no_render:
         from src.rendering import pipeline
 
@@ -273,6 +279,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"rendered {out} frames={info['frames']} duration={info['duration']:.1f}s in {info['render_s']}s")
         if info.get("sound"):
             line_ids = list(info["sound"].get("line_ids") or [])
+            cliches = list(info["sound"].get("cliches") or [])
             print(f"sound: {info['sound']}")
         summary.update(
             video=str(out),
@@ -290,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
             "stage": outcome.stage,
             "winner": outcome.winner_key,
             "line_ids": list(line_ids),
+            "cliches": list(cliches),
         })
         entries.append(entry)
         league.save_all_state(next_state, next_hof, entries, state_dir=STATE)

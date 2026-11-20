@@ -70,6 +70,9 @@ class Contestant:
     last_land_t: float = -9.0
     hit_until: float = -9.0     # v3.2: 0.4 s HIT window (X_X + tongue on Dummies)
     bounce_cd: float = -9.0     # v3.2: cooldown for Boing / Floater lift impulses
+    blink_next: float = 3.0     # v4.3 Glitch micro lag-blink: next scheduled blink (every 3.0-4.2 s)
+    blink_pending: float = -1.0  # v4.3: collision-triggered blink time (0.15 s after a heavy hit)
+    blink_cd: float = -9.0      # v4.3: collision-trigger cooldown (2.5 s)
 
     @property
     def is_hero(self) -> bool:
@@ -361,6 +364,60 @@ class Sim:
             c.body.apply_impulse_at_world_point((math.cos(a) * 105 * mass, math.sin(a) * 105 * mass), c.body.position)
             self.event("glitch", [c.key], c.pos, effect=phase.lower())
 
+    def _blink_ok(self, c: Contestant, dest: tuple[float, float]) -> bool:
+        """Safety lock for Glitch's lag-blink destination (Pymunk point + segment queries)."""
+        x, y = dest
+        r = c.radius
+        own = {c.shape}
+        # 1. never inside solid geometry / another ball
+        for q in self.space.point_query((x, y), max(2.0, r - 3.0), pymunk.ShapeFilter()):
+            if q.shape not in own and not q.shape.sensor:
+                return False
+        # 2. never tunnel THROUGH a wall on the way
+        for q in self.space.segment_query(c.pos, (x, y), max(2.0, r * 0.45), pymunk.ShapeFilter()):
+            if q.shape not in own and not q.shape.sensor and getattr(q.shape, "contestant", None) is None:
+                return False
+        if self.mode == SIDE:
+            if y > self.kill_y - 2.5 * r:                               # instant kill plane
+                return False
+            if any(p0 - r <= x <= p1 + r for p0, p1 in getattr(self.arena, "pits", [])):
+                return False                                           # never over a pit
+            fy = self.arena.floor_y(x) if hasattr(self.arena, "floor_y") else None
+            if fy is not None and y > fy + 10.0:
+                return False
+            if self.finish_x is not None:
+                if c.pos[0] < self.finish_x and x + r >= self.finish_x - 12.0:
+                    return False                                       # never across the finish sensor
+                if not getattr(self.arena, "vertical_tower", False) and x - r <= self.chase_x + 90.0:
+                    return False                                       # never into the killer fire
+        else:
+            if self.walkable is not None and not self.walkable(x / self.edge_k, y / self.edge_k):
+                return False
+            if hasattr(self.arena, "edge_distance") and self.arena.edge_distance(x, y) < r + 24.0:
+                return False
+        return True
+
+    def _glitch_blink(self, c: Contestant) -> None:
+        """v4.3 Micro Lag-Blink: shift +-40..65 px along the movement tangent (50% forward blink / 50% lag-rubberband
+        back). If the destination is unsafe, the visual glitch pulse still fires in place (no teleport)."""
+        vx, vy = float(c.body.velocity.x), float(c.body.velocity.y)
+        sp = math.hypot(vx, vy)
+        if sp < 40.0:
+            dx_dir = self.arena.drive_dir(c) if hasattr(self.arena, "drive_dir") else 1.0
+            tx, ty = (float(dx_dir), 0.0) if self.mode == SIDE else (math.cos(c.body.angle), math.sin(c.body.angle))
+        else:
+            tx, ty = vx / sp, vy / sp
+        back = self.rng.random() < 0.5
+        dist = self.rng.uniform(40.0, 65.0) * (-1.0 if back else 1.0)
+        src = c.pos
+        dest = (src[0] + tx * dist, src[1] + ty * dist)
+        moved = self._blink_ok(c, dest)
+        if moved:
+            c.body.position = dest
+            self.space.reindex_shapes_for_body(c.body)
+        self.event("glitch_blink", [c.key], dest if moved else src, src=src, dst=dest if moved else src,
+                   moved=moved, back=back)
+
     def eff_speed(self, stat: float) -> float:
         c, k = self.cfg["speed_centre"], self.cfg["speed_spread"]
         return c + (stat - c) * k
@@ -464,6 +521,8 @@ class Sim:
             c.stun = (lo + (hi - lo) * min(1.0, (per_mass - thr) / (2.5 * thr))) * max(0.4, mult)
         if c.hero and c.hero.trait == "glitch" and per_mass > thr * 0.8 and self.t - c.phase_t > 0.4:
             self._glitch_phase(c, "FEATHER" if c.phase == "LEAD" else "LEAD")
+        if c.hero and c.hero.trait == "glitch" and per_mass > thr and self.t >= c.blink_cd and c.blink_pending < 0:
+            c.blink_pending = self.t + 0.15
 
     def trait(self, c: Contestant, name: str, **data) -> None:
         last = [e for e in self.events if e.kind == "trait" and e.actors[0] == c.key and e.data.get("name") == name]
@@ -516,7 +575,7 @@ class Sim:
             self.goal.update(self.t)
             self._record()
             frame += 1
-            if self.winner and self.resolved_at is not None and self.t >= self.resolved_at + 0.5:
+            if self.winner and self.resolved_at is not None and self.t >= self.resolved_at + 0.65:
                 break
             true_finish = getattr(self.arena, "true_finish", False)
             cap = float(self.cfg["disc"]["hard_stop_s"]) if true_finish else hard
@@ -598,6 +657,14 @@ class Sim:
             x, y = c.pos
             if c.hero is not None and c.hero.trait == "glitch" and self.t - c.phase_t >= self.cfg["glitch_period_s"]:
                 self._glitch_phase(c, "FEATHER" if c.phase == "LEAD" else "LEAD")
+            if c.hero is not None and c.hero.trait == "glitch" and not c.finished and self.t > 0.5:
+                due_hit = c.blink_pending >= 0 and self.t >= c.blink_pending
+                if due_hit or self.t >= c.blink_next:
+                    self._glitch_blink(c)
+                    if due_hit:
+                        c.blink_cd = self.t + 2.5
+                    c.blink_pending = -1.0
+                    c.blink_next = self.t + self.rng.uniform(3.0, 4.2)
             if (self.mode == SIDE and c.hero is not None and c.hero.trait == "auto_hop" and c.grounded
                     and c.body.velocity.y > -120 and self.t >= c.bounce_cd and not c.finished):
                 # v3.2: Boing never sits passively in flat clumps — perpetual rubber superball hop
@@ -644,6 +711,10 @@ class Sim:
             esc_units = sum(TIMELINE.speed_at(3.0 + i * 0.1) * 0.1 for i in range(int((self.cfg["pacing"]["chase_finish_s"] - 3.0) * 10)))
             k = min(self.cfg["pacing"]["chase_max"], max(self.cfg["pacing"]["chase_min"], self.pressure))
             self.chase_x += (self.finish_x / esc_units) * self.speed_mult * k * dt * float(getattr(self.arena, "chase_scale", 1.0))
+            duel = [c.pos[0] for c in alive if c.is_hero]
+            if 2 <= len(duel) <= 3 and max(duel) - min(duel) > 1100.0:
+                # v4.3: compress a spread-out final duel (camera keeps the lead cluster big + edge rival pill)
+                self.chase_x += (self.finish_x / esc_units) * self.speed_mult * 0.65 * dt
             if self.overtime:
                 alive_x = [c.pos[0] for c in alive]
                 if alive_x:

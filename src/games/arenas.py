@@ -181,15 +181,19 @@ class Course(Arena):
         self.sim.static_poly([(x, y), (x + w, y), (x + w, y - h), (x, y - h)], "wall")
         self.seg(w)
 
-    def start(self) -> None:
-        """Spawn ledge -> compact drop-gate -> steep launch chute -> tilted run-out -> first lethal gap within 300 px."""
+    def start(self, first_gap: bool = True) -> None:
+        """Spawn ledge -> compact drop-gate -> steep launch chute -> tilted run-out -> first lethal gap within 300 px
+        (v4.3: `first_gap=False` swaps the instant-kill gap for a gentle run-in so dummies reach the first hazards)."""
         r = self.sim.rng
         self.seg(360, 12)
         self.add_gate(self.x - 26, top=self.LEDGE_Y - 155)
         self.seg(380, 320)                       # steep chute (40 deg)
         self.seg(220, 210)                       # continuous downhill run-out
         self.seg(r.uniform(90, 145), 14)
-        self.gap(r.uniform(115, 155), 24)        # first blood: within ~300 px of the drop zone
+        if first_gap:
+            self.gap(r.uniform(115, 155), 24)    # first blood: within ~300 px of the drop zone
+        else:
+            self.seg(r.uniform(170, 230), 36)    # gentle run-in straight into crusher bay #1
 
     def finish(self, length: float = 700) -> None:
         self.seg(length)
@@ -982,47 +986,73 @@ class CollapseTower(Course):
 
 
 class CrusherGauntlet(Course):
-    """v4.0: Fast stone gauntlet with oscillating overhead crusher pistons (timed smash gaps), oncoming rolling boulders
-    tumbling against traffic, flush speed-boost chevrons, and bouncy angled ceiling deflectors."""
+    """v4.3: Stone gauntlet whose slope-parallel crusher pistons (115-130 px heads) hang from ONE continuous riveted
+    iron ceiling girder on castle pillars. Brutal uneven stroke (0.22 s yellow telegraph -> 0.18 s smash -> 0.32 s floor
+    hold -> 0.65 s lift), sticky grip strips under select crushers so heroes genuinely get squished/stalled/punted,
+    big textured desert boulders rolling against traffic or dropping from ceiling chutes, and a gentle opening run-in
+    so the Golden Dummies survive into the first crushers. Ends at a visible checkered FINISH arch."""
     key = "crusher_gauntlet"
     chase_scale = 0.78
 
+    TOP_OFF = 189.0      # head centre above floor at the top of the stroke
+    BOT_OFF = 39.0       # head centre above floor at full stroke -> head bottom sits 6 px above the track
+    GIRDER_DY = 470.0    # girder centreline above each crusher's floor
+    TELE_S, SMASH_S, HOLD_S, LIFT_S = 0.22, 0.18, 0.32, 0.65
+
     def __init__(self, sim):
         super().__init__(sim)
-        self.crushers: list[tuple] = []
+        self.crushers: list[dict] = []
         self.boosts: list[tuple[str, float, float]] = []
+        self.grips: list[tuple[str, float, float]] = []
         self.boulders: list = []
-        self.next_boulder = 3.8
+        self.next_boulder = 3.6
+        self.chute_flip = False
+        self._last_t: float | None = None
 
     def build(self):
         r = self.sim.rng
-        self.start()
+        self.start(first_gap=False)
 
         n = self.count("gauntlet_bays", 6, 7)
+        pillar_xs: list[float] = []
         for i in range(n):
-            # 1. Speed-boost approach slab with flush chevrons + overhead bouncy angled ceiling deflector
+            # 1. Speed-boost approach slab with flush chevrons
             bx0 = self.x + 25.0
-            rx0, ry0 = self.x, self.y
+            ax0 = self.x
             self.seg(r.uniform(380, 470), r.uniform(150, 205))
             if i % 3 == 0:
                 self.boosts.append(("rect", bx0, self.x - 20.0))
+            pillar_xs.append((ax0 + self.x) / 2.0)
 
-            # 2. Timed Overhead Crusher Piston bay
-            bay_w = r.uniform(240, 305)
+            # 2. Timed overhead crusher bay; head parallel to the local track slope
+            bay_w = r.uniform(250, 310)
+            bay_dy = r.uniform(32, 62)
             cx = self.x + bay_w * 0.5
-            self.seg(bay_w, r.uniform(32, 62))
+            self.seg(bay_w, bay_dy)
             gy = self.ground_y_at(cx)
+            theta = math.atan2(bay_dy, bay_w)
+            head_w = r.uniform(115.0, 130.0)
             body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
             body.position = (cx, gy - self.TOP_OFF)
-            head = pymunk.Poly.create_box(body, (112, 66), radius=6)
-            shaft = pymunk.Segment(body, (0, -33), (0, -480), 12)
+            body.angle = theta
+            c_, s_ = math.cos(-theta), math.sin(-theta)
+
+            def loc(wx: float, wy: float, c_=c_, s_=s_) -> tuple[float, float]:
+                return (wx * c_ - wy * s_, wx * s_ + wy * c_)
+
+            head = pymunk.Poly.create_box(body, (head_w, 66), radius=6)
+            # telescoping shaft stays world-vertical and ends inside the girder's hydraulic sleeve
+            shaft = pymunk.Segment(body, loc(0, -33), loc(0, -(self.GIRDER_DY - self.TOP_OFF)), 12)
             cp = self.sim.add_prop(body, [shaft, head], "crusher", hazard=True)
             head.sensor = shaft.sensor = True        # crush/launch resolved by script -> zero floor tunnelling
-            self.crushers.append((cp, cx, gy, r.uniform(0, 1.0), r.uniform(1.9, 2.5)))
-            # Solid overhead stone/steel ceiling beam the piston is mounted to (visual, anchored up off-screen)
-            self.sim.statics.append({"type": "ceiling_beam", "x0": cx - 96.0, "x1": cx + 96.0, "y": gy - 470.0})
+            base_period = r.uniform(2.3, 3.0)
+            self.crushers.append({"cp": cp, "cx": cx, "gy": gy, "theta": theta, "hw": head_w / 2.0,
+                                  "cyc": r.uniform(0.0, 1.0), "period": base_period})
+            # 3. sticky grip strip right under every other crusher (heroes slow down IN the smash zone)
+            if i % 2 == 0:
+                self.grips.append(("rect", cx - head_w * 0.85, cx + head_w * 0.35))
 
-            # 3. Bouncy kicker + periodic downhill jump gap
+            # 4. Bouncy kicker + periodic downhill jump gap
             if i % 4 == 3:
                 self.seg(r.uniform(115, 145), r.uniform(8, 20), material="bouncy")
                 self.gap(r.uniform(68, 92) * self.ramp(i, n), r.uniform(42, 76))
@@ -1030,71 +1060,123 @@ class CrusherGauntlet(Course):
                 self.wave(r.uniform(220, 310), 24, 48)
 
         self.finish(700)
-        self.sim.surface_mods.append(self._boost_mod)
+        # ONE continuous ceiling girder through every piston mount (+ lead-in/out), carried by castle pillars
+        mounts = [(c["cx"], c["gy"] - self.GIRDER_DY) for c in self.crushers]
+        if mounts:
+            (x0, y0), (x1, y1) = mounts[0], mounts[-1]
+            slope0 = (mounts[1][1] - y0) / max(1.0, mounts[1][0] - x0) if len(mounts) > 1 else 0.0
+            slope1 = (y1 - mounts[-2][1]) / max(1.0, x1 - mounts[-2][0]) if len(mounts) > 1 else 0.0
+            pts = [(x0 - 420.0, y0 - 420.0 * slope0)] + mounts + [(x1 + 420.0, y1 + 420.0 * slope1)]
+
+            def girder_y(x: float) -> float:
+                for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+                    if ax <= x <= bx:
+                        return ay + (by - ay) * (x - ax) / max(1.0, bx - ax)
+                return pts[-1][1]
+
+            pillars = []
+            for px in [pts[0][0] + 60.0] + pillar_xs[1:] + [pts[-1][0] - 60.0]:
+                fy = self.floor_y(px)
+                if fy is not None and fy - girder_y(px) > 120.0:
+                    pillars.append((px, girder_y(px), fy))
+            self.sim.statics.append({"type": "ceiling_girder", "pts": pts, "mounts": mounts, "pillars": pillars})
+        self.sim.surface_mods.append(self._surface_mod)
         self.sim.hooks_frame.append(self._tick)
 
-    def _boost_mod(self, c: "Contestant") -> float:
+    def _surface_mod(self, c: "Contestant") -> float:
         x = c.pos[0]
+        if any(g[1] <= x <= g[2] for g in self.grips):
+            return 0.55
         return 1.32 if any(b[1] <= x <= b[2] for b in self.boosts) else 1.0
 
-    TOP_OFF = 189.0      # head centre above floor at the top of the stroke
-    BOT_OFF = 39.0       # head centre above floor at full stroke -> head bottom sits 6 px above the track
-    TELEGRAPH_S = 0.25
-
-    def _stroke(self, u: float, period: float) -> tuple[float, float]:
-        """Returns (offset above floor of head centre, shake px) for cycle phase u in [0, 1)."""
-        tele = min(0.12, self.TELEGRAPH_S / max(0.5, period))
-        if u < 0.40:
-            shake = 3.0 * math.sin(u * 900.0) if u > 0.40 - tele else 0.0
-            return self.TOP_OFF, shake
-        if u < 0.47:                                   # SLAM (ease-in)
-            k = (u - 0.40) / 0.07
-            return self.TOP_OFF - (self.TOP_OFF - self.BOT_OFF) * k * k, 0.0
-        if u < 0.55:                                   # hold at the bottom
-            return self.BOT_OFF, 0.0
-        k = (u - 0.55) / 0.45                          # slow hydraulic rise
+    def _stroke(self, s: float, period: float) -> tuple[float, float, str]:
+        """(head-centre offset above floor, shake px, phase) for s seconds into a cycle of `period` seconds."""
+        busy = self.TELE_S + self.SMASH_S + self.HOLD_S + self.LIFT_S
+        idle = max(0.15, period - busy)
+        if s < idle:
+            return self.TOP_OFF, 0.0, "idle"
+        s -= idle
+        if s < self.TELE_S:                            # 0.22 s yellow flash + shake telegraph
+            return self.TOP_OFF, 3.0 * math.sin(s * 140.0), "tele"
+        s -= self.TELE_S
+        if s < self.SMASH_S:                           # FAST 0.18 s smash (ease-in)
+            k = s / self.SMASH_S
+            return self.TOP_OFF - (self.TOP_OFF - self.BOT_OFF) * k * k, 0.0, "smash"
+        s -= self.SMASH_S
+        if s < self.HOLD_S:                            # 0.32 s floor hold
+            return self.BOT_OFF, 0.0, "hold"
+        s -= self.HOLD_S
+        k = min(1.0, s / self.LIFT_S)                  # slower 0.65 s hydraulic lift
         k = k * k * (3 - 2 * k)
-        return self.BOT_OFF + (self.TOP_OFF - self.BOT_OFF) * k, 0.0
+        return self.BOT_OFF + (self.TOP_OFF - self.BOT_OFF) * k, 0.0, "lift"
 
     def _tick(self, t: float):
-        alive_heroes = sum(1 for c in self.sim.alive() if c.hero is not None)
-        for cp, cx, gy, ph, w in self.crushers:
-            om = w * self.sim.hazard_mult
-            period = 2.0 * math.pi / om
-            u = (t / period + ph) % 1.0
-            off, shake = self._stroke(u, period)
-            off_prev, _ = self._stroke((u - (1.0 / 30.0) / period) % 1.0, period)
-            cp.body.position = (cx + shake, gy - off)
-            cp.body.velocity = (0.0, (off_prev - off) * 30.0)
-            head_bottom = gy - off + 33.0
-            descending = off < off_prev - 0.5 or u < 0.55 and u >= 0.40
-            if not descending:
+        dt = 1.0 / 30.0 if self._last_t is None else max(0.0, min(0.1, t - self._last_t))
+        self._last_t = t
+        hm = max(0.5, float(self.sim.hazard_mult))
+        warn: list[float] = []
+        for c in self.crushers:
+            period = max(1.6, c["period"] / hm)
+            c["cyc"] = (c["cyc"] + dt / period) % 1.0
+            s = c["cyc"] * period
+            off, shake, phase = self._stroke(s, period)
+            off_prev, _, _ = self._stroke(max(0.0, s - dt), period)
+            cx, gy = c["cx"], c["gy"]
+            c["cp"].body.position = (cx + shake, gy - off)
+            c["cp"].body.velocity = (0.0, (off_prev - off) / max(1e-3, dt))
+            if phase == "tele":
+                warn.append(cx)
+            if phase not in ("smash", "hold"):
                 continue
-            for c in list(self.sim.alive()):
-                dx = c.pos[0] - cx
-                if abs(dx) > 56.0 + c.radius or c.pos[1] - c.radius > head_bottom or c.pos[1] < gy - self.TOP_OFF:
+            head_bottom = gy - off + 33.0
+            for v in list(self.sim.alive()):
+                dx = v.pos[0] - cx
+                if abs(dx) > c["hw"] + v.radius or v.pos[1] - v.radius > head_bottom or v.pos[1] < gy - self.TOP_OFF:
                     continue
-                if c.pos[1] + c.radius < head_bottom - 10.0 and c.pos[1] < gy - 2.0 * c.radius - 10.0:
+                if v.pos[1] + v.radius < head_bottom - 10.0 and v.pos[1] < gy - 2.0 * v.radius - 10.0:
                     continue                           # airborne above the head's path
-                if c.hero is None:
-                    self.sim.eliminate(c, "crushed")   # genuinely smashed
-                    if c.hero is not None:
-                        alive_heroes -= 1
-                elif c.stun <= 0.0:
-                    c.squash = 1.0                     # launched out from under the slab
-                    c.stun = 0.25
-                    c.body.velocity = (max(260.0, c.body.velocity.x), -330.0)   # popped forward-up, keeps momentum
+                if v.hero is None and t >= 4.6:
+                    self.sim.eliminate(v, "crushed")   # dummies are genuinely flattened
+                elif v.stun <= 0.0:
+                    # heroes get SQUASHED: flattened + stunned, then stalled / punted forward-low / punted backward
+                    v.squash = 1.0
+                    v.stun = 0.55 * (v.hero.stun_mult if v.hero else 1.0)
+                    roll = self.sim.rng.random()
+                    vx = v.body.velocity.x
+                    if roll < 0.45:
+                        v.body.velocity = (vx * 0.15, 60.0)                      # pancaked & stalled
+                        how = "stall"
+                    elif roll < 0.80:
+                        v.body.velocity = (max(320.0, vx) + 120.0, -160.0)      # punted forward-low
+                        how = "punt"
+                    else:
+                        v.body.velocity = (-240.0, -220.0)                      # spat back out behind
+                        how = "spit"
+                    self.sim.event("crush_hit", [v.key], v.pos, how=how, hero=v.hero is not None)
+        # sticky grip strips: grounded balls inside a strip bleed speed (they linger in the smash zone)
+        for v in self.sim.alive():
+            if v.grounded and any(g[1] <= v.pos[0] <= g[2] for g in self.grips):
+                vx, vy = v.body.velocity
+                v.body.velocity = (vx * 0.93, vy)
 
-        # Oncoming rolling boulders tumbling against traffic
+        # Big textured desert boulders: rolling against traffic, alternating with ceiling-chute drops
         if t >= self.next_boulder:
-            self.next_boulder = t + self.sim.rng.uniform(3.6, 5.0) / self.sim.hazard_mult
+            self.next_boulder = t + self.sim.rng.uniform(3.4, 4.8) / hm
             ahead = self.sim.cam_x + 780.0
             if self.sim.finish_x is None or ahead < self.sim.finish_x - 240.0:
                 gy = self.ground_y_at(ahead)
-                bbody = pymunk.Body(22.0, pymunk.moment_for_circle(22.0, 0, 34.0))
-                bbody.position = (ahead, gy - 185.0)
-                bbody.velocity = (-255.0 * self.sim.hazard_mult, 0.0)
-                bsh = pymunk.Circle(bbody, 34.0)
+                rad = self.sim.rng.uniform(38.0, 44.0)
+                mass = 26.0 * (rad / 34.0) ** 2
+                bbody = pymunk.Body(mass, pymunk.moment_for_circle(mass, 0, rad))
+                self.chute_flip = not self.chute_flip
+                if self.chute_flip:
+                    bbody.position = (ahead, gy - 185.0)
+                    bbody.velocity = (-255.0 * hm, 0.0)
+                else:                                   # dropped from a ceiling chute just ahead of the pack
+                    drop_x = self.sim.cam_x + self.sim.rng.uniform(380.0, 560.0)
+                    bbody.position = (drop_x, self.ground_y_at(drop_x) - self.GIRDER_DY + 70.0)
+                    bbody.velocity = (-60.0, 80.0)
+                bsh = pymunk.Circle(bbody, rad)
                 bsh.friction, bsh.elasticity = 0.82, 0.32
                 bp = self.sim.add_prop(bbody, [bsh], "boulder", hazard=True)
                 self.boulders.append(bp)
@@ -1104,6 +1186,8 @@ class CrusherGauntlet(Course):
                 self.boulders.remove(bp)
 
         self.sim.zones["boost_zones"] = list(self.boosts)
+        self.sim.zones["grip_zones"] = list(self.grips)
+        self.sim.zones["crusher_warn"] = warn
 
 
 class SumoPoolPit(TopArena):

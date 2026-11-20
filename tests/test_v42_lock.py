@@ -15,7 +15,7 @@ class TestV42Lock(unittest.TestCase):
             for ln in lines:
                 low = f" {ln.lower()} "
                 self.assertFalse(any(p in low for p in script.BANNED_PHRASES), f"{fam}: {ln}")
-                self.assertLessEqual(len(ln.split()), 9, f"{fam}: {ln}")
+                self.assertLessEqual(len(ln.split()), 12 if fam == "outro_final" else 9, f"{fam}: {ln}")
 
     def test_family_dedup_and_cooldown(self) -> None:
         pk = script.Picker(random.Random(3), recent_ids={"drama:0", "drama:1"})
@@ -41,8 +41,8 @@ class TestV42Lock(unittest.TestCase):
         self.assertTrue(script._valid_llm_line(plain, "Glitch steals it, Grumble stays king."))
 
     def test_prosody_voice_and_card_hold(self) -> None:
-        self.assertEqual(tts.PROSODY["hype"], ("+24%", "+7Hz"))
-        self.assertEqual(tts.PROSODY["deadpan"], ("+11%", "-2Hz"))
+        self.assertEqual(tts.PROSODY["hype"], ("+26%", "+9Hz"))        # v4.3 stronger contrast
+        self.assertEqual(tts.PROSODY["deadpan"], ("+12%", "-3Hz"))
         self.assertIn("acompressor=threshold=-16dB", tts.BOOTH_MIC_AF)
         self.assertFalse(hasattr(mix, "CARD_MAX_S"))
         self.assertAlmostEqual(mix.CARD_TAIL_S, 0.65)

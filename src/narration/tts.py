@@ -78,8 +78,8 @@ def trim_silence_40db(pcm: np.ndarray, words: list[tuple[float, float, str]]) ->
 
 PROSODY: dict[str, tuple[str, str]] = {
     "normal": ("+16%", "+2Hz"),     # INTRO / FILLER / generic reactions
-    "hype": ("+24%", "+7Hz"),       # KO / BETRAYAL / CLIMAX / WINNER
-    "deadpan": ("+11%", "-2Hz"),    # SELF_KO / DUMMY_ROAST / FACEPALM
+    "hype": ("+26%", "+9Hz"),       # KO / BETRAYAL / MULTI-KO / CLIMAX / WINNER / GRAND FINAL (v4.3: more contrast)
+    "deadpan": ("+12%", "-3Hz"),    # SELF_KO / DUMMY_ROAST / IRONIC FAIL (v4.3: calmer, cheekier)
 }
 BOOTH_MIC_AF = "highpass=f=120,equalizer=f=2800:width_type=o:width=1.5:g=3.5,acompressor=threshold=-16dB:ratio=4:attack=5:release=60"
 _CACHE: dict[tuple[str, str], tuple[np.ndarray, list[tuple[float, float, str]]] | None] = {}

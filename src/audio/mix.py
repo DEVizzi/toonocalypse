@@ -108,6 +108,7 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
     # ------------------------------------------------------------------ 1. Narration & Natural Native-Pitch Timing
     beats = script.build_beats(r, to_out, video_len, replay_t, card_t, pair, league_ctx=league_ctx)
     gem = script.punch_up(beats, league_ctx=league_ctx, log=log)
+    script.apply_guards(beats, r, league_ctx=league_ctx, log=log)
     picker = getattr(r, "_picker", None) or script.Picker(__import__("random").Random(0))
     speech: list[dict] = []
     voice_pcm: list[tuple[float, np.ndarray]] = []
@@ -297,6 +298,13 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
                 add(t, 5, sfx.betrayal_sting(), -4.5)
         elif e.kind == "glitch":
             add(t, 1, sfx.zap(), -13)
+        elif e.kind == "glitch_blink":
+            add(t, 4, sfx.glitch_zip(), -6.5)
+        elif e.kind == "crush_hit":
+            add(t, 3, sfx.thud(), -6.0)
+            add(t + 0.02, 3, sfx.comic_bonk(), -9.0)
+        elif e.kind == "reverse":
+            add(t, 4, sfx.record_scratch(), -7.0)
         elif e.kind == "heavy_land" and e.data.get("shake"):
             add(t, 1, sfx.thud(), -9.5)
         elif e.kind == "trait" and e.actors and e.actors[0] == "boing":
@@ -307,6 +315,16 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
             add(t - 0.5, 4, sfx.riser(), -7.0)
         elif e.kind == "lead_change" and e.t >= (tr.meta.get("resolved_at") or 99) - 5:
             add(t, 2, sfx.ding(), -10.0)
+
+    # v4.3 comedic accent SFX tucked right under the punchline of each voiced line
+    for s in speech:
+        k = s["kind"]
+        if k == "betrayal":
+            add(s["t1"] - 0.10, 5, sfx.comic_bonk(), -7.5)
+        elif k in ("dummy", "hero_fall", "self_ko"):
+            add(s["t1"] - 0.08, 5, sfx.sad_slide_whistle(), -10.0)
+        elif k in ("ironic", "lead"):
+            add(max(0.0, s["t0"] - 0.05), 5, sfx.record_scratch(), -8.5)
 
     i = 0
     while i < len(elims):
@@ -321,8 +339,13 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
     for t0, _word, _pos, _seed in r.popups:
         add(to_out(t0), 1, sfx.pop(), -11.5)
     add(replay_t, 5, sfx.rewind(), -8.5)
-    add(card_t, 7, sfx.fanfare(), -3.5)
-    add(card_t + 0.2, 6, sfx.cheer(), -7.0)
+    if str(league_ctx.get("stage")) == "grand_final":
+        add(card_t, 8, sfx.grand_fanfare(), -1.0)          # louder championship fanfare
+        add(card_t + 0.15, 7, sfx.cheer(), -4.0)
+        add(card_t + 1.4, 6, sfx.cheer(), -6.0)
+    else:
+        add(card_t, 7, sfx.fanfare(), -3.5)
+        add(card_t + 0.2, 6, sfx.cheer(), -7.0)
 
     cap = int(a["sfx_cap_per_s"])
     kept: list[float] = []
@@ -378,6 +401,7 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
         "bgm_track": bgm_track,
         "voice": tts.LAST_VOICE.get("voice", ""),
         "line_ids": list(picker.used_ids),
+        "cliches": script.cliches_in([s["text"] for s in speech]),
         "outro_dur_s": round((outro_end_t or card_t) - card_t, 2),
         "sfx": n_fx,
         "max_reaction_lag_s": round(max_lag, 3),

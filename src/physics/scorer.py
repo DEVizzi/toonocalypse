@@ -78,10 +78,17 @@ def score(trace: Trace, history: dict | None = None) -> Score:
     sc = settings()["scorer"]
     p["dummy_win"] = sc["dummy_win_penalty"] if winner and winner.startswith("extra") else 0
     first = min((e.t for e in elims), default=99.0)
-    p["late_first_blood"] = sc["reject_penalty"] if first > sc["first_blood_s"] else 0
+    fb_limit = sc["first_blood_s"]
+    crushes = [e.t for e in ev if e.kind == "crush_hit"]
+    if trace.meta.get("recipe", {}).get("arena") == "crusher_gauntlet":
+        # v4.3: the opening run-in deliberately keeps Golden Dummies alive into the first crushers -> the first
+        # on-screen SQUASH counts as first blood, inside a 5.2 s window
+        first = min([first] + crushes)
+        fb_limit = sc["first_blood_s"] + 1.7
+    p["late_first_blood"] = sc["reject_penalty"] if first > fb_limit else 0
     imp_floor = sc["major_impulse"] * (0.65 if len(trace.keys) <= 10 else 1.0)
     action = sorted(
-        [e.t for e in elims]
+        [e.t for e in elims] + crushes
         + [e.t for e in ev if e.kind == "impact" and e.data.get("impulse", 0) >= imp_floor]
         + ([e.t for e in ev if e.kind in ("trait", "lead_change")] if len(trace.keys) <= 10 else [])
     )

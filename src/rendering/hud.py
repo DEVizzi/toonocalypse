@@ -70,14 +70,19 @@ def draw_header(frame: pygame.Surface, ep_label: str, survivors: int, total: int
 
 
 def draw_banner(frame: pygame.Surface, text: str, age: float, y: float = 540, colour=(255, 214, 0)) -> None:
-    """Big slam-in banner for 1.2 s (SPEED UP!, OVERTIME CHAOS!), auto-fitted to <= 900 px."""
+    """Big slam-in banner for 1.2 s (SPEED UP!, OVERTIME CHAOS!), auto-fitted to <= 900 px.
+    v4.3: exits with an alpha fade at full size (never shrinks into a tiny stray label over the slime/HUD)."""
     if age < 0 or age > 1.2:
         return
-    k = 1.45 - 0.45 * min(1.0, age / 0.12) if age < 0.12 else (1.0 if age < 0.95 else max(0.0, 1 - (age - 0.95) / 0.25))
-    if k <= 0.02:
+    k = 1.45 - 0.45 * min(1.0, age / 0.12) if age < 0.12 else 1.0
+    alpha = 255 if age < 0.95 else int(255 * max(0.0, 1 - (age - 0.95) / 0.25))
+    if alpha <= 8:
         return
     base = fit_width(outlined(text, 86, fill=colour, width=8), 780)
     s = fit_width(pygame.transform.rotozoom(base, -3, k), MAX_BANNER_W)
+    if alpha < 255:
+        s = s.convert_alpha() if pygame.display.get_init() and pygame.display.get_surface() else s.copy()
+        s.set_alpha(alpha)
     blit_text(frame, s, center=(W / 2, y))
 
 
@@ -324,6 +329,8 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
             blit_text(frame, outlined(labels[idx], 30, fill=medal[idx], width=4), midright=(rect.right - 18, rect.centery))
     elif outcome is not None:
         rows = list(getattr(outcome, "top4", None) or [(k, p, 0) for k, p in outcome.top3])
+        rows.sort(key=lambda r_: -int(r_[1]))              # v4.3 P0: strictly points DESC (stable tie order)
+        assert all(rows[i][1] >= rows[i + 1][1] for i in range(len(rows) - 1)), rows
         top_pts = max(1, rows[0][1]) if rows else 1
         for idx, (hk, hpts, delta) in enumerate(rows[:4]):
             cy = rows_top + row_h * (idx + 0.5)
@@ -363,13 +370,28 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
                 pygame.draw.rect(frame, (255, 255, 255), (track.left + 4, track.top + 3, max(0, fill_w - 8), 4), border_radius=2)
             pygame.draw.rect(frame, BLACK, track, 2, border_radius=9)
 
-    # ---- BOTTOM 12%: single-line verbatim spoken CTA pill
+    # ---- BOTTOM 12%: Ep 1-29 single-line verbatim spoken CTA pill | Ep 30 golden championship banner (zero CTA)
     cta = pygame.Rect(panel.left + 30, bot_top + 14, cw - 60, ch - (bot_top - panel.top) - 32)
+    bob = 2.5 * math.sin(t * 6.5)
+    if is_final:
+        shine = 0.5 + 0.5 * math.sin(t * 5.0)
+        pygame.draw.rect(frame, BLACK, cta.move(0, 5), border_radius=cta.height // 2)
+        pygame.draw.rect(frame, (int(222 + 30 * shine), int(160 + 40 * shine), 18), cta, border_radius=cta.height // 2)
+        pygame.draw.rect(frame, (255, 246, 170), cta.inflate(-12, -12), 3, border_radius=cta.height // 2 - 6)
+        pygame.draw.rect(frame, BLACK, cta, 5, border_radius=cta.height // 2)
+        txt = f"ALL HAIL SEASON {snum} CHAMPION: {name.upper()}!"
+        cs = fit_width(outlined(txt, 36, fill=(255, 252, 230), outline=(92, 52, 6), width=4), cta.width - 150)
+        r_txt = blit_text(frame, cs, center=(cta.centerx, cta.centery + bob))
+        _draw_trophy_cup(frame, r_txt.left - 34, cta.centery + 4 + bob, scale=0.42)
+        _crown_badge(frame, r_txt.right + 36, cta.centery + bob, 40)
+        gold = pygame.Rect(0, 200, W, H - 200)
+        effects.draw_confetti(frame, t + 0.2, 97, gold, n=170)     # denser championship confetti
+        effects.draw_confetti(frame, t, 73, panel.inflate(120, 80), n=70)
+        return
     pygame.draw.rect(frame, BLACK, cta.move(0, 4), border_radius=cta.height // 2)
     pygame.draw.rect(frame, (250, 204, 21), cta, border_radius=cta.height // 2)
     pygame.draw.rect(frame, BLACK, cta, 4, border_radius=cta.height // 2)
     txt = (prompt or "Drop your pick below!").strip().upper()
-    bob = 2.5 * math.sin(t * 6.5)
     cs = fit_width(outlined(txt, 38, fill=(26, 18, 40), outline=(255, 250, 220), width=3), cta.width - 110)
     r_txt = blit_text(frame, cs, center=(cta.centerx - 24, cta.centery + bob))
     _down_arrow(frame, r_txt.right + 34, cta.centery + bob * 1.6, 30)

@@ -29,6 +29,7 @@ BLACK = (17, 17, 17)
 WHITE_ = (255, 255, 255)
 BANNER_S = 1.0
 TRACK_MATS = ("ground", "ice", "mud", "bouncy", "conveyor", "plank")
+REACTION_BEAT_S = 0.45       # v4.3 live beat after the decisive moment before replay/confetti/card
 
 
 @dataclass
@@ -59,7 +60,9 @@ def plan_shots(ep: Episode, teaser_f: int | None = None) -> list[Shot]:
     tr = ep.trace
     pre = tr.meta.get("preroll_frames", 0)
     end_t = tr.meta.get("resolved_at") or (tr.n_frames - pre) / FPS
-    end_f = min(tr.n_frames - 1, pre + int(round(end_t * FPS)))
+    # v4.3: hold the live action REACTION_BEAT_S past the decisive moment (winner visibly across the arch / final
+    # loser fully gone with HUD at ALIVE 1) before cutting to the replay -> confetti/card never fire early.
+    end_f = min(tr.n_frames - 1, pre + int(round((end_t + REACTION_BEAT_S) * FPS)))
     winner = tr.meta.get("winner")
     shots: list[Shot] = []
     for f in range(pre):
@@ -103,6 +106,7 @@ class Renderer:
         self.escalations = [e for e in self.tr.events if e.kind in ("escalation", "twist", "stage_final", "reverse")]
         self.elims = sorted((e for e in self.tr.events if e.kind == "elimination"), key=lambda e: e.t)
         self.glitches = sorted((e for e in self.tr.events if e.kind == "glitch"), key=lambda e: e.t)
+        self.glitch_blinks = sorted((e for e in self.tr.events if e.kind == "glitch_blink"), key=lambda e: e.t)
         self.overtime_t = next((e.t for e in self.escalations if e.data.get("overtime")), 999.0)
         end_t = self.meta.get("resolved_at") or (self.tr.n_frames - self.pre) / FPS
         self.end_f = min(self.tr.n_frames - 1, self.pre + int(round(end_t * FPS)))
@@ -289,6 +293,10 @@ class Renderer:
                 prio = 3
             elif e.kind == "impact" and e.data.get("hero_pair") and e.data.get("impulse", 0) > 900:
                 word, prio = ("BONK!" if seed % 2 else "OOF!"), 1
+            elif e.kind == "crush_hit" and e.data.get("hero"):
+                word, prio = "SQUASHED!", 3
+            elif e.kind == "glitch_blink" and e.data.get("moved"):
+                word, prio = ("LAG!" if e.data.get("back") else "ZAP!"), 2
             elif e.kind == "trait":
                 word, prio = effects.CONTEXT_POPUPS.get(e.actors[0], "BOING!"), 2
             if word:
@@ -596,6 +604,8 @@ class Renderer:
         for sb in self.meta["statics"]:
             if sb["type"] == "ceiling_beam":
                 self._draw_ceiling_beam(cam, sb)
+            elif sb["type"] == "ceiling_girder":
+                self._draw_ceiling_girder(cam, sb)
 
     def _stone_bumper(self, cam: Cam, wx: float, gy: float) -> None:
         """Compact castle tower bumper (130 px tall) with crenellations and a dark arched door."""
@@ -618,21 +628,35 @@ class Renderer:
         pygame.draw.line(self.frame, light, (body.left + 4, body.top + 2), (body.left + 4, body.bottom - 2), max(2, int(3 * z)))
 
     def _finish(self, cam: Cam, x: float, y: float, t: float, play_t: float = 0.0) -> None:
-        """v3.3 pass-through finish gate: short checkered pylon + a red victory tape that snaps into two flapping halves
-        with a confetti burst the moment the winner crosses (zero physical collision)."""
+        """v4.3 pass-through checkered FINISH ARCH (two checkered posts + curved FINISH banner, golden on the Grand
+        Final) + a red victory tape that snaps into two flapping halves the moment the winner crosses."""
         z = cam.zoom
         top_y = y - 230
         a, b = cam.to_screen(x, top_y), cam.to_screen(x, y)
         sq = max(8.0, 20 * z)
-        # checkered pylon set just behind the line
-        px = a[0] + sq * 1.4
-        for i in range(int((b[1] - a[1]) / sq) + 1):
-            for j in range(2):
-                col = BLACK if (i + j) % 2 else WHITE_
-                pygame.draw.rect(self.frame, col, (px + j * sq - sq, a[1] + i * sq, sq + 1, sq + 1))
-        pygame.draw.rect(self.frame, BLACK, (px - sq - 2, a[1] - 2, 2 * sq + 4, b[1] - a[1] + 4), 3)
-        pygame.draw.circle(self.frame, BLACK, (px, a[1] - 10 * z), 12 * z)
-        pygame.draw.circle(self.frame, (255, 208, 40), (px, a[1] - 10 * z), 9 * z)
+        gold = self.finale
+        span = 120 * z
+        for px in (a[0] - span, a[0] + span):                       # two checkered posts straddling the line
+            for i in range(int((b[1] - a[1]) / sq) + 1):
+                for j in range(2):
+                    col = BLACK if (i + j) % 2 else ((255, 214, 40) if gold else WHITE_)
+                    pygame.draw.rect(self.frame, col, (px + j * sq - sq, a[1] + i * sq, sq + 1, sq + 1))
+            pygame.draw.rect(self.frame, BLACK, (px - sq - 2, a[1] - 2, 2 * sq + 4, b[1] - a[1] + 4), 3)
+        # curved banner across the top of the arch
+        arc = [(a[0] - span - sq, a[1] + 4)]
+        for k in range(13):
+            u = k / 12
+            arc.append((a[0] - span - sq + (2 * span + 2 * sq) * u, a[1] - 46 * z * math.sin(math.pi * u) - 12 * z))
+        arc.append((a[0] + span + sq, a[1] + 4))
+        inner = [(px_, py_ + 40 * z) for px_, py_ in reversed(arc[1:-1])]
+        band = arc[1:-1] + inner
+        pygame.draw.polygon(self.frame, BLACK, [(px_ + 3, py_ + 5) for px_, py_ in band])
+        pygame.draw.polygon(self.frame, (226, 160, 18) if gold else (232, 40, 60), band)
+        pygame.draw.polygon(self.frame, BLACK, band, max(3, int(4 * z)))
+        lbl = hud.outlined("FINISH", max(14, int(30 * z)), fill=(255, 250, 214) if gold else WHITE_, width=3)
+        self.frame.blit(lbl, lbl.get_rect(center=(a[0], a[1] - 38 * z)))
+        if gold:
+            hud._crown_badge(self.frame, a[0], a[1] - 84 * z, max(18, 40 * z))
         cross_t = self.finish_t
         lw = max(4, int(7 * z))
         if cross_t is None or play_t < cross_t:
@@ -655,7 +679,7 @@ class Renderer:
                 d = L * u / 6
                 pts.append((ox + math.sin(ang) * d + math.sin(t * 22 + u) * 5 * z, oy + side * math.cos(ang) * d * 0.5))
             pygame.draw.lines(self.frame, (232, 40, 60), False, pts, lw)
-        if age < 1.0 and getattr(self, "_cur_alive", 99) <= 1:
+        if age < 1.0:          # the winner has visibly crossed the arch -> genuine race finish celebration
             effects.draw_confetti(self.frame, age, 41, pygame.Rect(int(a[0] - 220 * z), int(a[1] - 160 * z),
                                                                      int(440 * z), int((b[1] - a[1]) + 160 * z)), n=40)
 
@@ -843,12 +867,13 @@ class Renderer:
 
     def _zones(self, cam: Cam, zone: dict, t: float) -> None:
         fr, z = self.frame, cam.zoom
-        for key in ("ice_zones", "mud_zones", "boost_zones"):
+        for key in ("ice_zones", "mud_zones", "boost_zones", "grip_zones"):
             for zz in zone.get(key, []):
+                draw_key = "mud_zones" if key == "grip_zones" else key
                 if zz[0] == "rect":
-                    self._draw_side_surface_mod(cam, key, float(zz[1]), float(zz[2]), t)
+                    self._draw_side_surface_mod(cam, draw_key, float(zz[1]), float(zz[2]), t)
                 else:
-                    self._draw_top_surface_mod(cam, key, float(zz[1][0]), float(zz[1][1]), float(zz[2]), zone, t)
+                    self._draw_top_surface_mod(cam, draw_key, float(zz[1][0]), float(zz[1][1]), float(zz[2]), zone, t)
         if "lava_y" in zone:
             y = cam.to_screen(0, zone["lava_y"])[1]
             if y < H:
@@ -977,7 +1002,7 @@ class Renderer:
                         pygame.draw.circle(self.frame, WHITE_, c, rr * 0.42)
                         pygame.draw.circle(self.frame, BLACK, c, rr * 0.72, max(2, int(2.5 * cam.zoom)))
                         continue
-                    if st["style"] == "giant_ball":
+                    if st["style"] in ("giant_ball", "boulder"):
                         self._draw_boulder(c, rr, ang)
                         continue
                     col = {"boulder": (130, 110, 100), "cannonball": (40, 40, 50)}.get(st["style"], th.hazard)
@@ -1034,23 +1059,36 @@ class Renderer:
                                                (mx - 6 * cam.zoom, my + 8 * cam.zoom)], max(2, int(3 * cam.zoom)))
                     pygame.draw.polygon(self.frame, BLACK, pts, max(3, int(4 * cam.zoom)))
                 elif st["style"] == "crusher":
-                    pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in sh["verts"]]
-                    pygame.draw.polygon(self.frame, (72, 78, 96), pts)
+                    def to_s(px_, py_):
+                        return cam.to_screen(x + px_ * ca - py_ * sa, y + px_ * sa + py_ * ca)
+                    pts = [to_s(px, py) for px, py in sh["verts"]]
+                    warn_xs = self.tr.zones[fi].get("crusher_warn", [])
+                    warning = any(abs(x - float(wx)) < 60.0 for wx in warn_xs)
+                    flash = warning and fi % 4 < 2
+                    pygame.draw.polygon(self.frame, (255, 226, 60) if flash else (72, 78, 96), pts)
                     if len(pts) >= 4:
-                        # Yellow/gold hazard warning band + iron bottom spikes on the crusher block!
-                        xs_p = [p[0] for p in pts]
-                        ys_p = [p[1] for p in pts]
-                        bx0, bx1 = min(xs_p), max(xs_p)
-                        by0, by1 = min(ys_p), max(ys_p)
-                        band = pygame.Rect(int(bx0 + 4), int(by1 - (by1 - by0) * 0.36), max(8, int(bx1 - bx0 - 8)), max(6, int((by1 - by0) * 0.30)))
-                        pygame.draw.rect(self.frame, (250, 204, 21), band)
-                        step_s = max(12, int(22 * cam.zoom))
-                        for sx_st in range(band.left + 6, band.right - 4, step_s):
-                            pygame.draw.line(self.frame, BLACK, (sx_st, band.bottom), (sx_st + 8, band.top), max(3, int(5 * cam.zoom)))
-                        for sx_sp in range(int(bx0 + 12 * cam.zoom), int(bx1 - 6 * cam.zoom), max(14, int(24 * cam.zoom))):
-                            tri = [(sx_sp - 7 * cam.zoom, by1), (sx_sp + 7 * cam.zoom, by1), (sx_sp, by1 + 14 * cam.zoom)]
+                        # slope-parallel yellow/black hazard band + iron spikes along the head's own bottom edge
+                        lxs = [p[0] for p in sh["verts"]]
+                        lys = [p[1] for p in sh["verts"]]
+                        hw_, hh_ = (max(lxs) - min(lxs)) / 2, (max(lys) - min(lys)) / 2
+                        band_l = [(-hw_ + 4, hh_ * 0.05), (hw_ - 4, hh_ * 0.05), (hw_ - 4, hh_ * 0.62), (-hw_ + 4, hh_ * 0.62)]
+                        pygame.draw.polygon(self.frame, (250, 204, 21) if not flash else (232, 40, 60),
+                                            [to_s(*p) for p in band_l])
+                        nst = max(3, int(2 * hw_ / 22))
+                        for k in range(nst):
+                            u = -hw_ + 8 + (2 * hw_ - 16) * k / max(1, nst - 1)
+                            pygame.draw.line(self.frame, BLACK, to_s(u - 5, hh_ * 0.62), to_s(u + 5, hh_ * 0.05),
+                                             max(3, int(5 * cam.zoom)))
+                        nsp = max(3, int(2 * hw_ / 24))
+                        for k in range(nsp):
+                            u = -hw_ + 12 + (2 * hw_ - 24) * k / max(1, nsp - 1)
+                            tri = [to_s(u - 7, hh_), to_s(u + 7, hh_), to_s(u, hh_ + 14)]
                             pygame.draw.polygon(self.frame, (176, 184, 202), tri)
                             pygame.draw.polygon(self.frame, BLACK, tri, max(2, int(3 * cam.zoom)))
+                        if warning:
+                            ex, ey = to_s(0, -hh_ - 34)
+                            bang = hud.outlined("!", max(18, int(40 * cam.zoom)), fill=(255, 226, 60), width=4)
+                            self.frame.blit(bang, bang.get_rect(center=(ex, ey)))
                     pygame.draw.polygon(self.frame, BLACK, pts, max(3, int(5 * cam.zoom)))
                 else:
                     pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in sh["verts"]]
@@ -1204,6 +1242,79 @@ class Renderer:
         for rx in range(beam.left + 12, beam.right - 6, max(16, int(30 * z))):
             pygame.draw.circle(self.frame, (205, 212, 226), (rx, beam.centery), max(2, int(3 * z)))
         pygame.draw.rect(self.frame, BLACK, beam, 4)
+
+    def _draw_ceiling_girder(self, cam: Cam, sb: dict) -> None:
+        """v4.3 Crusher Gauntlet: ONE continuous riveted iron truss girder spanning the whole gauntlet, carried by
+        stone castle pillars standing on the track, with every piston bolted into it."""
+        pts = [cam.to_screen(float(x), float(y)) for x, y in sb["pts"]]
+        if not pts or pts[-1][0] < -80 or pts[0][0] > W + 80:
+            return
+        z = cam.zoom
+        _, rock, dark, light = scenery.rock_colours(self.theme)
+        hgt = max(22.0, 54.0 * z)
+        # stone support pillars (girder -> track top)
+        for px, py_top, py_floor in sb.get("pillars", []):
+            a = cam.to_screen(float(px), float(py_top))
+            b = cam.to_screen(float(px), float(py_floor))
+            if a[0] < -60 or a[0] > W + 60:
+                continue
+            pw = max(14, int(34 * z))
+            col = pygame.Rect(int(a[0] - pw / 2), int(a[1]), pw, int(max(4, b[1] - a[1] - 2)))
+            pygame.draw.rect(self.frame, dark, col)
+            pygame.draw.rect(self.frame, rock, col.inflate(-int(10 * z), 0))
+            for yy in range(col.top + int(26 * z), col.bottom, max(14, int(30 * z))):
+                pygame.draw.line(self.frame, dark, (col.left + 2, yy), (col.right - 2, yy), max(2, int(2 * z)))
+            pygame.draw.rect(self.frame, BLACK, col, 3)
+            cap = pygame.Rect(col.left - int(6 * z), col.bottom - int(10 * z), col.width + int(12 * z), int(12 * z))
+            pygame.draw.rect(self.frame, dark, cap)
+            pygame.draw.rect(self.frame, BLACK, cap, 2)
+        iron, iron_hi, iron_dk = (92, 98, 116), (176, 184, 202), (52, 56, 70)
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            if max(x0, x1) < -60 or min(x0, x1) > W + 60:
+                continue
+            top0, top1 = y0 - hgt / 2, y1 - hgt / 2
+            bot0, bot1 = y0 + hgt / 2, y1 + hgt / 2
+            body = [(x0, top0), (x1, top1), (x1, bot1), (x0, bot0)]
+            pygame.draw.polygon(self.frame, iron_dk, [(x + 4, y + 6) for x, y in body])
+            pygame.draw.polygon(self.frame, iron, body)
+            # lattice truss diagonals
+            L = math.hypot(x1 - x0, y1 - y0)
+            n = max(1, int(L / max(26.0, 60.0 * z)))
+            for k in range(n):
+                u0, u1 = k / n, (k + 1) / n
+                ax, ay = x0 + (x1 - x0) * u0, y0 + (y1 - y0) * u0
+                bx, by = x0 + (x1 - x0) * u1, y0 + (y1 - y0) * u1
+                if k % 2 == 0:
+                    pygame.draw.line(self.frame, iron_dk, (ax, ay - hgt * 0.32), (bx, by + hgt * 0.32), max(3, int(5 * z)))
+                else:
+                    pygame.draw.line(self.frame, iron_dk, (ax, ay + hgt * 0.32), (bx, by - hgt * 0.32), max(3, int(5 * z)))
+            pygame.draw.line(self.frame, iron_hi, (x0, top0 + 4), (x1, top1 + 4), max(2, int(4 * z)))
+            pygame.draw.line(self.frame, iron_dk, (x0, bot0 - 5), (x1, bot1 - 5), max(2, int(5 * z)))
+            for k in range(n + 1):                       # rivets on both chords
+                u = k / n
+                rx, ry = x0 + (x1 - x0) * u, y0 + (y1 - y0) * u
+                for oy in (-hgt * 0.36, hgt * 0.36):
+                    pygame.draw.circle(self.frame, iron_hi, (rx, ry + oy), max(2, int(3.5 * z)))
+            pygame.draw.polygon(self.frame, BLACK, body, max(3, int(4 * z)))
+        # piston mount collars bolted into the girder + hydraulic sleeves the telescoping shafts slide into
+        for mx, my in sb.get("mounts", []):
+            c = cam.to_screen(float(mx), float(my))
+            if -60 < c[0] < W + 60:
+                sl_bot = cam.to_screen(float(mx), float(my) + 175.0)
+                sw = max(14, int(40 * z))
+                sleeve = pygame.Rect(int(c[0] - sw / 2), int(c[1]), sw, int(max(4, sl_bot[1] - c[1])))
+                pygame.draw.rect(self.frame, iron_dk, sleeve)
+                pygame.draw.rect(self.frame, iron, sleeve.inflate(-int(12 * z), 0))
+                pygame.draw.line(self.frame, iron_hi, (sleeve.left + int(8 * z), sleeve.top), (sleeve.left + int(8 * z), sleeve.bottom), max(2, int(3 * z)))
+                pygame.draw.rect(self.frame, BLACK, sleeve, 3)
+                ring = pygame.Rect(sleeve.left - int(5 * z), sleeve.bottom - int(10 * z), sleeve.width + int(10 * z), int(12 * z))
+                pygame.draw.rect(self.frame, (250, 204, 21), ring)
+                pygame.draw.rect(self.frame, BLACK, ring, 2)
+                r_ = pygame.Rect(0, 0, int(64 * z), int(hgt + 14 * z))
+                r_.center = (int(c[0]), int(c[1]))
+                pygame.draw.rect(self.frame, iron_dk, r_, border_radius=int(6 * z))
+                pygame.draw.rect(self.frame, (250, 204, 21), r_.inflate(-int(16 * z), -int(hgt * 0.55)))
+                pygame.draw.rect(self.frame, BLACK, r_, 3, border_radius=int(6 * z))
 
 
     def _falling_bumpers(self, cam: Cam, fi: int, z: float) -> None:
@@ -1764,21 +1875,124 @@ class Renderer:
         self.frame.set_clip(self.world_rect)
         self.draw_contestants(cam, tf if slow else fi, t_anim, ranks=ranks,
                               show_tags=shot.segment in ("play", "replay"))
-        self._cur_alive = int(sum(1 for f in self.tr.flags[fi] if f & T.ALIVE))
-        if shot.segment == "replay" and self._cur_alive <= 1:
-            effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)   # never while ALIVE > 1
+        # v4.3: "visually alive" = ALIVE or still mid-fall (exactly what the HUD shows) -> never celebrate early
+        self._cur_alive = int(sum(1 for f in self.tr.flags[fi] if (f & T.ALIVE) or (f & T.FALLING)))
+        crossed = self.finish_t is not None and eff_play_t >= self.finish_t
+        if shot.segment == "replay" and (self._cur_alive <= 1 or crossed):
+            effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)   # never while the duel is undecided
         if shot.segment == "cold" and not self.finale:
             self._draw_spotlights(cam, fi, shot.seg_t)
         if shot.segment in ("play", "replay", "cold"):
             self.draw_juice(cam, eff_play_t, t_anim, popups=shot.segment != "cold")
+        if shot.segment in ("play", "replay"):
+            self._draw_glitch_blinks(cam, fi, eff_play_t)
         if self.tr.mode == "SIDE_VIEW":
             self._abyss(cam, fi, t_anim)
             if shot.segment != "card":
                 self._draw_killer_fire(cam, fi, eff_play_t, t_anim)
+            if shot.segment in ("play", "replay"):
+                self._edge_rival_pills(cam, fi, ranks, t_anim)
+        if shot.segment == "replay":
+            self._replay_badge(t_anim)
         self.frame.set_clip(None)
         rms = self.voice_rms[index] if (self.voice_rms is not None and index < len(self.voice_rms)) else None
         self._overlays(shot, play_t, t_anim, hud_fi, ranks, index / FPS, voice_rms=rms)
         return self.frame
+
+    def _draw_glitch_blinks(self, cam: Cam, fi: int, play_t: float) -> None:
+        """v4.3 Glitch Micro Lag-Blink juice: 3 fading cyan/magenta wireframe pixel ghosts bridging old -> new position,
+        a 0.16 s horizontal RGB slice tear over Glitch's body, and neon pixel sparks."""
+        for e in self.glitch_blinks:
+            age = play_t - e.t
+            if age < 0.0 or age > 0.42:
+                continue
+            src, dst = e.data.get("src") or e.pos, e.data.get("dst") or e.pos
+            if src is None or dst is None:
+                continue
+            k = e.actors[0] if e.actors else "glitch"
+            rad = (HERO_BY_KEY[k].radius if k in HERO_BY_KEY else 24.0) * cam.zoom
+            fade = 1.0 - age / 0.42
+            layer = pygame.Surface((W, H), pygame.SRCALPHA)
+            if e.data.get("moved"):
+                for gi, u in enumerate((0.0, 0.34, 0.67)):
+                    gx, gy = cam.to_screen(src[0] + (dst[0] - src[0]) * u, src[1] + (dst[1] - src[1]) * u)
+                    col = (0, 240, 255) if gi % 2 == 0 else (255, 46, 210)
+                    a = int(220 * fade * (0.45 + 0.55 * u))
+                    off = (gi - 1) * 4
+                    pygame.draw.circle(layer, (*col, a), (gx + off, gy), rad, max(2, int(3 * cam.zoom)))
+                    step = max(4, int(rad / 3))
+                    for yy in range(int(gy - rad), int(gy + rad), step):          # pixel scan-lines (wireframe)
+                        hw_ = math.sqrt(max(0.0, rad * rad - (yy - gy) ** 2))
+                        pygame.draw.line(layer, (*col, a // 2), (gx - hw_ + off, yy), (gx + hw_ + off, yy), 1)
+            cx, cy = cam.to_screen(*dst)
+            rng = random.Random(int(e.t * 1000))
+            for _ in range(10):                                                    # neon pixel sparks
+                ang = rng.uniform(0, 2 * math.pi)
+                d = rad * (1.0 + 1.6 * age / 0.42) * rng.uniform(0.8, 1.3)
+                sz = max(3, int(6 * cam.zoom))
+                col = (0, 240, 255) if rng.random() < 0.5 else (255, 46, 210)
+                pygame.draw.rect(layer, (*col, int(255 * fade)), (cx + math.cos(ang) * d, cy + math.sin(ang) * d, sz, sz))
+            self.frame.blit(layer, (0, 0))
+            if age <= 0.16:                                                        # horizontal RGB slice tear
+                box = pygame.Rect(int(cx - rad * 1.5), int(cy - rad * 1.2), int(rad * 3), int(rad * 2.4))
+                box = box.clip(self.frame.get_rect())
+                if box.width > 4 and box.height > 4:
+                    snap = self.frame.subsurface(box).copy()
+                    sl_h = max(4, box.height // 7)
+                    for si, yy in enumerate(range(0, box.height, sl_h)):
+                        shift = int((rng.uniform(-1, 1)) * rad * 0.55 * (1.0 - age / 0.16))
+                        strip = snap.subsurface(pygame.Rect(0, yy, box.width, min(sl_h, box.height - yy))).copy()
+                        tint = (0, 230, 255) if si % 2 == 0 else (255, 40, 200)
+                        self.frame.blit(strip, (box.left + shift, box.top + yy))
+                        pygame.draw.line(self.frame, tint, (box.left + shift, box.top + yy),
+                                         (box.left + shift + box.width, box.top + yy), 2)
+
+    def _edge_rival_pills(self, cam: Cam, fi: int, ranks: dict[str, int], t: float) -> None:
+        """v4.3: when the final 2-3 are spread out, a compact `◀ [icon] #2` pill rides the screen edge showing the
+        off-screen chaser's live position (the camera stays big on the lead cluster instead of zooming out)."""
+        flags = self.tr.flags[fi]
+        alive = [h.key for h in self.heroes if flags[self.tr.index(h.key)] & T.ALIVE]
+        if not (2 <= len(alive) <= 3):
+            return
+        vy0, vy1 = LAYOUT["viewport"]
+        for k in alive:
+            x, y = float(self.tr.frames[fi][self.tr.index(k)][0]), float(self.tr.frames[fi][self.tr.index(k)][1])
+            sx, sy = cam.to_screen(x, y)
+            if 0 <= sx <= W:
+                continue
+            left = sx < 0
+            py = max(vy0 + 170, min(vy1 - 120, sy))
+            pill = pygame.Rect(0, 0, 170, 62)
+            if left:
+                pill.midleft = (12, int(py))
+            else:
+                pill.midright = (W - 12, int(py))
+            bob = 3 * math.sin(t * 7)
+            pill.move_ip(int(bob if left else -bob), 0)
+            pygame.draw.rect(self.frame, BLACK, pill.move(0, 4), border_radius=31)
+            pygame.draw.rect(self.frame, (24, 20, 46), pill, border_radius=31)
+            pygame.draw.rect(self.frame, (255, 96, 48), pill, 4, border_radius=31)
+            ax = pill.left + 22 if left else pill.right - 22
+            d = -1 if left else 1
+            tri = [(ax + d * 12, pill.centery), (ax - d * 8, pill.centery - 14), (ax - d * 8, pill.centery + 14)]
+            pygame.draw.polygon(self.frame, (255, 96, 48), tri)
+            pygame.draw.polygon(self.frame, BLACK, tri, 2)
+            icx = pill.left + 70 if left else pill.right - 112
+            hud._mini_hero_ball(self.frame, k, icx, pill.centery, 20, None)
+            rk = hud.outlined(f"#{ranks.get(k, 2)}", 30, fill=WHITE_, width=4)
+            self.frame.blit(rk, rk.get_rect(midleft=(icx + 28, pill.centery)))
+            hud.TEXT_BOXES.append(pill)
+
+    def _replay_badge(self, t: float) -> None:
+        txt = hud.outlined("INSTANT REPLAY", 30, fill=(255, 236, 120), width=4)
+        box = pygame.Rect(0, 0, txt.get_width() + 70, 52)
+        box.midtop = (W // 2, LAYOUT["viewport"][0] + 150)
+        pygame.draw.rect(self.frame, BLACK, box.move(0, 4), border_radius=26)
+        pygame.draw.rect(self.frame, (190, 30, 60), box, border_radius=26)
+        pygame.draw.rect(self.frame, BLACK, box, 3, border_radius=26)
+        if int(t * 4) % 2 == 0:
+            pygame.draw.circle(self.frame, WHITE_, (box.left + 26, box.centery), 9)
+        self.frame.blit(txt, txt.get_rect(midleft=(box.left + 46, box.centery)))
 
     def _abyss(self, cam: Cam, fi: int, t: float) -> None:
         """Recessed pit trench in front of background pillars & below all track slabs (SIDE_VIEW only)."""
