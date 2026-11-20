@@ -1,0 +1,88 @@
+{
+  "season_number": 1,
+  "race_number": 1,
+  "total_day": 1,
+  "theme": "royal_classic",
+  "reigning_champion": null,
+  "stats": {
+    "bonk": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "pip": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "boing": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "sly": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "grumble": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "dash": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "magneto": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "floater": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "juggernaut": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    },
+    "glitch": {
+      "points": 0,
+      "wins": 0,
+      "kos": 0,
+      "races": 0,
+      "rank_sum": 0
+    }
+  },
+  "playoff": {
+    "seeds": [],
+    "wildcard_winner": null,
+    "q1_winner": null,
+    "q1_loser": null,
+    "q2_advancers": [],
+    "finalists": [],
+    "champion": null
+  }
+}

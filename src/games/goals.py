@@ -20,7 +20,9 @@ class Goal:
 
     # ---- ranking helpers
     def tiebreak(self, c: "Contestant") -> float:
-        """Higher is better: distance along the course (SIDE) or closeness to the centre (TOP)."""
+        """Higher is better: arena progress / distance along course (SIDE) or closeness to centre (TOP)."""
+        if hasattr(self.sim.arena, "progress"):
+            return float(self.sim.arena.progress(c))
         if self.sim.mode == SIDE:
             return c.pos[0]
         cx, cy = self.sim.arena.center
@@ -74,8 +76,9 @@ class Goal:
             self.sim.event("stage_final", [], None, survivors=sorted(keep))
         self.check(t)
         fx = self.sim.finish_x
+        at_fin = getattr(self.sim.arena, "at_finish", None)
         if (self.sim.mode == SIDE and fx is not None and not self.sim.winner and self.key != "reach_finish"
-                and any(c.pos[0] >= fx for c in self.sim.alive())):
+                and any((at_fin(c) if at_fin else c.pos[0] >= fx) for c in self.sim.alive())):
             self.force_resolve(t)          # nobody stalls against the end wall: the course is over
         alive = self.sim.alive()
         if len(alive) == 1 and not self.sim.winner:
@@ -102,8 +105,10 @@ class ReachFinish(Goal):
 
     def check(self, t: float) -> None:
         fx = self.sim.finish_x
+        at_fin = getattr(self.sim.arena, "at_finish", None)
         for c in self.sim.alive():
-            if not c.finished and fx is not None and c.pos[0] >= fx:
+            reached = at_fin(c) if at_fin else (fx is not None and c.pos[0] >= fx)
+            if not c.finished and reached:
                 c.finished = True
                 self.sim.event("finish", [c.key], c.pos)
                 if not self.sim.winner:

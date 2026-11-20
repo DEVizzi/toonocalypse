@@ -59,28 +59,35 @@ def score(trace: Trace, history: dict | None = None) -> Score:
     hero_elims = [e.t for e in elims if e.data.get("hero")]
     p["all_heroes_early"] = -40 if heroes and len(hero_elims) >= len(heroes) and max(hero_elims) < 10 else 0
     lo, hi = TIMELINE.gameplay_target_min_s, TIMELINE.hard_stop_s
-    disc = trace.meta.get("recipe", {}).get("arena") == "rotating_disc"
-    if disc:
-        hi = 30.0                      # v3.3: disc plays to a genuine last-ball finish (natural 20-26 s)
+    true_ko = trace.meta.get("recipe", {}).get("arena") in ("rotating_disc", "sumo_pool_pit")
+    if true_ko:
+        hi = 30.0                      # v3.3/v4.0: plays to genuine ALIVE: 1/X finish (natural 19-26 s)
     p["duration"] = -50 if not (lo <= end <= hi) else 0
     how = next((e.data.get("how") for e in ev if e.kind == "win"), None)
-    p["forced_finish"] = settings()["scorer"]["reject_penalty"] if (disc and how != "last_standing") else 0
+    p["forced_finish"] = settings()["scorer"]["reject_penalty"] if (true_ko and how != "last_standing") else 0
     rate = len(elims) / max(1, len(trace.keys))
     goal = trace.meta.get("recipe", {}).get("goal")
     target_rate = 0.6 if goal not in ("reach_finish", "collect_items", "hold_a_zone") else 0.35
     p["elimination_rate"] = -30 if rate < target_rate else 0
     hero_ev = sorted(e.t for e in ev if e.actors and any(a in heroes for a in e.actors)
                      and e.kind in ("elimination", "impact", "trait", "lead_change", "teleport", "collect", "bomb_pass"))
-    dull = any(sum(1 for t in hero_ev if w <= t < w + 10) < 2 for w in range(0, max(1, int(end) - 9), 2))
+    min_ev = 1 if len(heroes) <= 3 else 2
+    dull = any(sum(1 for t in hero_ev if w <= t < w + 10) < min_ev for w in range(0, max(1, int(end) - 9), 2))
     p["dull_window"] = -25 if dull else 0
     # v3.0 hard locks (owner): a named hero must win; first blood by 3.5 s; no dead 5 s stretch mid-episode
     sc = settings()["scorer"]
     p["dummy_win"] = sc["dummy_win_penalty"] if winner and winner.startswith("extra") else 0
     first = min((e.t for e in elims), default=99.0)
     p["late_first_blood"] = sc["reject_penalty"] if first > sc["first_blood_s"] else 0
-    action = sorted([e.t for e in elims] + [e.t for e in ev if e.kind == "impact" and e.data.get("impulse", 0) >= sc["major_impulse"]])
+    imp_floor = sc["major_impulse"] * (0.65 if len(trace.keys) <= 10 else 1.0)
+    action = sorted(
+        [e.t for e in elims]
+        + [e.t for e in ev if e.kind == "impact" and e.data.get("impulse", 0) >= imp_floor]
+        + ([e.t for e in ev if e.kind in ("trait", "lead_change")] if len(trace.keys) <= 10 else [])
+    )
+    max_gap = sc["dead_stretch_s"] * (1.3 if len(trace.keys) <= 10 else 1.0)
     gaps = [b - a for a, b in zip([0.0] + action, action + [end])]
-    p["dead_stretch"] = sc["reject_penalty"] if any(g > sc["dead_stretch_s"] for g in gaps[1:-1]) else 0
+    p["dead_stretch"] = sc["reject_penalty"] if any(g > max_gap for g in gaps[1:-1]) else 0
     return Score(sum(p.values()), p)
 
 

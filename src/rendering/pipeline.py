@@ -11,6 +11,7 @@ import random
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -48,11 +49,12 @@ class Episode:
     prompt: str = ""
     shots: list[Shot] = field(default_factory=list)
     flash_event: T.Event | None = None
+    outcome: Any = None
+    league_ctx: dict[str, Any] = field(default_factory=dict)
 
 
 def plan_shots(ep: Episode, teaser_f: int | None = None) -> list[Shot]:
-    """0.8 s cold-open teaser -> gameplay from gate retraction -> 0.3x winner replay -> 2.0 s game-show winner card.
-    v3.2: Zero trailing loop-tail cold-open flash frames; video ends cleanly on the Winner Card."""
+    """0.8 s cold-open teaser -> gameplay from gate retraction -> 0.3x winner replay -> dynamic game-show winner card."""
     tr = ep.trace
     pre = tr.meta.get("preroll_frames", 0)
     end_t = tr.meta.get("resolved_at") or (tr.n_frames - pre) / FPS
@@ -93,12 +95,16 @@ class Renderer:
         self.tr = ep.trace
         self.meta = self.tr.meta
         self.theme: Theme = THEME_BY_KEY[self.meta["recipe"]["theme"]]
+        self.finale: bool = bool(self.meta["recipe"].get("finale"))
         self.cams = track(self.tr)
         self.frame = pygame.Surface((W, H))
-        self.sky_bg, self.far_spires, self.mid_arches = scenery.parallax_layers(self.theme)
+        self.sky_bg, self.far_spires, self.mid_arches = scenery.parallax_layers(self.theme, finale=self.finale)
         self.castle = scenery.castle_header(self.theme)
         self.heroes = [HERO_BY_KEY[k] for k in self.meta["heroes"]]
-        self.extras = {k: Extra(v["number"], v["colour"], cult=v["cult"]) for k, v in self.meta["extras"].items()}
+        self.extras = {
+            k: Extra(v["number"], v["colour"], cult=v["cult"], golden=bool(v.get("golden", False)))
+            for k, v in self.meta["extras"].items()
+        }
         self.pre = self.meta.get("preroll_frames", 0)
         self.rng = random.Random(self.meta.get("seed", 0))
         self.escalations = [e for e in self.tr.events if e.kind in ("escalation", "twist", "stage_final", "reverse")]
@@ -113,6 +119,7 @@ class Renderer:
         self.face = self._face_angles()
         self.teaser_f = self._teaser_frame()
         self.disc_prop = next((i for i, p in enumerate(self.meta["props"]) if p["style"] == "disc_marks"), None)
+        self.bridge_prop_indices = [i for i, p in enumerate(self.meta["props"]) if p["style"] == "bridge_tile"]
         self.tag_events = [(e.t, set(e.actors)) for e in self.tr.events
                            if e.kind == "lead_change" or (e.kind == "elimination" and e.data.get("by_hero"))]
         self.world_rect = pygame.Rect(0, LAYOUT["viewport"][0], W, H - LAYOUT["viewport"][0])
@@ -128,8 +135,8 @@ class Renderer:
         self.finish_t = next((e.t for e in self.tr.events if e.kind in ("finish", "win")), None) \
             if self.meta.get("finish_x") is not None else None
         self.popups = self._schedule_popups()
-        self.speech: list = []                  # narration lines: borderless 3-4 word pop captions
-        self.voice_rms: list[float] | None = None  # v3.4: per-frame 33ms isolated voice RMS for MC Tuno lip-sync
+        self.speech: list = []                  # narration lines: borderless 2-4 word pop captions
+        self.voice_rms: list[float] | None = None  # per-frame 33ms isolated voice RMS for MC Tuno lip-sync
         self.out_index: dict = {}               # output frame index -> output time (for captions)
 
     # ------------------------------------------------------------------ precomputed presentation state
@@ -260,7 +267,7 @@ class Renderer:
 
     def _platform_r(self, zone: dict) -> float:
         for s in self.meta["statics"]:
-            if s["type"] == "disc":
+            if s["type"] in ("disc", "octagon_pool"):
                 return s["r"] * self._k(zone)
             if s["type"] == "ring":
                 return zone.get("ring_r", s["r"]) * self._k(zone)
@@ -303,15 +310,13 @@ class Renderer:
         return None
 
     def _draw_side_tracks(self, cam: Cam, removed: set, t_anim: float) -> None:
-        """v3.2: Draws background vertical castle pillars / iron chains, then seamless stitched masonry/beam slabs."""
+        """Draws background vertical castle pillars / iron chains, then seamless stitched masonry/beam slabs."""
         chains = self._build_track_chains(removed)
         z = cam.zoom
         self._lowest_slab_y = 0.0
-        # 1. Background supports (behind all track slabs). v3.3: sparse — pillars only under long slabs, >= 620 px apart;
-        #    short step ledges hang from thin chains instead, so the lower half of the frame stays clean and open.
         placed: list[float] = []
         for pts, mats, _ in chains:
-            x0, x1 = pts[0][0], pts[-1][0]
+            x0, x1 = min(pts[0][0], pts[-1][0]), max(pts[0][0], pts[-1][0])
             span = x1 - x0
             if span < 90:
                 continue
@@ -343,7 +348,7 @@ class Renderer:
                 )
                 sx, sy = cam.to_screen(wx, wy)
                 placed.append(wx)
-                if short or has_lower:
+                if short or has_lower or self.meta.get("vertical_tower"):
                     has_upper = any(
                         other_pts is not pts and (uy := self._chain_y_at(other_pts, wx)) is not None and wy - 360 < uy < wy - 30
                         for other_pts, _, _ in chains
@@ -354,9 +359,7 @@ class Renderer:
                 else:
                     scenery.draw_support_pillar(self.frame, sx, sy + 56 * z, H, z, self.theme, chain=False)
 
-        # 2. Stitched beveled architectural slabs
         for pts, mats, belts in chains:
-            # Slice visible sub-range with 1-segment margin for clean off-screen joins
             vis_i = [
                 i for i in range(len(pts) - 1)
                 if max(cam.to_screen(*pts[i])[0], cam.to_screen(*pts[i + 1])[0]) > -120
@@ -370,22 +373,20 @@ class Renderer:
             sub_belts = belts[i0:i1]
             for _, py in sub_pts:
                 self._lowest_slab_y = max(self._lowest_slab_y, py + 72 * z)
-            scenery.draw_track_chain(self.frame, sub_pts, sub_mats, sub_belts, z, self.theme, t_anim)
+            scenery.draw_track_chain(self.frame, sub_pts, sub_mats, sub_belts, z, self.theme, t_anim, finale=self.finale)
 
     def _draw_drop_gate(self, cam: Cam, wx: float, wy: float, play_t: float) -> None:
-        """v3.2: Compact mechanical castle portcullis gate that retracts smoothly upward at t = 0..0.38 s."""
+        """Compact mechanical castle portcullis gate that retracts smoothly upward at t = 0..0.38 s."""
         sx, sy = cam.to_screen(wx, wy)
         if sx < -120 or sx > W + 120:
             return
         z = cam.zoom
         lw = max(2, int(4 * z))
         lift = 0.0 if play_t <= 0.0 else min(1.0, play_t / 0.38)
-        # Ease-out smooth mechanical lift
         lift_eased = 1.0 - (1.0 - lift) ** 2
         gate_h = 138 * z
         housing_h = 46 * z
         top_y = sy - gate_h - housing_h
-        # Iron portcullis grate sliding upward into the stone gatehouse
         bar_bottom = sy - lift_eased * (gate_h - 14 * z)
         bar_top = top_y + 12 * z
         if bar_bottom > bar_top + 6:
@@ -393,19 +394,16 @@ class Renderer:
             grate = pygame.Rect(int(sx - gw / 2), int(bar_top), gw, int(bar_bottom - bar_top))
             pygame.draw.rect(self.frame, BLACK, grate.inflate(6, 4), border_radius=4)
             pygame.draw.rect(self.frame, (78, 84, 102), grate, border_radius=3)
-            # Warning gold/black stripes near bottom shoe of portcullis
             shoe_h = min(grate.height, max(8, int(18 * z)))
             pygame.draw.rect(self.frame, (255, 204, 36), (grate.left + 2, grate.bottom - shoe_h, grate.width - 4, shoe_h))
             pygame.draw.line(self.frame, BLACK, (grate.centerx, grate.top), (grate.centerx, grate.bottom), max(2, lw - 1))
-        # Compact stone-and-iron overhead gatehouse arch + rotating brass gear
         hw = max(26, int(52 * z))
         house = pygame.Rect(int(sx - hw / 2), int(top_y), int(hw), int(housing_h))
-        _, rock, dark, light = scenery.rock_colours(self.theme)
+        _, rock, dark, _light = scenery.rock_colours(self.theme)
         pygame.draw.rect(self.frame, BLACK, house.inflate(lw * 2, lw * 2), border_radius=8)
         pygame.draw.rect(self.frame, rock, house, border_radius=6)
         pygame.draw.rect(self.frame, dark, (house.left, house.bottom - int(housing_h * 0.34), house.width, int(housing_h * 0.34)),
                          border_radius=4)
-        # Mechanical gear wheel on gatehouse face
         gr = max(7, int(13 * z))
         gcx, gcy = house.centerx, house.centery
         ang0 = lift_eased * math.pi * 1.8
@@ -425,13 +423,23 @@ class Renderer:
         removed = set(zone.get("removed_statics", []))
 
         if self.tr.mode == "TOP_DOWN":
-            fr.blit(self._void, (0, 0))                 # v3.3: clean top-down abyss under the spinning disc
+            fr.blit(self._void, (0, 0))
         else:
-            # v3.2: 3-Layer Parallax Background
             for surf, factor in ((self.sky_bg, 0.04), (self.far_spires, 0.11), (self.mid_arches, 0.24)):
                 par = (-cam.x * factor) % W
                 fr.blit(surf, (par - W, 0))
                 fr.blit(surf, (par, 0))
+            # S5 Monsoon Storm: subtle 0.12s distant lightning flash + forked sky bolt every ~5.8s
+            if getattr(th, "particles", "") == "monsoon":
+                cyc = (play_t + 2.1) % 5.8
+                if 0.0 <= cyc <= 0.12 and play_t > 0.3:
+                    al = int(78 * (1.0 - cyc / 0.12))
+                    flash_s = pygame.Surface((W, H), pygame.SRCALPHA)
+                    flash_s.fill((215, 238, 255, al))
+                    bx = int((int(play_t // 5.8) * 317 + 260) % (W - 220) + 110)
+                    bolt = [(bx, 255), (bx - 28, 430), (bx + 18, 455), (bx - 36, 670), (bx + 8, 695), (bx - 22, 880)]
+                    pygame.draw.lines(flash_s, (235, 248, 255, min(255, al * 3)), False, bolt, 5)
+                    fr.blit(flash_s, (0, 0))
 
         fr.set_clip(self.world_rect)
         self._particles(cam, t_anim)
@@ -444,14 +452,22 @@ class Renderer:
             if s["type"] == "disc":
                 k = self._k(zone)
                 spin = float(self.tr.props[fi][self.disc_prop][2]) if self.disc_prop is not None else 0.0
-                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), s["r"] * z * k, z, th, spin_deg=spin)
+                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), s["r"] * z * k, z, th, spin_deg=spin,
+                                               finale=self.finale)
+            elif s["type"] == "octagon_pool":
+                k = self._k(zone)
+                push_p = min(1.0, max(0.0, (play_t - 16.0) / 10.0))
+                pr_px = (76.0 + 54.0 * push_p) * z * k
+                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), s["r"] * z * k, z, th,
+                                               shape="octagon_pool", pocket_r=pr_px, finale=self.finale)
             elif s["type"] == "ring":
                 r = zone.get("ring_r", s["r"]) * self._k(zone)
-                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), r * z, z, th)
+                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), r * z, z, th, finale=self.finale)
                 pygame.draw.circle(fr, th.accent, cam.to_screen(*s["c"]), r * z, max(3, int(6 * z)))
             elif s["type"] == "square":
                 k = self._k(zone)
-                scenery.draw_floating_platform(fr, cam.to_screen(0, 0), 0, z, th, "square", s["half"] * k * z)
+                scenery.draw_floating_platform(fr, cam.to_screen(0, 0), 0, z, th, "square", s["half"] * k * z,
+                                               finale=self.finale)
             elif s["type"] == "hex_grid":
                 states = zone.get("tiles", [0] * len(s["tiles"]))
                 k = self._k(zone)
@@ -482,10 +498,24 @@ class Renderer:
                 if s["mat"] in TRACK_MATS or s["mat"] == "gate":
                     continue
                 a, b = cam.to_screen(*s["a"]), cam.to_screen(*s["b"])
-                if max(a[0], b[0]) < -50 or min(a[0], b[0]) > W + 50:
+                if max(a[0], b[0]) < -70 or min(a[0], b[0]) > W + 70:
                     continue
                 if self.tr.mode == "SIDE_VIEW" and s["mat"] == "wall":
-                    # v3.3: compact 130 px castle stone bumper instead of a sky-tall grey pole
+                    if self.meta.get("vertical_tower") and abs(s["b"][1] - s["a"][1]) > 1400:
+                        # CollapseTower outer masonry containment wall
+                        _, rock, dark, light = scenery.rock_colours(th)
+                        ww = max(24, int(44 * z))
+                        top_sy = int(max(LAYOUT["viewport"][0] - 10, min(a[1], b[1])))
+                        bot_sy = int(min(H + 10, max(a[1], b[1])))
+                        if bot_sy > top_sy:
+                            rect_w = pygame.Rect(int(a[0] - ww / 2), top_sy, ww, bot_sy - top_sy)
+                            pygame.draw.rect(fr, rock, rect_w)
+                            pygame.draw.rect(fr, dark, (rect_w.right - ww // 3, rect_w.top, ww // 3, rect_w.height))
+                            for yy in range(top_sy, bot_sy, max(20, int(48 * z))):
+                                pygame.draw.line(fr, dark, (rect_w.left + 2, yy), (rect_w.right - 2, yy), 2)
+                            pygame.draw.rect(fr, BLACK, rect_w, max(2, int(4 * z)))
+                            pygame.draw.line(fr, light, (rect_w.left + 4, rect_w.top), (rect_w.left + 4, rect_w.bottom), 2)
+                        continue
                     wx = s["a"][0]
                     g = self._ground_seg_at(wx + 30) or self._ground_seg_at(wx - 30)
                     gy = g[0] if g is not None else max(s["a"][1], s["b"][1])
@@ -775,11 +805,16 @@ class Renderer:
         if "lava_y" in zone:
             y = cam.to_screen(0, zone["lava_y"])[1]
             if y < H:
-                pygame.draw.rect(fr, (255, 90, 20), (0, y, W, H - y))
+                c_out = getattr(self.theme, "wall_outer", (195, 42, 16))
+                c_mid = getattr(self.theme, "wall_mid", (255, 96, 20))
+                c_core = getattr(self.theme, "wall_core", (255, 232, 118))
+                pygame.draw.rect(fr, c_out, (0, y + 10, W, H - y))
+                wave_pts = [(wx, y + 7 * math.sin(t * 4.2 + wx * 0.018)) for wx in range(0, W + 24, 24)]
+                pygame.draw.polygon(fr, c_mid, wave_pts + [(W, H), (0, H)])
                 for i in range(12):
-                    bx = (i * 97 + t * 40) % W
-                    pygame.draw.circle(fr, (255, 200, 60), (bx, y + 10 + 6 * math.sin(t * 5 + i)), 14)
-                pygame.draw.line(fr, (255, 230, 120), (0, y), (W, y), 6)
+                    bx = (i * 97 + t * 44) % W
+                    pygame.draw.circle(fr, c_core, (bx, y + 14 + 6 * math.sin(t * 5 + i)), 12)
+                pygame.draw.lines(fr, c_core, False, wave_pts, 5)
         if zone.get("zone"):
             zx, zy, r = zone["zone"]
             c = cam.to_screen(zx, zy)
@@ -812,20 +847,17 @@ class Renderer:
             pygame.draw.circle(self.frame, col, (c[0] + (math.sin(t * 60) * 3 if st == 1 else 0), c[1]), r * z, 5)
 
     def _draw_seesaw(self, cam: Cam, x: float, y: float, ang: float, verts: list) -> None:
-        """v3.2: Chunky wood-and-iron seesaw plank with bolted end-caps and a riveted cast-iron center gear hub."""
+        """Chunky wood-and-iron seesaw plank with bolted end-caps and a riveted cast-iron center gear hub."""
         z = cam.zoom
         lw = max(3, int(4.5 * z))
         ca, sa = math.cos(ang), math.sin(ang)
         cx_s, cy_s = cam.to_screen(x, y)
-        # Iron fulcrum A-bracket anchored underneath center hub
         brk = [(cx_s - 20 * z, cy_s + 36 * z), (cx_s, cy_s), (cx_s + 20 * z, cy_s + 36 * z)]
         pygame.draw.polygon(self.frame, (64, 68, 84), brk)
         pygame.draw.polygon(self.frame, BLACK, brk, lw)
 
-        # Chunky timber plank + shaded lower bevel
         pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in verts]
         pygame.draw.polygon(self.frame, (176, 122, 68), pts)
-        # Wood grain lines along the plank
         xs_loc = [v[0] for v in verts]
         ys_loc = [v[1] for v in verts]
         hw, hh = max(xs_loc), max(ys_loc)
@@ -833,7 +865,6 @@ class Renderer:
             g0 = cam.to_screen(x + (-hw * 0.82) * ca - (hh * gy_k) * sa, y + (-hw * 0.82) * sa + (hh * gy_k) * ca)
             g1 = cam.to_screen(x + (hw * 0.82) * ca - (hh * gy_k) * sa, y + (hw * 0.82) * sa + (hh * gy_k) * ca)
             pygame.draw.line(self.frame, (132, 86, 44), g0, g1, max(2, int(2.5 * z)))
-        # Bolted dark-iron end-caps on left and right tips
         cap_len = min(36.0, hw * 0.18)
         for sgn in (-1, 1):
             x_in, x_out = sgn * (hw - cap_len), sgn * hw
@@ -845,7 +876,6 @@ class Renderer:
             pygame.draw.circle(self.frame, (215, 222, 235), rv, max(2, int(3.5 * z)))
         pygame.draw.polygon(self.frame, BLACK, pts, lw)
 
-        # Riveted center gear hub
         gr = max(12, int(22 * z))
         for k in range(10):
             ga = ang + k * math.pi / 5
@@ -865,6 +895,7 @@ class Renderer:
         props = self.tr.props[fi]
         styles = self.meta["props"]
         th = self.theme
+        b_states = self.tr.zones[fi].get("bridge_states", [])
         for i, row in enumerate(props):
             if i >= len(styles) or row[2] <= -9000:
                 continue
@@ -890,16 +921,24 @@ class Renderer:
                 if sh["type"] == "circle":
                     ox, oy = sh["c"]
                     c = cam.to_screen(x + ox * ca - oy * sa, y + ox * sa + oy * ca)
+                    rr = sh["r"] * cam.zoom
+                    if st["style"] == "piston_bumper":
+                        # SumoPoolPit oscillating concentric spring-ring bumper
+                        pygame.draw.circle(self.frame, BLACK, c, rr + 4)
+                        pygame.draw.circle(self.frame, (255, 196, 36), c, rr)
+                        pygame.draw.circle(self.frame, (238, 48, 82), c, rr * 0.72)
+                        pygame.draw.circle(self.frame, WHITE_, c, rr * 0.42)
+                        pygame.draw.circle(self.frame, BLACK, c, rr * 0.72, max(2, int(2.5 * cam.zoom)))
+                        continue
                     col = {"boulder": (130, 110, 100), "cannonball": (40, 40, 50), "giant_ball": (255, 77, 166)}.get(st["style"], th.hazard)
-                    pygame.draw.circle(self.frame, BLACK, c, sh["r"] * cam.zoom + 4)
-                    pygame.draw.circle(self.frame, col, c, sh["r"] * cam.zoom)
-                    pygame.draw.circle(self.frame, WHITE_, (c[0] - sh["r"] * 0.35 * cam.zoom, c[1] - sh["r"] * 0.35 * cam.zoom),
-                                       sh["r"] * 0.2 * cam.zoom)
+                    pygame.draw.circle(self.frame, BLACK, c, rr + 4)
+                    pygame.draw.circle(self.frame, col, c, rr)
+                    pygame.draw.circle(self.frame, WHITE_, (c[0] - rr * 0.35, c[1] - rr * 0.35), rr * 0.2)
                 elif sh["type"] == "seg":
                     pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in (sh["a"], sh["b"])]
                     if st["style"] == "disc_marks":
-                        continue                 # v3.3: no thin spoke lines (read as stray artifacts over patches)
-                    wd = int(sh["r"] * 2 * cam.zoom)
+                        continue
+                    wd = max(4, int(sh["r"] * 2 * cam.zoom))
                     pygame.draw.line(self.frame, BLACK, pts[0], pts[1], wd + 8)
                     if st["style"] == "hammer":
                         pygame.draw.line(self.frame, (150, 95, 45), pts[0], pts[1], wd + 2)
@@ -907,6 +946,17 @@ class Renderer:
                             bx = pts[0][0] + (pts[1][0] - pts[0][0]) * kk
                             by = pts[0][1] + (pts[1][1] - pts[0][1]) * kk
                             pygame.draw.circle(self.frame, (190, 195, 205), (bx, by), wd * 0.9 + 2)
+                    elif st["style"] == "crusher":
+                        # Heavy hydraulic steel piston shaft
+                        pygame.draw.line(self.frame, (98, 106, 124), pts[0], pts[1], wd + 2)
+                        pygame.draw.line(self.frame, (210, 218, 232), pts[0], pts[1], max(2, wd // 3))
+                    elif st["style"] == "pool_rail":
+                        # High-elasticity bouncy pool table bumper cushion rail
+                        pygame.draw.line(self.frame, (255, 82, 168), pts[0], pts[1], wd + 2)
+                        pygame.draw.line(self.frame, (255, 224, 92), pts[0], pts[1], max(2, wd // 3))
+                        for end_p in pts:
+                            pygame.draw.circle(self.frame, BLACK, end_p, wd * 0.65 + 3)
+                            pygame.draw.circle(self.frame, (255, 214, 42), end_p, wd * 0.65)
                     else:
                         pygame.draw.line(self.frame, (245, 245, 245), pts[0], pts[1], wd)
                         nseg = 8
@@ -917,6 +967,41 @@ class Renderer:
                             pygame.draw.line(self.frame, th.hazard, p0, p1, wd)
                 elif st["style"] == "seesaw":
                     self._draw_seesaw(cam, x, y, ang, sh["verts"])
+                elif st["style"] == "bridge_tile":
+                    pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in sh["verts"]]
+                    b_ord = self.bridge_prop_indices.index(i) if i in self.bridge_prop_indices else -1
+                    b_st = b_states[b_ord] if (0 <= b_ord < len(b_states)) else 0
+                    base_c = (232, 86, 54) if b_st == 1 else ((192, 136, 74) if b_st == 0 else (142, 96, 52))
+                    pygame.draw.polygon(self.frame, base_c, pts)
+                    if len(pts) >= 4:
+                        pygame.draw.line(self.frame, scenery.mix(base_c, WHITE_, 0.35), pts[0], pts[1], max(2, int(4 * cam.zoom)))
+                        if b_st >= 1:
+                            # Warning crack zigzag when tile is shaking/dropping!
+                            mx = sum(p[0] for p in pts) / 4.0
+                            my = sum(p[1] for p in pts) / 4.0
+                            pygame.draw.lines(self.frame, (255, 232, 92), False,
+                                              [(mx - 14 * cam.zoom, my - 8 * cam.zoom), (mx + 4 * cam.zoom, my),
+                                               (mx - 6 * cam.zoom, my + 8 * cam.zoom)], max(2, int(3 * cam.zoom)))
+                    pygame.draw.polygon(self.frame, BLACK, pts, max(3, int(4 * cam.zoom)))
+                elif st["style"] == "crusher":
+                    pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in sh["verts"]]
+                    pygame.draw.polygon(self.frame, (72, 78, 96), pts)
+                    if len(pts) >= 4:
+                        # Yellow/gold hazard warning band + iron bottom spikes on the crusher block!
+                        xs_p = [p[0] for p in pts]
+                        ys_p = [p[1] for p in pts]
+                        bx0, bx1 = min(xs_p), max(xs_p)
+                        by0, by1 = min(ys_p), max(ys_p)
+                        band = pygame.Rect(int(bx0 + 4), int(by1 - (by1 - by0) * 0.36), max(8, int(bx1 - bx0 - 8)), max(6, int((by1 - by0) * 0.30)))
+                        pygame.draw.rect(self.frame, (250, 204, 21), band)
+                        step_s = max(12, int(22 * cam.zoom))
+                        for sx_st in range(band.left + 6, band.right - 4, step_s):
+                            pygame.draw.line(self.frame, BLACK, (sx_st, band.bottom), (sx_st + 8, band.top), max(3, int(5 * cam.zoom)))
+                        for sx_sp in range(int(bx0 + 12 * cam.zoom), int(bx1 - 6 * cam.zoom), max(14, int(24 * cam.zoom))):
+                            tri = [(sx_sp - 7 * cam.zoom, by1), (sx_sp + 7 * cam.zoom, by1), (sx_sp, by1 + 14 * cam.zoom)]
+                            pygame.draw.polygon(self.frame, (176, 184, 202), tri)
+                            pygame.draw.polygon(self.frame, BLACK, tri, max(2, int(3 * cam.zoom)))
+                    pygame.draw.polygon(self.frame, BLACK, pts, max(3, int(5 * cam.zoom)))
                 else:
                     pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in sh["verts"]]
                     if st["style"] == "hammer":
@@ -960,26 +1045,81 @@ class Renderer:
             pygame.draw.circle(self.frame, (230, 40, 60), (sx, sy), rr)
 
     def _particles(self, cam: Cam, t: float) -> None:
+        """v4.0 Procedural Atmospheric Weather across all 8 Seasonal Themes."""
         kind = self.theme.particles
         rng = random.Random(3)
-        col = {"snow": (255, 255, 255), "embers": (255, 150, 60), "stars": (255, 255, 220), "bubbles": (200, 240, 255),
-               "rain": (170, 190, 230), "sand": (240, 210, 150), "fireflies": (255, 240, 120), "sprinkles": (255, 120, 200),
-               "wisps": (190, 255, 160), "sparks": (255, 210, 90), "clouds": (255, 255, 255), "pollen": (255, 236, 150)}[kind]
-        for i in range(32):
-            x0, y0 = rng.uniform(0, W), rng.uniform(330, 1600)
-            sp = rng.uniform(20, 80)
-            if kind in ("snow", "rain", "sprinkles"):
-                y = (y0 + t * sp * (6 if kind == "rain" else 1.5)) % 1270 + 330
-                x = (x0 - cam.x * 0.3) % W
+        palette = {
+            "motes": (255, 246, 195),
+            "snow": (244, 250, 255),
+            "embers": (255, 146, 48),
+            "cyber_glitch": (0, 242, 255),
+            "monsoon": (168, 206, 245),
+            "haunted_mist": (152, 255, 128),
+            "sand_wind": (246, 212, 138),
+            "sprinkles": (255, 112, 192),
+            "stars": (255, 255, 220),
+            "bubbles": (200, 240, 255),
+            "rain": (170, 190, 230),
+            "sand": (240, 210, 150),
+            "fireflies": (255, 240, 120),
+            "wisps": (190, 255, 160),
+            "sparks": (255, 210, 90),
+            "clouds": (255, 255, 255),
+            "pollen": (255, 236, 150),
+        }
+        col = palette.get(kind, (255, 244, 190))
+
+        if kind == "haunted_mist" and self.tr.mode != "TOP_DOWN":
+            # S6 Haunted Castle: Drifting translucent purple-green mist ribbons + glowing fireflies
+            mist = pygame.Surface((W, 240), pygame.SRCALPHA)
+            for k in range(5):
+                mx = ((k * 260 - t * (34 + k * 9) - cam.x * 0.18) % (W + 340)) - 340
+                my = 30 + (k % 3) * 52
+                pygame.draw.ellipse(mist, (124, 96, 178, 38), (int(mx), int(my), 360, 74))
+            self.frame.blit(mist, (0, 1310))
+
+        sprinkle_cols = ((255, 88, 168), (88, 220, 255), (255, 224, 68), (148, 245, 128))
+        for i in range(36):
+            x0, y0 = rng.uniform(0, W), rng.uniform(300, 1600)
+            sp = rng.uniform(28, 86)
+            if kind in ("monsoon", "rain"):
+                y = (y0 + t * sp * 7.2) % 1300 + 290
+                x = (x0 - t * sp * 2.1 - cam.x * 0.3) % W
+                pygame.draw.line(self.frame, col, (x, y), (x - 10, y + 28), 2)
+            elif kind == "snow":
+                y = (y0 + t * sp * 1.65) % 1300 + 290
+                x = (x0 + math.sin(t * 2.1 + i) * 26 - cam.x * 0.3) % W
+                pygame.draw.circle(self.frame, col, (int(x), int(y)), 3 if i % 3 else 4)
+            elif kind == "sand_wind":
+                x = (x0 + t * sp * 6.5 - cam.x * 0.35) % (W + 120) - 60
+                y = (y0 + math.sin(t * 3.0 + i) * 14) % 1260 + 310
+                pygame.draw.line(self.frame, col, (x, y), (x + 48 + (i % 3) * 18, y + 3), 2)
+            elif kind == "cyber_glitch":
+                if i < 14:
+                    gx = (x0 + math.sin(t * 8.0 + i) * 40 - cam.x * 0.25) % W
+                    gy = (y0 - t * sp * 1.4) % 1260 + 310
+                    gc = (0, 242, 255) if i % 2 == 0 else (255, 48, 192)
+                    if int(t * 12 + i * 3) % 5 == 0:
+                        pygame.draw.rect(self.frame, gc, (int(gx), int(gy), 28 + (i % 4) * 12, 4))
+                    else:
+                        pygame.draw.rect(self.frame, gc, (int(gx), int(gy), 5, 5))
+            elif kind == "sprinkles":
+                y = (y0 + t * sp * 1.9) % 1300 + 290
+                x = (x0 + math.sin(t * 2.4 + i) * 18 - cam.x * 0.3) % W
+                sc = sprinkle_cols[i % len(sprinkle_cols)]
+                ang_s = t * 3.5 + i
+                pygame.draw.line(
+                    self.frame,
+                    sc,
+                    (x - math.cos(ang_s) * 6, y - math.sin(ang_s) * 6),
+                    (x + math.cos(ang_s) * 6, y + math.sin(ang_s) * 6),
+                    4,
+                )
             else:
-                y = (y0 - t * sp) % 1270 + 330
-                x = (x0 + math.sin(t + i) * 20 - cam.x * 0.3) % W
-            if kind == "rain":
-                pygame.draw.line(self.frame, col, (x, y), (x - 6, y + 22), 2)
-            elif kind == "clouds" and self.tr.mode != "TOP_DOWN":
-                pygame.draw.ellipse(self.frame, col, (x, y, 60, 22))
-            else:
-                pygame.draw.circle(self.frame, (190, 215, 255) if kind == "clouds" else col, (x, y), 2 if kind == "clouds" else 3)
+                y = (y0 - t * sp) % 1270 + 320
+                x = (x0 + math.sin(t * 2.2 + i) * 22 - cam.x * 0.3) % W
+                r_p = 4 if (kind == "haunted_mist" and int(t * 4 + i) % 2 == 0) else 3
+                pygame.draw.circle(self.frame, col, (int(x), int(y)), r_p)
 
     # ------------------------------------------------------------------ contestants + elemental cues + juice
     def _glitch_state(self, fi: int) -> tuple[str, float]:
@@ -1188,20 +1328,54 @@ class Renderer:
                 effects.draw_popup(self.frame, word, (sx, sy - 70), age, seed)
 
     def _draw_killer_fire(self, cam: Cam, fi: int, play_t: float, t_anim: float) -> None:
-        """v3.4 Foreground Killer Fire Wall (SIDE_VIEW):
-        - Drawn ABOVE all platforms, seesaws, and balls (below HUD only) so seesaws never overlap the fire.
-        - 85px additive warm orange heat-glow gradient ahead of the flames.
-        - 3 overlapping vertical flame ribbons scrolling upward at 140, 220, 310 px/s with layered sine harmonics
-          forming organic curling tongues pointing right (#B91C1C crimson, #F97316 orange, #FEF08A incandescent core).
-        - Rising bright ember sparks + subtle dark smoke puffs + incineration flare/char/ghost VFX."""
+        """v4.0 Foreground Themed Killer Wall & Ceiling Purge Wave (SIDE_VIEW):
+        - Skinned per SeasonTheme (Royal Fire, Frostfire, Molten Magma, Cyber Plasma, Monsoon Lightning,
+          Toxic Ghostfire, Solar Flare, Hot-Pink Berry Syrup).
+        - Richly textured [0 .. base_x] interior: scrolling storm bands, billowing smoke arcs, diagonal heat/plasma
+          streaks, and drifting bright embers (NEVER a flat solid block!).
+        - Also renders CollapseTower's descending `tower_fire_y` ceiling purge wave."""
         zone = self.tr.zones[fi]
-        if "chase_x" not in zone:
-            return
         fr = self.frame
-        base_x = cam.to_screen(zone["chase_x"], 0)[0]
+        th = self.theme
         top = LAYOUT["viewport"][0]
         h_span = H - top
+        c_out = getattr(th, "wall_outer", (185, 28, 28))
+        c_mid = getattr(th, "wall_mid", (249, 115, 22))
+        c_core = getattr(th, "wall_core", (254, 240, 138))
+        c_back = getattr(th, "wall_back", (128, 18, 18))
+        c_glow = getattr(th, "wall_glow", (11, 5, 1))
 
+        base_x = cam.to_screen(zone["chase_x"], 0)[0] if "chase_x" in zone else -999.0
+
+        # A) CollapseTower descending ceiling purge wave (`tower_fire_y`)
+        if "tower_fire_y" in zone:
+            purge_sy = cam.to_screen(0, zone["tower_fire_y"])[1]
+            if purge_sy > top - 24:
+                xs = list(range(-16, W + 28, 16))
+                p1, p2, p3 = [], [], []
+                for x in xs:
+                    u1 = x + t_anim * 155.0
+                    dy1 = 30.0 + 18.0 * math.sin(u1 * 0.025) + 10.0 * math.sin(u1 * 0.064 + 1.2)
+                    p1.append((float(x), purge_sy + dy1))
+                    u2 = x + t_anim * 235.0
+                    dy2 = 12.0 + 14.0 * math.sin(u2 * 0.032 + 0.9) + 8.0 * math.sin(u2 * 0.078 + 2.1)
+                    p2.append((float(x), purge_sy + dy2))
+                    u3 = x + t_anim * 315.0
+                    dy3 = -6.0 + 11.0 * math.sin(u3 * 0.041 + 2.0) + 6.0 * math.sin(u3 * 0.095 + 0.5)
+                    p3.append((float(x), purge_sy + dy3))
+                pygame.draw.polygon(fr, c_out, [(-20.0, float(top - 10)), (float(W + 20), float(top - 10))] + p1[::-1])
+                pygame.draw.polygon(fr, c_mid, [(-20.0, float(top - 10)), (float(W + 20), float(top - 10))] + p2[::-1])
+                pygame.draw.polygon(fr, c_core, [(-20.0, float(top - 10)), (float(W + 20), float(top - 10))] + p3[::-1])
+                if purge_sy - top > 32:
+                    back_band = [(px, py - 34.0 - 10.0 * math.sin((px + t_anim * 220.0) * 0.03)) for px, py in p3]
+                    pygame.draw.polygon(fr, c_back, [(-20.0, float(top - 10)), (float(W + 20), float(top - 10))] + back_band[::-1])
+                    for k in range(12):
+                        sx_k = (k * 103.0 + t_anim * 95.0) % W
+                        sy_k = top + ((k * 47.0 + t_anim * 110.0) % max(16.0, purge_sy - top))
+                        pygame.draw.arc(fr, scenery.mix(c_back, BLACK, 0.45), (int(sx_k - 32), int(sy_k - 14), 64, 28), 0.2, 2.9, 4)
+                        pygame.draw.circle(fr, c_core, (int((sx_k + 45) % W), int(sy_k)), 3)
+
+        # B) Side-view advancing Killer Wall (`chase_x`) + Richly Textured [0 .. base_x] Interior
         if base_x > -110:
             pts1: list[tuple[float, float]] = []
             pts2: list[tuple[float, float]] = []
@@ -1226,16 +1400,13 @@ class Renderer:
             max_x = max(p[0] for p in pts1)
             glow_w = min(W, max(16, int(max_x + 92)))
             if glow_w > 16:
-                # 1. Additive warm orange heat-glow gradient (85px wide) extending ahead of the flames
                 glow = pygame.Surface((glow_w, h_span))
                 for step in range(17, 0, -1):
-                    off = step * 5.0   # 85px -> 5px
+                    off = step * 5.0
                     poly_g = [(0.0, 0.0)] + [(max(0.0, px + off), py - top) for px, py in pts1] + [(0.0, float(h_span))]
-                    # Cumulative additive steps build a silky quadratic orange heat gradient
-                    pygame.draw.polygon(glow, (11, 5, 1), poly_g)
+                    pygame.draw.polygon(glow, c_glow, poly_g)
                 fr.blit(glow, (0, top), special_flags=pygame.BLEND_RGB_ADD)
 
-                # 2. Subtle dark smoke puffs drifting upward just ahead/above the crimson flame tips
                 smoke = pygame.Surface((min(W, glow_w + 40), h_span), pygame.SRCALPHA)
                 for i in range(14):
                     sy_loc = (i * 137.0 - t_anim * (175.0 + (i % 3) * 28.0)) % (h_span + 60) - 30
@@ -1243,23 +1414,53 @@ class Renderer:
                     edge_x = base_x + 44.0 + 22.0 * math.sin(u_s * 0.026) + 14.0 * math.sin(t_anim * 2.4 + i)
                     if 0 <= edge_x < smoke.get_width() - 20:
                         sr = 18 + (i % 4) * 5
-                        pygame.draw.circle(smoke, (30, 22, 26, 68), (int(edge_x + 12), int(sy_loc)), sr)
+                        pygame.draw.circle(smoke, (26, 20, 28, 72), (int(edge_x + 12), int(sy_loc)), sr)
                 fr.blit(smoke, (0, top))
 
-            # 3. Three overlapping scrolling flame ribbons:
-            #    Outer crimson (#B91C1C) -> Mid blazing orange (#F97316) -> Inner incandescent core (#FEF08A)
-            pygame.draw.polygon(fr, (185, 28, 28), [(-20.0, float(top - 20))] + pts1 + [(-20.0, float(H + 20))])
-            pygame.draw.polygon(fr, (249, 115, 22), [(-20.0, float(top - 20))] + pts2 + [(-20.0, float(H + 20))])
-            pygame.draw.polygon(fr, (254, 240, 138), [(-20.0, float(top - 20))] + pts3 + [(-20.0, float(H + 20))])
-            if base_x > 52:
-                # Scrolling roaring inferno depth behind the #FEF08A incandescent core ribbon (never a flat yellow/cream block!)
-                back_or = [(px - 44.0 - 12.0 * math.sin((py + t_anim * 260.0) * 0.035), py) for px, py in pts3]
-                pygame.draw.polygon(fr, (234, 88, 12), [(-20.0, float(top - 20))] + back_or + [(-20.0, float(H + 20))])
-                if base_x > 105:
-                    back_cr = [(px - 92.0 - 16.0 * math.sin((py + t_anim * 190.0) * 0.029 + 1.4), py) for px, py in pts3]
-                    pygame.draw.polygon(fr, (153, 27, 27), [(-20.0, float(top - 20))] + back_cr + [(-20.0, float(H + 20))])
+            # 3-Layer Leading Edge Ribbons
+            pygame.draw.polygon(fr, c_out, [(-20.0, float(top - 20))] + pts1 + [(-20.0, float(H + 20))])
+            pygame.draw.polygon(fr, c_mid, [(-20.0, float(top - 20))] + pts2 + [(-20.0, float(H + 20))])
+            pygame.draw.polygon(fr, c_core, [(-20.0, float(top - 20))] + pts3 + [(-20.0, float(H + 20))])
 
-            # 4. Rising bright ember sparks ahead of the flames
+            # Richly Textured Interior [0 .. base_x] (scrolling storm waves + billowing dark smoke arcs + diagonal heat streaks + embers)
+            if base_x > 26:
+                back_mid = [(px - 36.0 - 14.0 * math.sin((py + t_anim * 250.0) * 0.034), py) for px, py in pts3]
+                pygame.draw.polygon(fr, scenery.mix(c_mid, c_out, 0.45), [(-20.0, float(top - 20))] + back_mid + [(-20.0, float(H + 20))])
+                if base_x > 72:
+                    back_dp = [(px - 80.0 - 18.0 * math.sin((py + t_anim * 185.0) * 0.028 + 1.3), py) for px, py in pts3]
+                    pygame.draw.polygon(fr, c_back, [(-20.0, float(top - 20))] + back_dp + [(-20.0, float(H + 20))])
+
+                int_w = max(12, int(min(W, base_x - 14)))
+                smoke_col_dark = scenery.mix(c_back, BLACK, 0.52)
+                streak_col = scenery.mix(c_mid, c_core, 0.48)
+                # Diagonal heat/plasma streaks sweeping upward-right inside [0 .. base_x]
+                for i in range(14):
+                    sx0 = ((i * 73.0 + t_anim * 135.0) % (int_w + 80)) - 60
+                    sy0 = top + ((i * 129.0 - t_anim * (230.0 + (i % 4) * 35.0)) % h_span)
+                    sx1 = min(float(int_w), sx0 + 46.0 + (i % 3) * 18.0)
+                    sy1 = sy0 - 54.0
+                    if sx1 > 2 and sx0 < int_w:
+                        pygame.draw.line(fr, streak_col, (max(0.0, sx0), sy0), (sx1, sy1), 4 if i % 2 == 0 else 3)
+
+                # Billowing dark smoke arcs swirling upward inside [0 .. base_x]
+                for i in range(18):
+                    bx_s = ((i * 61.0 - t_anim * 48.0 + 18.0 * math.sin(t_anim * 2.6 + i)) % max(24.0, float(int_w)))
+                    by_s = top + ((i * 97.0 - t_anim * (165.0 + (i % 5) * 24.0)) % h_span)
+                    rw = 34 + (i % 4) * 12
+                    rh = 24 + (i % 3) * 8
+                    if bx_s + rw * 0.5 < int_w + 8:
+                        pygame.draw.arc(fr, smoke_col_dark, (int(bx_s - rw / 2), int(by_s - rh / 2), rw, rh),
+                                        0.3 + (i % 3) * 0.4, 2.8 + (i % 2) * 0.5, 5)
+
+                # Drifting incandescent interior embers inside [0 .. base_x]
+                for i in range(20):
+                    ex_in = ((i * 53.0 + t_anim * 92.0 + 14.0 * math.cos(t_anim * 4.2 + i)) % max(16.0, float(int_w)))
+                    ey_in = top + ((i * 107.0 - t_anim * (260.0 + (i % 4) * 32.0)) % h_span)
+                    er_in = 2 + (i % 3)
+                    pygame.draw.circle(fr, c_mid, (int(ex_in), int(ey_in)), er_in + 2)
+                    pygame.draw.circle(fr, c_core, (int(ex_in), int(ey_in)), er_in)
+
+            # Rising bright ember sparks ahead of the leading edge
             for i in range(22):
                 spd_y = 250.0 + (i % 5) * 38.0
                 ey = top + ((i * 113.0 - t_anim * spd_y) % h_span)
@@ -1267,10 +1468,10 @@ class Renderer:
                 ex = base_x + 24.0 + life * 68.0 + 16.0 * math.sin(t_anim * 5.5 + i * 1.7)
                 if -10 <= ex <= W:
                     er = max(2, int((4.5 - 2.5 * life)))
-                    pygame.draw.circle(fr, (249, 115, 22), (int(ex), int(ey)), er + 2)
-                    pygame.draw.circle(fr, (254, 240, 138), (int(ex), int(ey)), er)
+                    pygame.draw.circle(fr, c_mid, (int(ex), int(ey)), er + 2)
+                    pygame.draw.circle(fr, c_core, (int(ex), int(ey)), er)
 
-        # 5. Foreground Incineration Burn VFX (bright orange-white flare + dark char puff -> delayed ghost)
+        # C) Foreground Incineration Burn VFX (exact frame of flame/purge contact -> flare + char + ghost)
         for e in self.tr.events:
             if e.kind != "elimination" or e.data.get("cause") != "left_behind" or e.pos is None:
                 continue
@@ -1278,7 +1479,8 @@ class Renderer:
             if age < 0.0 or age > 1.05:
                 continue
             sx, sy = cam.to_screen(*e.pos)
-            sx = max(float(max(28.0, base_x + 18.0)), sx)
+            if "chase_x" in zone:
+                sx = max(float(max(28.0, base_x + 18.0)), sx)
             if -40 <= sx <= W + 40 and top <= sy <= H:
                 seed = int(e.t * 1000) % 997
                 effects.draw_incineration(fr, (sx, sy), age, seed)
@@ -1292,6 +1494,8 @@ class Renderer:
         alive_heroes = [i for i in range(len(self.tr.keys)) if (flags[i] & T.ALIVE) and self.tr.keys[i] in HERO_BY_KEY]
         if self.tr.mode == "TOP_DOWN":
             alive_heroes.sort(key=lambda i: rows[i, 0] ** 2 + rows[i, 1] ** 2)
+        elif self.meta.get("vertical_tower"):
+            alive_heroes.sort(key=lambda i: -rows[i, 1])
         else:
             alive_heroes.sort(key=lambda i: -rows[i, 0])
         w = self.meta.get("winner")
@@ -1300,7 +1504,7 @@ class Renderer:
         return {self.tr.keys[i]: r + 1 for r, i in enumerate(alive_heroes)}
 
     def tuno_state(self, play_t: float, segment: str) -> tuple[str, str]:
-        """v3.4: MC Tuno's 6 reaction poses (zero chin badge pills; voice + RMS lip-sync + face carry reactions)."""
+        """MC Tuno's 6 reaction poses (voice + RMS lip-sync + expressive face carry reactions)."""
         if segment == "cold":
             return "HYPED_TALKING", ""
         if segment in ("card", "replay"):
@@ -1318,7 +1522,6 @@ class Renderer:
         return "HYPED_TALKING", ""
 
     def _active_twist_badge(self, fi: int, play_t: float) -> tuple[str, str, tuple[int, int, int]] | None:
-        """Returns (icon_kind, label, accent_rgb) whenever a twist or speed escalation is active during gameplay."""
         zone = self.tr.zones[fi]
         tw = self.meta["recipe"].get("twist")
         if tw and zone.get("twist_on"):
@@ -1347,7 +1550,11 @@ class Renderer:
         cam = self.cams[fi]
         t_anim = index / FPS
         cap = self.cams[min(self.pre, len(self.cams) - 1)].zoom * 2.6
-        if shot.zoom_mult != 1.0 and shot.focus:
+        if self.tr.mode == "TOP_DOWN":
+            # Part A.3: Strictly lock TOP_DOWN camera center at (0, 0) through the ENTIRE match and replay!
+            z_top = min(cam.zoom * (1.08 if shot.segment == "replay" else shot.zoom_mult), cap)
+            cam = Cam(0.0, 0.0, z_top, cam.shake)
+        elif shot.zoom_mult != 1.0 and shot.focus:
             i = self.tr.index(shot.focus)
             rows, _, _ = self.tr.sample(tf / FPS)
             cam = Cam(float(rows[i, 0]), float(rows[i, 1]), min(cam.zoom * shot.zoom_mult, cap))
@@ -1355,7 +1562,8 @@ class Renderer:
             cam = Cam(cam.x, cam.y, min(cam.zoom * shot.zoom_mult, cap), cam.shake)
         play_t = (fi - self.pre) / FPS
         eff_play_t = play_t if shot.segment not in ("cold", "replay") else (tf - self.pre) / FPS
-        hud_fi = {"replay": self.end_f, "card": self.end_f}.get(shot.segment, fi)
+        # Part A.3: Sync ALIVE counter & ranks to exact visual frame `fi` during replay (never prematurely show end_f!)
+        hud_fi = self.end_f if shot.segment == "card" else fi
         ranks = self._ranks(hud_fi)
         slow = shot.segment in ("cold", "replay")
         self.frame.set_clip(None)
@@ -1370,7 +1578,6 @@ class Renderer:
         if self.tr.mode == "SIDE_VIEW":
             self._abyss(cam, fi, t_anim)
             if shot.segment != "card":
-                # v3.4: Foreground Killer Fire Wall ABOVE all platforms, seesaws, balls, and abyss (below HUD only)
                 self._draw_killer_fire(cam, fi, eff_play_t, t_anim)
         self.frame.set_clip(None)
         rms = self.voice_rms[index] if (self.voice_rms is not None and index < len(self.voice_rms)) else None
@@ -1378,8 +1585,9 @@ class Renderer:
         return self.frame
 
     def _abyss(self, cam: Cam, fi: int, t: float) -> None:
-        """v3.2: Recessed dark pit trench in front of background pillars & below all track slabs (SIDE_VIEW only)."""
-        fr, key = self.frame, self.theme.key
+        """Recessed pit trench in front of background pillars & below all track slabs (SIDE_VIEW only)."""
+        fr = self.frame
+        bstyle = getattr(self.theme, "block_style", "royal")
         ky = self.tr.zones[fi].get("lava_y", self.meta.get("kill_y", 500.0))
         y0 = int(cam.to_screen(0, ky)[1])
         y0 = max(1540, int(self._lowest_slab_y + 28), min(1760, y0))
@@ -1389,25 +1597,30 @@ class Renderer:
         pygame.draw.rect(fr, (54, 52, 74), (0, y0 - 6, W, 12))
         pygame.draw.rect(fr, (18, 16, 30), (0, y0 + 6, W, H - y0 - 6))
 
-        if key in ("volcano", "desert", "clockwork", "jungle"):
-            pygame.draw.rect(fr, (195, 48, 12), (0, y0 + 18, W, H - y0 - 18))
+        if bstyle in ("obsidian", "sandstone", "neon", "gothic", "wafer"):
+            c_out = getattr(self.theme, "wall_outer", (195, 48, 12))
+            c_mid = getattr(self.theme, "wall_mid", (255, 112, 22))
+            c_core = getattr(self.theme, "wall_core", (255, 224, 92))
+            pygame.draw.rect(fr, c_out, (0, y0 + 18, W, H - y0 - 18))
             pts = [(x, y0 + 18 + 10 * math.sin(t * 3.2 + x * 0.02)) for x in range(0, W + 20, 20)]
-            pygame.draw.polygon(fr, (255, 112, 22), pts + [(W, H), (0, H)])
-            pygame.draw.lines(fr, (255, 224, 92), False, pts, 5)
+            pygame.draw.polygon(fr, c_mid, pts + [(W, H), (0, H)])
+            pygame.draw.lines(fr, c_core, False, pts, 5)
             for i in range(9):
                 bx = (i * 131 + t * 32) % W
                 by = y0 + 56 + 24 * math.sin(t * 2.4 + i)
-                pygame.draw.circle(fr, (255, 204, 64), (bx, by), 9 + 3 * math.sin(t * 6 + i))
+                pygame.draw.circle(fr, c_core, (bx, by), 9 + 3 * math.sin(t * 6 + i))
         else:
+            spike_hi = (198, 240, 255) if bstyle == "frost" else (148, 156, 174)
+            spike_sh = (96, 148, 198) if bstyle == "frost" else (98, 106, 124)
             for x in range(-8, W + 48, 52):
                 btip = (x + 52, y0 + 16)
                 pygame.draw.polygon(fr, (42, 46, 64), [(x + 26, y0 + 78), btip, (x + 78, y0 + 78)])
             for x in range(-20, W + 48, 52):
                 tip = (x + 26, y0 + 4)
                 pygame.draw.polygon(fr, BLACK, [(x - 3, y0 + 78), tip, (x + 55, y0 + 78)])
-                pygame.draw.polygon(fr, (148, 156, 174), [(x + 3, y0 + 74), (tip[0], tip[1] + 8), (x + 49, y0 + 74)])
-                pygame.draw.polygon(fr, (98, 106, 124), [(tip[0], tip[1] + 8), (x + 49, y0 + 74), (tip[0], y0 + 74)])
-                pygame.draw.line(fr, (224, 232, 246), (tip[0] - 2, tip[1] + 12), (x + 11, y0 + 68), 3)
+                pygame.draw.polygon(fr, spike_hi, [(x + 3, y0 + 74), (tip[0], tip[1] + 8), (x + 49, y0 + 74)])
+                pygame.draw.polygon(fr, spike_sh, [(tip[0], tip[1] + 8), (x + 49, y0 + 74), (tip[0], y0 + 74)])
+                pygame.draw.line(fr, (232, 244, 255), (tip[0] - 2, tip[1] + 12), (x + 11, y0 + 68), 3)
             pygame.draw.rect(fr, (26, 26, 40), (0, y0 + 74, W, H - y0 - 74))
 
     def _talking(self, out_t: float) -> bool | None:
@@ -1432,21 +1645,19 @@ class Renderer:
             f = flags[self.tr.index(h.key)]
             status[h.key] = "crown" if f & T.WINNER else ("alive" if f & T.ALIVE else "out")
 
-        # Snappy 1.22x red pulse + shake on ALIVE pill on EVERY elimination
-        elim_ages = [play_t - e.t for e in self.elims if 0.0 <= play_t - e.t <= 0.38] if shot.segment == "play" else []
+        elim_ages = [play_t - e.t for e in self.elims if 0.0 <= play_t - e.t <= 0.38] if shot.segment in ("play", "replay") else []
         pulse = max(((1.0 - a / 0.38) ** 1.5 for a in elim_ages), default=0.0)
 
-        # Smooth dynamic Top-5 Leaderboard pill width as alive heroes drop below 5
         live_heroes_n = sum(1 for h in self.heroes if status.get(h.key) != "out")
         hero_ko_ages = [play_t - e.t for e in self.elims if e.data.get("hero") and 0.0 <= play_t - e.t <= 0.24]
         eff_slots = min(5.0, float(live_heroes_n) + sum(1.0 - a / 0.24 for a in hero_ko_ages))
 
+        reigning = getattr(self.ep.outcome, "reigning_champion", None) if self.ep.outcome else None
         t_st, _ = self.tuno_state(play_t, shot.segment)
         twist_badge = self._active_twist_badge(fi, play_t) if shot.segment == "play" else None
 
         if shot.segment == "cold":
-            scenery.draw_pick_strip(fr, self.heroes, t_anim, hud.TEXT_BOXES)
-            # v3.4: Display Arena Title banner at top/center on 00:00 (no duplicate "WHO SURVIVES?")
+            scenery.draw_pick_strip(fr, self.heroes, t_anim, hud.TEXT_BOXES, reigning_champion=reigning)
             arena_title = self.meta["recipe"]["arena"].replace("_", " ").upper()
             hud.blit_text(
                 fr,
@@ -1455,9 +1666,8 @@ class Renderer:
             )
         elif shot.segment != "card":
             scenery.draw_panel(fr, alive, total, self.heroes, status, ranks, hud.TEXT_BOXES,
-                               pulse=pulse, t=t_anim, eff_slots=eff_slots)
+                               pulse=pulse, t=t_anim, eff_slots=eff_slots, reigning_champion=reigning)
 
-        # Broadcast Header + 240x220 MC Tuno Booth Cam (active with RMS lip-sync across ALL segments incl. Winner Card!)
         scenery.draw_header(fr, self.castle, self.ep.ep_label, t_st, t_anim, hud.TEXT_BOXES,
                             talking=self._talking(out_t), voice_rms=voice_rms, twist_badge=twist_badge)
 
@@ -1471,9 +1681,18 @@ class Renderer:
             hero = HERO_BY_KEY.get(w) if w else None
             name = hero.name if hero else (f"Number {self.extras[w].number}" if w in self.extras else "Nobody")
             col = renderer.hex_rgb(hero.colour) if hero else (200, 180, 140)
-            hud.draw_winner_card(fr, hero, name, col, self.ep.season_line or "+10 SEASON POINTS",
-                                 self.ep.prompt or "Who wins tomorrow?", shot.seg_t, bot=self.extras.get(w) if w else None)
-        if self.speech:
+            hud.draw_winner_card(
+                fr,
+                hero,
+                name,
+                col,
+                self.ep.season_line or "+10 PTS",
+                self.ep.prompt or "Drop your pick below!",
+                shot.seg_t,
+                bot=self.extras.get(w) if w else None,
+                outcome=self.ep.outcome,
+            )
+        elif self.speech:
             from src.rendering import captions
             captions.draw_caption(fr, self.speech, out_t, hud.TEXT_BOXES)
 

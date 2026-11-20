@@ -85,16 +85,33 @@ def track(trace: T.Trace) -> list[Cam]:
                 if e.kind == "elimination" and e.data.get("hero") and e.pos is not None]
     bias_win = int(0.50 * FPS)
     r0 = trace.zones[0].get("ring_r", 1.0)
+    vert_tower = bool(meta.get("vertical_tower", False))
     for f in range(trace.n_frames):
         rows, flags = trace.frames[f], trace.flags[f]
         everyone = [i for i in range(len(rows)) if flags[i] & T.ALIVE]
         focus = None
         if top:
-            tx, ty = (x0 + x1) / 2, (y0 + y1) / 2 + 20
+            # v4.0 Part A.3: Lock TOP_DOWN camera center strictly at (0, 0) (zoom + micro-shake only!)
+            tx, ty = 0.0, 0.0
             z0 = trace.zones[f]
             ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * z0.get("ring_r", 1.0) / max(1.0, r0)
-            # v3.3: zoom tracks initial_radius / current_radius continuously while the disc shrinks
             tz = base_zoom * min(top_zmax, 1.0 / max(ek, 1e-3))
+        elif vert_tower:
+            alive = [i for i in heroes if flags[i] & T.ALIVE] or everyone
+            if not alive:
+                tx, ty, tz = (cx if cx is not None else 660.0), (cy if cy is not None else 0.0), max(zmin, 0.86)
+            else:
+                ys = [float(rows[i, 1]) for i in alive]
+                m = [alive[j] for j in action_cluster(ys, 620.0)]
+                mx = rows[m, 0]
+                my = rows[m, 1]
+                # Keep tower horizontally well-framed around shaft center (~660) with gentle cluster pan
+                tx = 0.62 * 660.0 + 0.38 * float(np.mean(mx))
+                ty = float(np.mean(my))
+                span_y = float(my.max() - my.min()) + 480.0
+                tz = max(zmin, min(1.02, ((VIEW_BOTTOM - VIEW_TOP) * 0.82) / span_y, 0.86 if len(alive) > 4 else 1.0))
+                tx = min(max(tx, x0 + W / 2 / tz), x1 - W / 2 / tz)
+                ty = min(max(ty, y0 + 280), y1 - 220)
         else:
             alive = [i for i in heroes if flags[i] & T.ALIVE] or everyone
             tz = base_zoom
@@ -111,7 +128,7 @@ def track(trace: T.Trace) -> list[Cam]:
                     tx, ty = float(sx_.mean()), float(sy_.mean()) - 30
                     span = float(sx_.max() - sx_.min()) + 360
                     tz = max(zmin, min(rs["final3_zoom"], (W * 0.88) / span))
-                    if span * zmin > W * 0.9:          # survivors too spread: keep the leader's side
+                    if span * zmin > W * 0.9:
                         tx, ty = lead_x - 120, lead_y - 30
                     focus = lead if span * zmin > W * 0.9 else None
                 elif near_finish:
@@ -128,14 +145,12 @@ def track(trace: T.Trace) -> list[Cam]:
                     ty = float(np.median(rows[m, 1])) - 30
                     span = float(mx.max() - mx.min()) + 320
                     tz = (W * 0.86) / span
-                # keep the fire wall + doomed stragglers on screen when the wall is about to torch someone
                 chase = trace.zones[f].get("chase_x")
                 if chase is not None and any(float(rows[i, 0]) < chase + 240 for i in everyone):
                     tzc = max(zmin, min(zmax, tz))
                     tx_wall = chase + (W / 2 - 110) / tzc
                     if tx > tx_wall and lead_x - tx_wall < (W / 2 - 70) / tzc:
                         tx = tx_wall
-                # 2-pass death cam: bias toward an upcoming hero KO (never zooming below the floor)
                 for kf, kx, ky in hero_kos:
                     if 0 <= kf - f <= bias_win:
                         w_ko = 0.6 * (1.0 - (kf - f) / max(1, bias_win))
@@ -154,8 +169,11 @@ def track(trace: T.Trace) -> list[Cam]:
                     tz = min(zmax, tz * 1.08)
         if cx is None:
             cx, cy, cz = tx, ty, tz
-        cx, vx = _spring(cx, vx, tx, 4.5, dt)
-        cy, vy = _spring(cy, vy, ty, 3.2, dt)
+        if top:
+            cx, cy, vx, vy = 0.0, 0.0, 0.0, 0.0
+        else:
+            cx, vx = _spring(cx, vx, tx, 4.5, dt)
+            cy, vy = _spring(cy, vy, ty, 3.2, dt)
         cz, vz = _spring(cz, vz, tz, 7.0 if not top else 3.5, dt)
         if not top:
             cz = max(zmin, min(zmax, cz))

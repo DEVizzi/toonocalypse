@@ -127,12 +127,14 @@ def _pattern(s: pygame.Surface, key: str, cx: float, cy: float, r: float, th: fl
         for k in range(-3, 4):
             a, b = _rot(cx, cy, r, th + k * 0.18 - math.pi / 2), _rot(cx, cy, r, th - k * 0.18 + math.pi / 2)
             pygame.draw.line(s, shade(neon, 0.50), a, b, max(1, int(r * 0.07)))
-    elif key == "dummy":                                         # yellow/grey 4-quadrant crash-test shell
+    elif key in ("dummy", "dummy_gold"):                         # 4-quadrant crash-test shell (standard or Grand Final gold)
+        q_col = (34, 34, 46) if key == "dummy_gold" else (255, 205, 20)
         for k in (0, 2):
             a0 = th + k * math.pi / 2
             pts = [(cx, cy)] + [_rot(cx, cy, r * 1.2, a0 + u * (math.pi / 2) / 6) for u in range(7)]
-            pygame.draw.polygon(s, (255, 205, 20), pts)
-        # Outer rim quadrant ticks (keeps center open so goofy cartoon faces read with high contrast)
+            pygame.draw.polygon(s, q_col, pts)
+        if key == "dummy_gold":
+            pygame.draw.circle(s, (255, 238, 128), (cx, cy), r * 0.42)
         lw = max(2, int(r * 0.09))
         for k in range(4):
             ang = th + k * math.pi / 2
@@ -333,7 +335,8 @@ def draw_ball(frame: pygame.Surface, hero: Hero | None, extra: Extra | None, pos
               vel, angvel: float, expression: str, pose: str, t: float, zoom: float, squash: float = 0.0,
               scale: float = 1.0, alpha: int = 255, force_grin: bool = False, phase: str = "", look=(0.0, 0.0),
               tint: tuple[int, int, int] | None = None) -> None:
-    key = hero.key if hero else "dummy"
+    is_gold_dummy = bool(hero is None and extra is not None and getattr(extra, "golden", False))
+    key = hero.key if hero else ("dummy_gold" if is_gold_dummy else "dummy")
     shape = hero.shape if hero else "circle"
     if hero:
         w0, h0 = hero.size
@@ -354,7 +357,7 @@ def draw_ball(frame: pygame.Surface, hero: Hero | None, extra: Extra | None, pos
         frame.blit(s, s.get_rect(center=(int(pos[0]), int(pos[1]))))
         return
 
-    base = rgb(hero.colour) if hero else (216, 220, 226)
+    base = rgb(hero.colour) if hero else ((255, 212, 48) if is_gold_dummy else (216, 220, 226))
     if hero and hero.key == "glitch":
         base = (17, 17, 22)
         neon = GLITCH_CRIMSON if phase == "LEAD" else GLITCH_CYAN

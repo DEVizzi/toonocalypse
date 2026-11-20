@@ -1,10 +1,10 @@
-"""M5/v3.4 sound conductor:
-- Schedules MC Tuno's narration on the REAL output timeline (0.15s anticipation lead-in; strictly drops any reaction
-  line delayed > 0.55s behind its physics event).
-- Triggers winner shoutout 0.4s before the Winner Card and keeps Winner Card screen hold strictly in [2.0s, 2.3s].
+"""M5/v4.0 Sound Conductor:
+- ZERO time-stretching or resampling (deleted _time_fit completely — 100% natural pitch from start to finish).
+- Tight 7-10 word outro synthesized natively at edge-tts match voice/rate; Winner Card hold dynamically adapts to
+  `outro_end_rel + 0.40s` (capped at 3.2s) and displays the EXACT verbatim spoken CTA on the Winner Card.
+- Anti-Dead-Air filler pass: injects a crisp ~1s suspense/standings call whenever >= 3.2s of active gameplay has zero speech.
 - Exports isolated pre-BGM/SFX voice stem WAV and computes frame-accurate 33ms normalized RMS slices for lip-sync.
-- Layers CC0 procedural Game-Show Funk BGM at -18 dB, smoothly ducking to -24 dB whenever narration RMS > 0.02.
-- Attenuates loud SFX (sirens, boings, impacts) by -7 dB during active speech so narration is 100% intelligible."""
+- Layers CC0 procedural Game-Show Funk BGM at -18 dB (ducking smoothly to -24 dB) + -7 dB SFX attenuation during speech."""
 from __future__ import annotations
 
 import re
@@ -17,9 +17,10 @@ from src.audio import music, sfx
 from src.audio.sfx import SR
 from src.config import FPS, settings
 
-MAX_REACTION_LAG_S = 0.50   # strictly < 0.55s (and satisfies < 0.5s verification target)
+MAX_REACTION_LAG_S = 0.50
 CARD_MIN_S = 2.00
-CARD_MAX_S = 2.30
+CARD_MAX_S = 3.20
+DEAD_AIR_MAX_S = 3.20
 
 
 def _db(x: float) -> float:
@@ -38,25 +39,11 @@ def _place(buf: np.ndarray, clip: np.ndarray, t: float, gain: float) -> None:
 
 
 def _prompt_pair(prompt: str, heroes: list) -> tuple[str, str]:
-    m = re.match(r"^\s*(.+?) or (.+?) tomorrow", prompt or "")
+    m = re.match(r"^\s*(.+?) or (.+?)\b", prompt or "")
     if m:
         return m.group(1), m.group(2)
     names = [h.name for h in heroes] or ["Bonk", "Pip"]
     return names[0], names[min(1, len(names) - 1)]
-
-
-def _time_fit(pcm: np.ndarray, words: list[tuple[float, float, str]], max_dur: float) -> tuple[np.ndarray, list[tuple[float, float, str]]]:
-    """Fits a clip cleanly inside max_dur so winner + outro CTA always complete inside the 2.0-2.3s Winner Card."""
-    cur_dur = pcm.size / SR
-    if cur_dur <= max_dur or pcm.size < 16:
-        return pcm, words
-    ratio = cur_dur / max(0.45, max_dur)
-    new_n = max(8, int(round(pcm.size / ratio)))
-    x_old = np.linspace(0.0, 1.0, pcm.size, dtype=np.float32)
-    x_new = np.linspace(0.0, 1.0, new_n, dtype=np.float32)
-    fitted = np.interp(x_new, x_old, pcm).astype(np.float32)
-    scaled_words = [(w0 / ratio, w1 / ratio, w) for w0, w1, w in words]
-    return fitted, scaled_words
 
 
 def _write_wav_mono_or_stereo(path: Path, mono: np.ndarray, stereo_dup: bool = True) -> None:
@@ -85,6 +72,10 @@ def compute_frame_rms(voice: np.ndarray, n_frames: int) -> list[float]:
     return out
 
 
+def _is_anchor(kind: str) -> bool:
+    return kind.startswith(("intro", "winner", "multi_ko", "outro"))
+
+
 def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
     from src.narration import script, tts
 
@@ -92,9 +83,11 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
     shots = ep.shots
     pre = r.pre
     play_out: dict[int, int] = {}
+    out_to_gp: dict[int, float] = {}
     for i, s in enumerate(shots):
         if s.segment == "play":
             play_out.setdefault(int(round(s.tf)), i)
+            out_to_gp[i] = max(0.0, (s.tf - pre) / FPS)
     replay_i = next((i for i, s in enumerate(shots) if s.segment == "replay"), len(shots))
     card_i = next((i for i, s in enumerate(shots) if s.segment == "card"), len(shots))
 
@@ -109,60 +102,72 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
     replay_t = replay_i / FPS
     video_len = len(shots) / FPS
     pair = _prompt_pair(ep.prompt, r.heroes)
+    league_ctx = getattr(ep, "league_ctx", None) or {}
 
-    # ------------------------------------------------------------------ 1. Narration & tight event sync
-    beats = script.build_beats(r, to_out, video_len, replay_t, card_t, pair)
-    gem = script.punch_up(beats, log=log)
+    # ------------------------------------------------------------------ 1. Narration & Natural Native-Pitch Timing
+    beats = script.build_beats(r, to_out, video_len, replay_t, card_t, pair, league_ctx=league_ctx)
+    gem = script.punch_up(beats, league_ctx=league_ctx, log=log)
     speech: list[dict] = []
     voice_pcm: list[tuple[float, np.ndarray]] = []
     dropped_lag = 0
+    fillers_added = 0
     max_lag = 0.0
+    outro_end_t: float | None = None
 
     if tts.available():
         placed: list[tuple[float, float]] = []
-        # Place must-play anchors (intro, winner, outro) first so winner @ (card_t - 0.4s) & CTA are guaranteed!
-        ordered = sorted(beats, key=lambda b: (0 if b.kind in ("intro", "winner", "outro") else 1, -b.prio, b.t))
-        win_end_t = card_t + 0.45
+        used_texts: set[str] = {b.text for b in beats if b.text}
+        ordered = sorted(beats, key=lambda b: (0 if _is_anchor(b.kind) else 1, -b.prio, b.t))
+        win_end_t = card_t + 0.15
 
         for b in ordered:
             res = tts.synthesize(b.text)
             if res is None:
                 continue
             pcm, words = res
-            if b.kind == "winner":
-                # Keep winner shoutout crisp (~0.95s) so CTA gets ~1.65s natural pacing on the Winner Card
-                pcm, words = _time_fit(pcm, words, 0.95)
             d = pcm.size / SR
+            ok_t: float | None = None
 
-            if b.kind == "intro":
+            if b.kind.startswith("intro"):
                 t0 = 0.04
                 ok_t = t0 if all(t0 + d + 0.06 <= p0 or t0 >= p1 + 0.06 for p0, p1 in placed) else None
-            elif b.kind == "winner":
-                # Trigger winner shoutout 0.4s before Winner Card appears
-                target = max(replay_t + 0.05, card_t - 0.40)
-                ok_t = None
-                for k in range(0, 8):
+            elif b.kind.startswith(("winner", "multi_ko")):
+                # Start winner call slightly earlier if it's a longer Multi-KO / Season Champion shoutout
+                lead = min(0.95, max(0.42, d - 0.55))
+                target = max(replay_t + 0.04, card_t - lead)
+                for k in range(0, 12):
                     t0 = target + k * 0.04
                     if all(t0 + d + 0.05 <= p0 or t0 >= p1 + 0.05 for p0, p1 in placed):
                         ok_t = t0
                         break
                 if ok_t is not None:
                     win_end_t = ok_t + d
-            elif b.kind == "outro":
-                # Start CTA right after winner shoutout and guarantee completion before card_t + 2.24s
-                t0 = max(card_t + 0.15, win_end_t + 0.05)
-                avail_dur = max(0.85, (card_t + CARD_MAX_S - 0.06) - t0)
-                pcm, words = _time_fit(pcm, words, avail_dur)
-                d = pcm.size / SR
+            elif b.kind.startswith("outro"):
+                # ZERO resampling/compression! Place natively right after winner call and adapt Winner Card hold!
+                t0 = max(card_t + 0.12, win_end_t + 0.08)
+                # Ensure native clip + 0.30s breathing room fits cleanly inside the 3.20s max Winner Card cap
+                if (t0 - card_t) + d + 0.25 > CARD_MAX_S:
+                    stage = str(league_ctx.get("stage") or "league")
+                    sn = int(league_ctx.get("season_number") or 1) + 1
+                    tight_cta = (f"Who wins Season {sn} tomorrow?" if stage == "grand_final"
+                                 else f"{pair[0]} or {pair[1]} next? Vote below!")
+                    res2 = tts.synthesize(tight_cta)
+                    if res2 is not None and (res2[0].size / SR) < d:
+                        b.text = tight_cta
+                        pcm, words = res2
+                        d = pcm.size / SR
                 ok_t = t0
+                outro_end_t = t0 + d
+                # Sync Winner Card bottom CTA text verbatim to what MC Tuno speaks!
+                ep.prompt = b.text
             else:
-                # Reaction beat: target is (event_t - 0.15s); strictly drop if delayed > 0.50s behind event_t!
-                ok_t = None
+                # Gameplay reaction beat: target (event_t - 0.15s); drop if delayed > 0.50s behind event_t
                 t_cand = max(0.0, b.t)
                 limit_t = b.event_t + MAX_REACTION_LAG_S
+                win_guard = min(card_t - 0.52, (placed_win := min((p0 for p0, _ in placed if p0 >= replay_t), default=card_t - 0.45)) - 0.08)
                 while t_cand <= limit_t + 1e-6:
                     t1 = t_cand + d
-                    if t1 > card_t - 0.46:
+                    if t1 > win_guard:
                         break
                     if all(t1 + 0.06 <= p0 or t_cand >= p1 + 0.06 for p0, p1 in placed):
                         ok_t = t_cand
@@ -173,7 +178,7 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
 
             if ok_t is None:
                 continue
-            if b.kind not in ("intro", "winner", "outro"):
+            if not _is_anchor(b.kind):
                 max_lag = max(max_lag, ok_t - b.event_t)
             placed.append((ok_t, ok_t + d))
             speech.append({
@@ -185,16 +190,61 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
                 "words": [(ok_t + w0, ok_t + w1, w) for w0, w1, w in words],
             })
             voice_pcm.append((ok_t, pcm))
+
+        # Anti-Dead-Air Filler Pass: eliminate any >= 3.2s silent stretch during active gameplay
+        win_start_bound = min((s["t0"] for s in speech if s["kind"].startswith(("winner", "multi_ko"))), default=card_t - 0.45)
+        for _pass in range(4):
+            placed_sorted = sorted(placed)
+            # Check silent stretches inside [0.20, win_start_bound]
+            anchors_gp = [(0.0, 0.20)] + [p for p in placed_sorted if p[0] < win_start_bound] + [(win_start_bound, win_start_bound + 0.1)]
+            inserted = False
+            for ( _a0, a1), (b0, _b1) in zip(anchors_gp, anchors_gp[1:]):
+                gap = b0 - a1
+                if gap >= DEAD_AIR_MAX_S:
+                    t_fill = a1 + min(1.15, gap * 0.34)
+                    out_fi = min(max(0, int(round(t_fill * FPS))), len(shots) - 1)
+                    gp_t = out_to_gp.get(out_fi, max(0.0, t_fill - 0.8))
+                    ftxt = script.pick_filler(r, gp_t, used_texts, league_ctx=league_ctx)
+                    fres = tts.synthesize(ftxt)
+                    if fres is None:
+                        continue
+                    fpcm, fwords = fres
+                    fd = fpcm.size / SR
+                    if t_fill + fd + 0.12 <= b0 and all(t_fill + fd + 0.06 <= p0 or t_fill >= p1 + 0.06 for p0, p1 in placed):
+                        placed.append((t_fill, t_fill + fd))
+                        speech.append({
+                            "t0": t_fill,
+                            "t1": t_fill + fd,
+                            "text": ftxt,
+                            "kind": "filler",
+                            "event_t": t_fill,
+                            "words": [(t_fill + w0, t_fill + w1, w) for w0, w1, w in fwords],
+                        })
+                        voice_pcm.append((t_fill, fpcm))
+                        fillers_added += 1
+                        inserted = True
+                        break
+            if not inserted:
+                break
+
         speech.sort(key=lambda s: s["t0"])
-        log(f"  narration: {len(speech)}/{len(beats)} voiced (dropped_stale={dropped_lag}, max_lag={max_lag:+.2f}s, gemini={gem})")
+        log(
+            f"  narration: {len(speech)} voiced (+{fillers_added} anti-dead-air fillers, "
+            f"dropped_stale={dropped_lag}, max_lag={max_lag:+.2f}s, gemini={gem})"
+        )
     else:
         log("  narration: edge-tts/ffmpeg unavailable -> SFX + music only")
 
-    # ------------------------------------------------------------------ 2. Strict 2.0s-2.3s Winner Card hold
+    # ------------------------------------------------------------------ 2. Dynamic Winner Card Hold (outro + 0.40s, <= 3.2s)
     from src.rendering.pipeline import Shot
     cur_card_frames = len(shots) - card_i
-    need_end = (max(s["t1"] for s in speech) + 0.10) if speech else (card_t + CARD_MIN_S)
-    target_card_s = min(CARD_MAX_S, max(CARD_MIN_S, need_end - card_t))
+    if outro_end_t is not None:
+        need_card_s = (outro_end_t - card_t) + 0.40
+    elif speech:
+        need_card_s = (max(s["t1"] for s in speech) - card_t) + 0.40
+    else:
+        need_card_s = CARD_MIN_S
+    target_card_s = min(CARD_MAX_S, max(CARD_MIN_S, need_card_s))
     target_card_frames = int(round(target_card_s * FPS))
     if target_card_frames > cur_card_frames and shots:
         last = shots[-1]
@@ -211,7 +261,6 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
         m = float(np.max(np.abs(pcm))) or 1.0
         _place(voice, pcm / m * 0.92, t0, _db(a["narration_db"]))
 
-    # Export isolated voice stem WAV (pre-BGM/SFX) before rendering frames
     voice_stem_path = wav_path.with_name(f".{wav_path.stem}_voice.wav")
     _write_wav_mono_or_stereo(voice_stem_path, voice, stereo_dup=False)
     frame_rms = compute_frame_rms(voice, len(shots))
@@ -302,11 +351,9 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
         0.0, 1.0,
     )
 
-    # Attenuate loud SFX by -7 dB during active speech (narration RMS > 0.02)
     sfx_duck_db = float(a.get("sfx_duck_db", -7.0))
     fx *= (10.0 ** ((sfx_duck_db * duck_env) / 20.0)).astype(np.float32)
 
-    # Upbeat Game-Show Funk BGM at -18 dB, smoothly ducking to -24 dB whenever narration RMS > 0.02
     ot = to_out(r.overtime_t) if r.overtime_t < 900 else None
     bed = music.funk_bgm(video_len + 0.2, bpm=float(a["bpm"]), intense_from=ot if ot is not None else 1e9,
                          seed=int(tr.meta.get("seed", 0)))
@@ -315,7 +362,7 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
     end_fade = min(n, int(0.25 * SR))
     if end_fade > 1:
         mus[-end_fade:] *= np.linspace(1.0, 0.0, end_fade, dtype=np.float32)
-    mus_db_curve = float(a["music_db"]) + float(a["duck_db"]) * duck_env   # -18 dB -> -24 dB
+    mus_db_curve = float(a["music_db"]) + float(a["duck_db"]) * duck_env
     mus *= (10.0 ** (mus_db_curve / 20.0)).astype(np.float32)
 
     # ------------------------------------------------------------------ 6. Master Bus + Soft-Clip -> WAV
@@ -331,6 +378,7 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
         "frame_rms": frame_rms,
         "tts": bool(speech),
         "gemini_lines": gem,
+        "fillers_added": fillers_added,
         "sfx": n_fx,
         "max_reaction_lag_s": round(max_lag, 3),
         "card_hold_s": card_hold_s,

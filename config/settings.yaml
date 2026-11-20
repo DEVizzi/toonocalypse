@@ -32,9 +32,9 @@ timeline:
   replay_speed: 0.3
   replay_source_s: 0.45
   replay_zoom: 1.35
-  winner_card_s: 2.1
+  winner_card_s: 2.3
   loop_tail_s: 0.0
-  two_stage_chance: 0.30
+  two_stage_chance: 0.0
   two_stage_qualifier_s: 8
   two_stage_survivors: 6
   two_stage_sting_s: 0.6

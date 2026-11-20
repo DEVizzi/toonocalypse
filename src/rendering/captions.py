@@ -63,41 +63,44 @@ def _word_surf(word: str, size: int, col: tuple[int, int, int], outline_w: int =
 
 
 def chunk_indices(n: int) -> list[list[int]]:
-    """Splits n words into balanced 3-4 word chunks (avoids 1-word trailing orphans)."""
+    """Splits n words into balanced 2-4 word chunks (zero 1-word orphans)."""
     if n <= 0:
         return []
     if n <= 4:
         return [list(range(n))]
-    if n == 5:
-        return [[0, 1, 2], [3, 4]]
-    if n == 6:
-        return [[0, 1, 2], [3, 4, 5]]
-    if n == 7:
-        return [[0, 1, 2, 3], [4, 5, 6]]
-    if n == 8:
-        return [[0, 1, 2, 3], [4, 5, 6, 7]]
     out: list[list[int]] = []
     i = 0
     while i < n:
         rem = n - i
-        step = 3 if rem in (5, 6, 9) else min(4, rem)
+        if rem <= 4:
+            step = rem
+        elif rem in (5, 6, 9):
+            step = 3
+        else:
+            step = 4
         out.append(list(range(i, i + step)))
         i += step
     return out
 
 
+def _row_width(words: list[str], idxs: list[int], size: int, space: int) -> int:
+    if not idxs:
+        return 0
+    return sum(_word_surf(words[idx], size, WHITE).get_width() for idx in idxs) + space * (len(idxs) - 1)
+
+
 def _wrap_chunk(words: list[str], idxs: list[int], size: int) -> list[list[int]]:
+    """v4.0 Balanced Caption Wrapping:
+    - 1..3 word chunks stay strictly on a single line (step down font size if > MAX_W; NEVER wrap 2+1!).
+    - 4-word chunks stay on 1 line if compact, else split strictly as balanced 2+2 (NEVER 3+1 or 1+3!)."""
     space = max(10, _font(size).size(" ")[0] - 4)
-    lines: list[list[int]] = [[]]
-    width = 0
-    for idx in idxs:
-        ww = _word_surf(words[idx], size, WHITE).get_width()
-        if lines[-1] and width + space + ww > MAX_W:
-            lines.append([])
-            width = 0
-        width += (space if lines[-1] else 0) + ww
-        lines[-1].append(idx)
-    return lines if len(lines) <= 2 else []
+    if _row_width(words, idxs, size, space) <= MAX_W:
+        return [list(idxs)]
+    if len(idxs) == 4:
+        top_half, bot_half = idxs[:2], idxs[2:]
+        if _row_width(words, top_half, size, space) <= MAX_W and _row_width(words, bot_half, size, space) <= MAX_W:
+            return [top_half, bot_half]
+    return []
 
 
 def draw_caption(frame: pygame.Surface, speech: list[dict], out_t: float, text_boxes: list | None = None) -> None:
@@ -124,11 +127,11 @@ def draw_caption(frame: pygame.Surface, speech: list[dict], out_t: float, text_b
 
     size = 64
     lay = _wrap_chunk(words, active_chunk, size)
-    while not lay and size > 42:
+    while not lay and size > 34:
         size -= 4
         lay = _wrap_chunk(words, active_chunk, size)
     if not lay:
-        lay = [active_chunk]
+        lay = [active_chunk[:2], active_chunk[2:]] if len(active_chunk) == 4 else [active_chunk]
 
     space = max(10, _font(size).size(" ")[0] - 4)
     rows: list[list[pygame.Surface]] = []

@@ -1,9 +1,11 @@
-"""Toon Toon Castle CLI (§22.4).
+"""Toon Toon Castle v4.0 Autonomous Season League CLI (§22.4).
 
-    python -m src.main --dry-run --seed 42 --arena flat_track --goal reach_finish
+Examples:
+    # Preview / Showcase dry-run (synthesizes realistic season standings, never mutates state/):
+    python -m src.main --dry-run --seed 101 --season 1 --race 12 --arena rotating_disc --goal last_one_standing
 
-Pipeline (M4 scope): recipe -> simulate N seeds -> score -> pick the best real run -> silent render.
-Dry-run never uploads and never mutates state/. Later milestones add beats/script/TTS/audio, state and publishing.
+    # Autonomous daily Season League production run (updates state/*.json atomically, auto-rolls over after Race 30):
+    python -m src.main --commit-state
 """
 from __future__ import annotations
 
@@ -18,23 +20,22 @@ from src.characters.roster import HEROES, make_extras
 from src.config import settings
 from src.games import recipe_generator
 from src.games.base import Recipe
+from src.games.themes import for_season
 from src.physics import scorer
 from src.physics.engine import Sim
 from src.physics.trace import Event, Trace
+from src.state import league
 
 ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / "state"
 
 
 def _load(name: str, default):
-    p = STATE / name
-    try:
-        return json.loads(p.read_text())
-    except (OSError, ValueError):
-        return default
+    return league.load_json(STATE / name, default)
 
 
 def pick_cast(kind: str, rng: random.Random) -> tuple[list, list]:
+    """Legacy fallback cast helper."""
     cast = settings()["cast"]
     if kind == "rumble":
         return list(HEROES), make_extras(cast["mega_extras"], rng)
@@ -44,7 +45,7 @@ def pick_cast(kind: str, rng: random.Random) -> tuple[list, list]:
 
 def simulate_best(recipe: Recipe, heroes: list, extras: list, seed: int, history: dict | None = None,
                   log=print) -> tuple[Trace, scorer.Score, list[dict]]:
-    """Best-of-N (§12): 8 seeds, 8 more if none reaches min_score (max 16). Outcomes are real physics."""
+    """Best-of-N (§12): 8 seeds, 8 more if none reaches min_score (max 16). Outcomes are 100% real physics."""
     sc = settings()["scorer"]
     results: list[tuple[float, int, Trace, scorer.Score]] = []
     report = []
@@ -58,12 +59,27 @@ def simulate_best(recipe: Recipe, heroes: list, extras: list, seed: int, history
         res = scorer.score(tr, history)
         dt = time.time() - t0
         results.append((res.total, s, tr, res))
-        report.append({"seed": s, "score": res.total, "winner": tr.meta["winner"],
-                       "resolved_at": tr.meta["resolved_at"], "sim_s": round(dt, 2)})
-        log(f"  seed {s}: score={res.total:+.0f} winner={tr.meta['winner']} t={tr.meta['resolved_at']:.1f}s sim={dt:.1f}s")
+        report.append({
+            "seed": s,
+            "score": res.total,
+            "rejected": scorer.rejected(res),
+            "winner": tr.meta["winner"],
+            "resolved_at": tr.meta["resolved_at"],
+            "sim_s": round(dt, 2),
+        })
+        log(f"  seed {s}: score={res.total:+.0f} rej={scorer.rejected(res)} winner={tr.meta['winner']} "
+            f"t={tr.meta['resolved_at']:.1f}s sim={dt:.1f}s")
     log(f"  {len(results)} sims in {time.time() - t_all:.1f}s")
-    # a run whose gameplay length is out of range can never pass the quality gate: rank in-range runs first
-    results.sort(key=lambda r: (not scorer.rejected(r[3]), r[0]), reverse=True)
+    # Rank non-rejected runs first, then prefer Hero winners if all runs had minor duration edge cases
+    results.sort(
+        key=lambda r: (
+            not scorer.rejected(r[3]),
+            not str(r[2].meta.get("winner") or "").startswith("extra"),
+            16.0 <= float(r[2].meta.get("resolved_at") or 0) <= 28.0,
+            r[0],
+        ),
+        reverse=True,
+    )
     best = results[0]
     return best[2], best[3], report
 
@@ -84,15 +100,18 @@ def flash_event(tr: Trace) -> Event | None:
 
 
 def comment_prompt(heroes: list, winner: str | None, rng: random.Random) -> str:
-    pool = [h for h in heroes if h.key != winner] or heroes
+    pool = [h for h in heroes if h.key != winner] or list(HEROES)
     a, b = rng.sample(pool, 2) if len(pool) >= 2 else (pool[0], pool[0])
-    return f"{a.name} or {b.name} tomorrow?"
+    return f"{a.name} or {b.name} tomorrow? Drop your pick!"
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Toon Toon Castle episode pipeline")
-    ap.add_argument("--dry-run", action="store_true", help="render only: no uploads, no state mutation")
+    ap = argparse.ArgumentParser(description="Toon Toon Castle v4.0 IPL Season League pipeline")
+    ap.add_argument("--dry-run", action="store_true", help="render only: no uploads, no state/ mutation")
+    ap.add_argument("--commit-state", action="store_true", help="git pull --rebase + commit + push state/ after run")
     ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("--season", type=int, default=None, help="override season number (synthesizes mock table in --dry-run)")
+    ap.add_argument("--race", type=int, default=None, help="override race number 1..30 (synthesizes mock table in --dry-run)")
     ap.add_argument("--arena", default=None)
     ap.add_argument("--goal", default=None)
     ap.add_argument("--mode", choices=["SIDE_VIEW", "TOP_DOWN"], default=None)
@@ -101,22 +120,46 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--twist", default=None, help="twist override, or 'none'")
     ap.add_argument("--theme", default=None)
     ap.add_argument("--flash-forward", choices=["auto", "on", "off"], default="auto")
-    ap.add_argument("--episode", type=int, default=None, help="episode number shown on the badge")
+    ap.add_argument("--episode", type=int, default=None, help="legacy alias for --race")
     ap.add_argument("--out", default="output/episode.mp4")
     ap.add_argument("--no-render", action="store_true", help="simulate and score only")
     ap.add_argument("--stills", type=int, default=0, help="also save N half-size PNG stills for review")
     ap.add_argument("--no-audio", action="store_true", help="silent render (skip narration, SFX and music)")
     a = ap.parse_args(argv)
 
-    if not a.dry_run:
-        print("Only --dry-run is available until M7/M8 (publishing). Re-run with --dry-run.", file=sys.stderr)
-        return 2
     seed = a.seed if a.seed is not None else int(time.time()) % 100000
     rng = random.Random(seed)
-    history = _load("episode_history.json", [])
-    entries = history.get("entries", []) if isinstance(history, dict) else history
-    day = (entries[-1]["day"] + 1) if entries else 1
-    recipe, relaxed = recipe_generator.generate(entries, day, seed, mode=a.mode, arena=a.arena, goal=a.goal)
+    history = _load("episode_history.json", {"entries": []})
+    entries = list(history.get("entries", []) if isinstance(history, dict) else history)
+    hof = _load("hall_of_fame.json", {"seasons": []})
+
+    race_override = a.race or a.episode
+    if a.dry_run and (a.season is not None or race_override is not None):
+        s_num = max(1, int(a.season or 1))
+        r_num = max(1, min(league.SEASON_LEN, int(race_override or 1)))
+        season_state = league.mock_season_state(s_num, r_num, seed=seed)
+    else:
+        season_state = league.load_season_state(STATE)
+        if a.season is not None:
+            season_state["season_number"] = max(1, int(a.season))
+            season_state["theme"] = for_season(season_state["season_number"]).key
+        if race_override is not None:
+            season_state["race_number"] = max(1, min(league.SEASON_LEN, int(race_override)))
+
+    season_num = int(season_state["season_number"])
+    race_num = int(season_state["race_number"])
+    day = int(season_state.get("total_day") or ((entries[-1]["day"] + 1) if entries else 1))
+
+    heroes, extras, is_grand_final = league.select_cast_for_race(season_state, rng)
+    recipe, relaxed = recipe_generator.generate(
+        entries,
+        day,
+        seed,
+        mode=a.mode,
+        arena=a.arena,
+        goal=a.goal,
+        season_theme=for_season(season_num).key,
+    )
     if a.hazards:
         recipe.hazards = sorted(a.hazards.split(","))
     if a.twist:
@@ -125,34 +168,110 @@ def main(argv: list[str] | None = None) -> int:
         recipe.theme = a.theme
     if a.flash_forward != "auto":
         recipe.flash_forward = a.flash_forward == "on"
-    recipe.episode_kind = "rumble_final" if a.kind == "rumble" else "spotlight"
-    heroes, extras = pick_cast(a.kind, rng)
-    print(f"recipe: {recipe.mode} {recipe.arena} / {recipe.goal} / {recipe.hazards} / twist={recipe.twist} / "
-          f"{recipe.theme} two_stage={recipe.two_stage} flash={recipe.flash_forward} relaxed={relaxed}")
-    print(f"cast: {[h.key for h in heroes]} + {len(extras)} extras")
-    trace, best, report = simulate_best(recipe, heroes, extras, seed)
-    print(f"best: seed={trace.meta['seed']} score={best.total:+.0f} {best.parts} winner={trace.meta['winner']}")
+    recipe.finale = is_grand_final
+    recipe.episode_kind = "rumble_final" if is_grand_final else "spotlight"
+
+    recent_winners = [e.get("winner") for e in entries[-6:] if isinstance(e, dict) and e.get("winner")]
+    sim_hist = {"recent_winners": recent_winners}
+
+    print(
+        f"season: S{season_num} Race {race_num}/30 ({league.stage_for_race(race_num)}) | "
+        f"theme={recipe.theme} finale={recipe.finale}"
+    )
+    print(
+        f"recipe: {recipe.mode} {recipe.arena} / {recipe.goal} / {recipe.hazards} / "
+        f"twist={recipe.twist} relaxed={relaxed}"
+    )
+    print(f"cast ({len(heroes)}H+{len(extras)}D): {[h.key for h in heroes]} + {'GOLDEN' if is_grand_final else 'std'} dummies")
+
+    trace, best, report = simulate_best(recipe, heroes, extras, seed, history=sim_hist)
+    outcome, next_state, next_hof = league.evaluate_and_advance(
+        season_state, trace, hall_of_fame=hof, mutate=not a.dry_run
+    )
+    print(
+        f"best: seed={trace.meta['seed']} score={best.total:+.0f} winner={outcome.winner_key} "
+        f"leader={outcome.leader_key}({outcome.leader_pts}pts) lead_changed={outcome.lead_changed}"
+    )
+
+    league_ctx = {
+        "season_number": outcome.season_number,
+        "episode_number": outcome.race_number,
+        "stage": outcome.stage,
+        "current_leader": outcome.leader_key,
+        "current_leader_name": outcome.leader_name,
+        "points_gap": outcome.points_gap,
+        "races_remaining": outcome.races_remaining,
+        "lead_changed": outcome.lead_changed,
+    }
+
+    if not a.dry_run:
+        entry = recipe_generator.history_entry(recipe, day)
+        entry.update({
+            "season": outcome.season_number,
+            "race": outcome.race_number,
+            "stage": outcome.stage,
+            "winner": outcome.winner_key,
+        })
+        entries.append(entry)
+        league.save_all_state(next_state, next_hof, entries, state_dir=STATE)
+        if a.commit_state:
+            ok = league.git_commit_state_safe(
+                f"chore(league): S{outcome.season_number} R{outcome.race_number}/30 ({outcome.winner_key} wins)",
+                ROOT,
+            )
+            print(f"git_commit_state_safe: {ok}")
 
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    summary = {"recipe": recipe.to_dict(), "cast": [h.key for h in heroes], "extras": len(extras),
-               "best_seed": trace.meta["seed"], "score": best.total, "score_parts": best.parts,
-               "winner": trace.meta["winner"], "resolved_at": trace.meta["resolved_at"], "candidates": report}
+    summary = {
+        "season": outcome.season_number,
+        "race": outcome.race_number,
+        "stage": outcome.stage,
+        "ribbon": outcome.ribbon_text,
+        "recipe": recipe.to_dict(),
+        "cast": [h.key for h in heroes],
+        "extras": len(extras),
+        "golden_extras": is_grand_final,
+        "best_seed": trace.meta["seed"],
+        "score": best.total,
+        "score_parts": best.parts,
+        "winner": outcome.winner_key,
+        "leader": outcome.leader_key,
+        "leader_pts": outcome.leader_pts,
+        "top3": outcome.top3,
+        "ko_bonus": outcome.ko_bonus_key,
+        "lead_changed": outcome.lead_changed,
+        "resolved_at": trace.meta["resolved_at"],
+        "candidates": report,
+    }
     if not a.no_render:
-        from src.rendering import pipeline   # pygame import is deferred so simulation-only runs need no SDL
+        from src.rendering import pipeline
 
-        num = a.episode or day
-        label = f"EP. {num} - {'SUNDAY RUMBLE' if a.kind == 'rumble' else recipe.label()}"
-        ep = pipeline.Episode(trace, label, prompt=comment_prompt(heroes, trace.meta["winner"], rng),
-                              flash_event=flash_event(trace))
+        arena_short = recipe.arena.replace("_", " ").upper()
+        ep_label = league.header_label(outcome.season_number, outcome.race_number, arena_short)
+        ep = pipeline.Episode(
+            trace,
+            ep_label,
+            season_line=outcome.winner_points_pill,
+            prompt=comment_prompt(list(HEROES), outcome.winner_key, rng),
+            flash_event=flash_event(trace),
+            outcome=outcome,
+            league_ctx=league_ctx,
+        )
         t0 = time.time()
         info = pipeline.encode(ep, out, stills=a.stills, sound=not a.no_audio)
         info["render_s"] = round(time.time() - t0, 1)
         print(f"rendered {out} frames={info['frames']} duration={info['duration']:.1f}s in {info['render_s']}s")
         if info.get("sound"):
             print(f"sound: {info['sound']}")
-        summary.update(video=str(out), duration=info["duration"], frames=info["frames"], render_s=info["render_s"],
-                       sound=info.get("sound"))
+        summary.update(
+            video=str(out),
+            duration=info["duration"],
+            frames=info["frames"],
+            render_s=info["render_s"],
+            prompt_cta=ep.prompt,
+            sound=info.get("sound"),
+        )
     out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
     return 0
 

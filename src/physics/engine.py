@@ -148,12 +148,20 @@ class Sim:
         self.twist = twists.make(recipe.twist, self) if recipe.twist else None
         self._collisions()
         self.trace = T.Trace(FPS, self.mode, [c.key for c in self.contestants])
-        self.trace.meta.update(recipe=recipe.to_dict(), statics=self.statics,
-                               props=[{"shapes": p.shapes, "style": p.style} for p in self.props],
-                               bounds=self.bounds, finish_x=self.finish_x, kill_y=self.kill_y,
-                               heroes=[c.key for c in self.contestants if c.is_hero],
-                               extras={c.key: {"number": c.extra.number, "colour": c.extra.colour, "cult": c.extra.cult}
-                                       for c in self.contestants if c.extra})
+        self.trace.meta.update(
+            recipe=recipe.to_dict(),
+            statics=self.statics,
+            props=[{"shapes": p.shapes, "style": p.style} for p in self.props],
+            bounds=self.bounds,
+            finish_x=self.finish_x,
+            kill_y=self.kill_y,
+            vertical_tower=bool(getattr(self.arena, "vertical_tower", False)),
+            heroes=[c.key for c in self.contestants if c.is_hero],
+            extras={
+                c.key: {"number": c.extra.number, "colour": c.extra.colour, "cult": c.extra.cult, "golden": c.extra.golden}
+                for c in self.contestants if c.extra
+            },
+        )
 
     # ------------------------------------------------------------------ world API (used by arenas/hazards)
     def _apply_gravity(self) -> None:
@@ -554,7 +562,7 @@ class Sim:
                 self._start_overtime(banner)
             else:
                 self.event("escalation", [], None, mult=mult, banner=banner)
-        if not self.overtime and self.t > 3.0 and len(self.alive()) <= self.cfg["overtime"]["survivors"]:
+        if not self.overtime and self.t > 15.8 and len(self.alive()) <= self.cfg["overtime"]["survivors"]:
             self.escalation_idx = len(esc) - 1
             _, mult, banner = esc[-1]
             self.speed_mult = mult
@@ -604,38 +612,40 @@ class Sim:
                         c.body.apply_impulse_at_world_point((math.cos(a) * 240 * c.body.mass, math.sin(a) * 240 * c.body.mass),
                                                             c.body.position)
                     else:
-                        c.body.apply_impulse_at_world_point((260 * c.body.mass, -320 * c.body.mass), c.body.position)
+                        dx_hop = self.arena.drive_dir(c) if hasattr(self.arena, "drive_dir") else 1.0
+                        c.body.apply_impulse_at_world_point((260 * dx_hop * c.body.mass, -320 * c.body.mass), c.body.position)
                     c.last_unstick_t = self.t
-            # eliminations
+            # eliminations (v4.0: trigger on exact visual contact with pit trench or leading flame edge)
+            vert_tower = bool(getattr(self.arena, "vertical_tower", False))
             if self.mode == SIDE:
                 floor = self.arena.floor_y(x) if hasattr(self.arena, "floor_y") else None
                 if y > self.kill_y or (floor is not None and y > floor + self.cfg["fall_kill_depth"]):
                     self.eliminate(c, "fell")
-                elif self.finish_x is not None and c.pos[0] < self.chase_x:
-                    self.eliminate(c, "left_behind")       # v3.3: only the visible fire wall torches stragglers
+                elif not vert_tower and self.finish_x is not None and (c.pos[0] - c.radius) <= self.chase_x + 22.0:
+                    self.eliminate(c, "left_behind")
             elif self.walkable is not None and not self.walkable(x / self.edge_k, y / self.edge_k):
                 self.eliminate(c, "fell")
             c.contacts = [k for k in c.contacts if self.t - k[0] < 1.5]
         self._pacing()
         alive = self.alive()
-        if self.mode == SIDE and alive:
+        vert_tower = bool(getattr(self.arena, "vertical_tower", False))
+        if self.mode == SIDE and alive and not vert_tower:
             from src.physics.cluster import cluster_center
             hx = [c.pos[0] for c in alive if c.is_hero] or [c.pos[0] for c in alive]
             target = cluster_center(hx, settings()["render"]["cluster_window_px"])
-            self.cam_x += (target - self.cam_x) * min(1.0, dt * 2.5)        # mirrors the action-cluster camera
-        if self.mode == SIDE and self.finish_x is not None and self.t > 3.0:
-            # paced so the collapse reaches the finish around the forced-resolution time (faster when behind schedule)
+            self.cam_x += (target - self.cam_x) * min(1.0, dt * 2.5)
+        if self.mode == SIDE and self.finish_x is not None and self.t > 3.0 and not vert_tower:
             esc_units = sum(TIMELINE.speed_at(3.0 + i * 0.1) * 0.1 for i in range(int((self.cfg["pacing"]["chase_finish_s"] - 3.0) * 10)))
             k = min(self.cfg["pacing"]["chase_max"], max(self.cfg["pacing"]["chase_min"], self.pressure))
             self.chase_x += (self.finish_x / esc_units) * self.speed_mult * k * dt
-            if self.overtime:       # the floor collapses right behind the last-place survivor
+            if self.overtime:
                 alive_x = [c.pos[0] for c in alive]
                 if alive_x:
                     target_w = min(alive_x) - 120
                     self.chase_x = max(self.chase_x, self.chase_x + (target_w - self.chase_x) * min(1.0, dt * 1.6))
-            # v3.3 rubber band: never more than wall_lag_px behind the action cluster (eased so it visibly surges)
             n_heroes = sum(1 for c in alive if c.is_hero)
-            lag = float(self.cfg["wall_lag_px"]) * (1.35 if n_heroes <= 4 else 1.0)
+            lag_mult = 1.65 if len(self.contestants) <= 10 else (1.35 if n_heroes <= 4 else 1.0)
+            lag = float(self.cfg["wall_lag_px"]) * lag_mult
             lag_floor = self.cam_x - lag
             if self.t > 6.0 and self.chase_x < lag_floor:
                 self.chase_x += (lag_floor - self.chase_x) * min(1.0, dt * 1.2)

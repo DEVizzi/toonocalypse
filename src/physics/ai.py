@@ -97,8 +97,8 @@ class Brain:
     def _side(self, sim: Sim, c: Contestant) -> None:
         bh = c.behaviour
         x, y = c.pos
-        dirx = 1.0
-        goal_dir = sim.goal.direction(c) if hasattr(sim.goal, "direction") else None
+        dirx = sim.arena.drive_dir(c) if hasattr(sim.arena, "drive_dir") else 1.0
+        goal_dir = sim.goal.direction(c) if (hasattr(sim.goal, "direction") and not hasattr(sim.arena, "drive_dir")) else None
         if goal_dir is not None:
             dirx = goal_dir
         if self.reversed(sim, c):

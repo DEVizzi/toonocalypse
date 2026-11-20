@@ -92,14 +92,17 @@ class Extra:
     elasticity: float = 0.60
     behaviour: Behaviour = field(default_factory=lambda: Behaviour(0.2, 0.2, 0.25, 0.25))
     cult: bool = False
+    golden: bool = False
 
     @property
     def key(self) -> str:
         return f"extra{self.number}"
 
 
-def make_extras(n: int, rng: random.Random, cult_numbers: set[int] | None = None) -> list[Extra]:
+def make_extras(n: int, rng: random.Random, cult_numbers: set[int] | None = None, golden: bool = False) -> list[Extra]:
     cult_numbers = cult_numbers or set()
-    return [Extra(i, behaviour=Behaviour(rng.uniform(0.05, 0.3), rng.uniform(0.0, 0.3), rng.uniform(0.1, 0.35),
-                                         rng.uniform(0.0, 0.3)), max_speed=rng.uniform(200, 250), cult=i in cult_numbers)
+    col = "#FFD43B" if golden else "#D5D9DE"
+    return [Extra(i, colour=col, behaviour=Behaviour(rng.uniform(0.05, 0.3), rng.uniform(0.0, 0.3), rng.uniform(0.1, 0.35),
+                                                     rng.uniform(0.0, 0.3)), max_speed=rng.uniform(200, 250),
+                  cult=i in cult_numbers, golden=golden)
             for i in range(1, n + 1)]
