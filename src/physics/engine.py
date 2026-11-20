@@ -59,6 +59,12 @@ class Contestant:
     fan_favorite: bool = False
     drive: tuple[float, float] = (0.0, 0.0)   # force re-applied on every substep (pymunk resets forces per step)
     panic_until: float = -9.0   # extras freeze in cartoon panic at drops and hazards
+    drive_torque: float = 0.0   # SIDE rolling torque re-applied every substep
+    traction: float = 1.0       # 0..1.3 from surface friction: scales grip-limited propulsion
+    prop_mult: float = 1.0      # crash dummies push at 0.72x
+    phase: str = ""             # Glitch: FEATHER | LEAD
+    phase_t: float = 0.0
+    last_land_t: float = -9.0
 
     @property
     def is_hero(self) -> bool:
@@ -126,6 +132,7 @@ class Sim:
         self.edge_k = 1.0               # TOP: escalation shrinks every arena's walkable edge (§4 "arena shrinks")
         self.pressure = 1.0             # Lord Tuno's pacing pressure: >1 when more contestants remain than the schedule
         self.hazard_mult = 1.0          # hazards escalate harder than racers (speed_mult ** hazard_escalation_exp)
+        self.overtime = False           # OVERTIME CHAOS: <= 3 survivors or the overtime escalation time
         self.cam_x = 0.0
         self.fan_favorite = fan_favorite
         self.arena = arenas.build(self)
@@ -235,7 +242,8 @@ class Sim:
                 c.fan_favorite = True
 
     def _velocity_func(self, c_ref: list[Contestant]) -> Callable:
-        clamp = self.cfg["velocity_clamp"]
+        clamp, wmax = self.cfg["velocity_clamp"], self.cfg["angular_clamp"]
+        drag = self.cfg["floater_air_drag"]
 
         def f(body, gravity, damping, dt):
             c = c_ref[0]
@@ -243,53 +251,76 @@ class Sim:
             if c.hero is not None and c.hero.gravity_mult != 1.0:
                 g = (gravity[0] * c.hero.gravity_mult, gravity[1] * c.hero.gravity_mult)
             pymunk.Body.update_velocity(body, g, damping, dt)
+            if c.hero is not None and c.hero.trait == "glide" and not c.grounded and self.mode == SIDE:
+                body.velocity = body.velocity * max(0.0, 1.0 - drag * dt)       # beach ball: high air drag
             v = body.velocity
             sp = v.length
             if sp > clamp:
                 body.velocity = v * (clamp / sp)
+            if abs(body.angular_velocity) > wmax:
+                body.angular_velocity = math.copysign(wmax, body.angular_velocity)
         return f
 
-    def _make_body(self, mass: float, shape_fn, pos, angle_locked: bool):
-        moment = pymunk.moment_for_circle(mass, 0, 20) * (40.0 if angle_locked else 1.0)
-        body = pymunk.Body(mass, moment)
+    def _hero_shape(self, h: Hero, body: pymunk.Body) -> pymunk.Shape:
+        w, hh = h.size
+        if h.shape in ("circle", "cloud"):
+            return pymunk.Circle(body, w)
+        if h.shape == "oval":       # rounded puck: beveled 10-gon ellipse
+            pts = [(math.cos(a) * (w - 5), math.sin(a) * (hh - 5)) for a in np.linspace(0, 2 * math.pi, 10, endpoint=False)]
+            return pymunk.Poly(body, pts, radius=5)
+        if h.shape == "square":     # heavy bevel so the cube tumbles and rolls
+            return pymunk.Poly.create_box(body, (2 * (w - 10), 2 * (hh - 10)), radius=10)
+        n = 6 if h.shape == "hexagon" else 8
+        return pymunk.Poly(body, [(math.cos(2 * math.pi * i / n) * (w - 5), math.sin(2 * math.pi * i / n) * (w - 5))
+                                  for i in range(n)], radius=5)
+
+    def _moment(self, shape: pymunk.Shape, mass: float) -> float:
+        """True moment of inertia for the actual shape (never infinite: everything rolls and tumbles)."""
+        if isinstance(shape, pymunk.Circle):
+            return pymunk.moment_for_circle(mass, 0, shape.radius)
+        return pymunk.moment_for_poly(mass, shape.get_vertices(), radius=shape.radius)
+
+    def _make_contestant(self, key: str, hero: Hero | None, extra: Extra | None, pos) -> Contestant:
+        body = pymunk.Body(1.0, 1.0)
         body.position = pos
-        shape = shape_fn(body)
+        if hero is not None:
+            shape = self._hero_shape(hero, body)
+            mass = hero.mass
+            fr, el, radius, vmax, bh = hero.friction, hero.elasticity, hero.radius, hero.max_speed, hero.behaviour
+        else:
+            assert extra is not None
+            shape = pymunk.Circle(body, extra.radius)
+            mass = extra.mass
+            fr, el, radius, vmax, bh = extra.friction, extra.elasticity, extra.radius, extra.max_speed, extra.behaviour
+        body.mass, body.moment = mass, self._moment(shape, mass)
+        shape.friction, shape.elasticity = fr, el
+        shape.collision_type = CT_BODY
         self.space.add(body, shape)
-        return body, shape
+        c = Contestant(key, hero, extra, body, shape, radius, self.eff_speed(vmax), bh, anchor_pos=pos)
+        c.prop_mult = 1.0 if hero is not None else self.cfg["dummy_propulsion"]
+        body.velocity_func = self._velocity_func([c])
+        shape.contestant = c  # type: ignore[attr-defined]
+        if hero is not None and hero.trait == "glitch":
+            self._glitch_phase(c, "LEAD" if self.rng.random() < 0.5 else "FEATHER", event=False)
+        return c
 
     def _make_hero(self, h: Hero, pos) -> Contestant:
-        w, hh = h.size
-
-        def shape_fn(body):
-            if h.shape in ("circle", "cloud"):
-                return pymunk.Circle(body, w)
-            if h.shape == "oval":   # approximate the oval with a beveled octagon
-                pts = [(math.cos(a) * (w - 4), math.sin(a) * (hh - 4)) for a in np.linspace(0, 2 * math.pi, 8, endpoint=False)]
-                return pymunk.Poly(body, pts, radius=4)
-            if h.shape == "square":
-                return pymunk.Poly.create_box(body, (w - 16, hh - 16), radius=8)
-            n = 6 if h.shape == "hexagon" else 8
-            pts = [(math.cos(2 * math.pi * i / n + math.pi / n) * (w - 8), math.sin(2 * math.pi * i / n + math.pi / n) * (w - 8))
-                   for i in range(n)]
-            return pymunk.Poly(body, pts, radius=8)
-
-        mass = h.mass if not h.mass_range else self.rng.uniform(*h.mass_range)
-        body, shape = self._make_body(mass, shape_fn, pos, angle_locked=True)
-        shape.friction, shape.elasticity = h.friction, h.elasticity
-        shape.collision_type = CT_BODY
-        c = Contestant(h.key, h, None, body, shape, h.radius, self.eff_speed(h.max_speed), h.behaviour, anchor_pos=pos)
-        body.velocity_func = self._velocity_func([c])
-        shape.contestant = c  # type: ignore[attr-defined]
-        return c
+        return self._make_contestant(h.key, h, None, pos)
 
     def _make_extra(self, e: Extra, pos) -> Contestant:
-        body, shape = self._make_body(e.mass, lambda b: pymunk.Circle(b, e.radius), pos, angle_locked=True)
-        shape.friction, shape.elasticity = e.friction, e.elasticity
-        shape.collision_type = CT_BODY
-        c = Contestant(e.key, None, e, body, shape, e.radius, self.eff_speed(e.max_speed), e.behaviour, anchor_pos=pos)
-        body.velocity_func = self._velocity_func([c])
-        shape.contestant = c  # type: ignore[attr-defined]
-        return c
+        return self._make_contestant(e.key, None, e, pos)
+
+    def _glitch_phase(self, c: Contestant, phase: str, event: bool = True) -> None:
+        """Glitch phase-shift: FEATHER (tiny mass, hyper-bounce) <-> LEAD (heavy, dead thud) + erratic micro-impulse."""
+        lo, hi = c.hero.mass_range or (0.6, 4.0)  # type: ignore[union-attr]
+        mass, el = (lo, 0.98) if phase == "FEATHER" else (hi, 0.30)
+        c.body.mass, c.body.moment = mass, self._moment(c.shape, mass)
+        c.shape.elasticity = el
+        c.phase, c.phase_t = phase, self.t
+        if event:
+            a = self.rng.uniform(0, 2 * math.pi)
+            c.body.apply_impulse_at_world_point((math.cos(a) * 90 * mass, math.sin(a) * 90 * mass), c.body.position)
+            self.event("glitch", [c.key], c.pos, effect=phase.lower())
 
     def eff_speed(self, stat: float) -> float:
         c, k = self.cfg["speed_centre"], self.cfg["speed_spread"]
@@ -335,27 +366,48 @@ class Sim:
             if c:
                 imp = arb.total_impulse.length
                 self._impact(c, imp, None)
+                if (c.hero and c.hero.trait == "bowling" and imp / c.body.mass > 160 and self.mode == SIDE
+                        and self.t - c.last_land_t > 0.6):
+                    c.last_land_t = self.t
+                    self.event("heavy_land", [c.key], c.pos)
                 if c.hero and c.hero.trait == "no_brakes" and imp > 260 * c.body.mass and abs(arb.normal.x) > 0.7:
                     self.trait(c, "wall_slam")
 
         def begin_bouncy(arb: pymunk.Arbiter, space, data):
             pass
 
+        def boing(arb: pymunk.Arbiter, space, data):
+            # Boing, the perpetual pinball: every collision faster than 180 px/s rebounds at 1.06x (capped)
+            for s in arb.shapes:
+                c = getattr(s, "contestant", None)
+                if c and c.hero and c.hero.trait == "auto_hop" and arb.is_first_contact:
+                    v = c.body.velocity
+                    if v.length > 180:
+                        n = arb.normal if s is arb.shapes[0] else -arb.normal
+                        boost = min(1100.0, v.length * 1.06) - v.length
+                        c.body.apply_impulse_at_world_point((-n.x * boost * c.body.mass * 0.5, -n.y * boost * c.body.mass * 0.5),
+                                                            c.body.position)
+                        c.squash = 1.0
+
+        for ct in (CT_BODY, CT_GROUND, CT_HAZARD, CT_BOUNCY):
+            self.space.on_collision(CT_BODY, ct, post_solve=boing)
         self.space.on_collision(CT_BODY, CT_BODY, post_solve=post_body_body)
         self.space.on_collision(CT_BODY, CT_GROUND, post_solve=post_body_world)
         self.space.on_collision(CT_BODY, CT_HAZARD, post_solve=post_body_world)
         self.space.on_collision(CT_BODY, CT_BOUNCY, post_solve=post_body_world)
 
     def _impact(self, c: Contestant, impulse: float, other: Contestant | None) -> None:
-        per_mass = impulse / max(0.5, c.body.mass)
+        per_mass = impulse / max(0.3, c.body.mass)
         if per_mass > 120:
             c.squash = max(c.squash, min(1.0, per_mass / 400))
         thr = self.cfg["stun_threshold"]
         if per_mass > thr and c.stun <= 0:
+            # knocked: propulsion cut for 0.35-0.75 s scaled by the hit, pure ballistics/spin take over
+            lo, hi = self.cfg["stun_range"]
             mult = c.hero.stun_mult if c.hero else 1.0
-            c.stun = self.cfg["stun_s"] * mult
-        if c.hero and c.hero.trait == "glitch" and per_mass > thr * 0.8:
-            c.trait_cd = 0.0  # strong impact triggers a glitch next frame
+            c.stun = (lo + (hi - lo) * min(1.0, (per_mass - thr) / (2.5 * thr))) * max(0.4, mult)
+        if c.hero and c.hero.trait == "glitch" and per_mass > thr * 0.8 and self.t - c.phase_t > 0.4:
+            self._glitch_phase(c, "FEATHER" if c.phase == "LEAD" else "LEAD")
 
     def trait(self, c: Contestant, name: str, **data) -> None:
         last = [e for e in self.events if e.kind == "trait" and e.actors[0] == c.key and e.data.get("name") == name]
@@ -418,8 +470,12 @@ class Sim:
 
     def _apply_drives(self) -> None:
         for c in self.contestants:
-            if c.alive and (c.drive[0] or c.drive[1]):
+            if not c.alive:
+                continue
+            if c.drive[0] or c.drive[1]:
                 c.body.apply_force_at_world_point(c.drive, c.body.position)
+            if c.drive_torque:
+                c.body.torque += c.drive_torque
 
     def push(self, c: Contestant, fx: float, fy: float) -> None:
         """Add a continuous force for the current frame (applied on every substep)."""
@@ -444,7 +500,23 @@ class Sim:
             _, mult, banner = esc[self.escalation_idx]
             self.speed_mult = mult
             self.hazard_mult = mult ** self.cfg["hazard_escalation_exp"]
-            self.event("escalation", [], None, mult=mult, banner=banner)
+            if self.escalation_idx == len(esc) - 1:
+                self._start_overtime(banner)
+            else:
+                self.event("escalation", [], None, mult=mult, banner=banner)
+        if not self.overtime and self.t > 3.0 and len(self.alive()) <= self.cfg["overtime"]["survivors"]:
+            self.escalation_idx = len(esc) - 1
+            _, mult, banner = esc[-1]
+            self.speed_mult = mult
+            self._start_overtime(banner)
+
+    def _start_overtime(self, banner: str) -> None:
+        """OVERTIME CHAOS: hazards at double speed, the floor collapses behind the last place / the arena shrinks hard."""
+        if self.overtime:
+            return
+        self.overtime = True
+        self.hazard_mult = self.cfg["overtime"]["hazard_mult"]
+        self.event("escalation", [], None, mult=self.speed_mult, banner=banner or "OVERTIME CHAOS!", overtime=True)
 
     def _post_frame(self, dt: float) -> None:
         tl = TIMELINE
@@ -459,6 +531,9 @@ class Sim:
                 if c.stun <= 0:
                     c.last_stun_end = self.t
             x, y = c.pos
+            if c.hero is not None and c.hero.trait == "glitch" and self.t - c.phase_t >= self.cfg["glitch_period_s"]:
+                self._glitch_phase(c, "FEATHER" if c.phase == "LEAD" else "LEAD")
+            c.traction = min(1.3, max(0.03, c.shape.friction / 0.8))
             # anti-stuck: living, unstunned body moving < 18 px over 1.5 s gets an unstick hop
             if self.t - c.anchor_t >= self.cfg["unstick_window_s"]:
                 moved = math.hypot(x - c.anchor_pos[0], y - c.anchor_pos[1])
@@ -473,7 +548,8 @@ class Sim:
                 c.anchor_pos, c.anchor_t = (x, y), self.t
             # eliminations
             if self.mode == SIDE:
-                if y > self.kill_y:
+                floor = self.arena.floor_y(x) if hasattr(self.arena, "floor_y") else None
+                if y > self.kill_y or (floor is not None and y > floor + self.cfg["fall_kill_depth"]):
                     self.eliminate(c, "fell")
                 elif self.finish_x is not None and (c.pos[0] < self.cam_x - self.view_w * self._behind_k()
                                                     or c.pos[0] < self.chase_x):
@@ -487,10 +563,18 @@ class Sim:
             esc_units = sum(TIMELINE.speed_at(3.0 + i * 0.1) * 0.1 for i in range(int((self.cfg["pacing"]["chase_finish_s"] - 3.0) * 10)))
             k = min(self.cfg["pacing"]["chase_max"], max(self.cfg["pacing"]["chase_min"], self.pressure))
             self.chase_x += (self.finish_x / esc_units) * self.speed_mult * k * dt
+            if self.overtime:       # the floor collapses right behind the last-place survivor
+                alive_x = [c.pos[0] for c in self.alive()]
+                if alive_x:
+                    target = min(alive_x) - 120
+                    self.chase_x = max(self.chase_x, self.chase_x + (target - self.chase_x) * min(1.0, dt * 1.6))
             self.zones["chase_x"] = self.chase_x
         pc = self.cfg["pacing"]
         if self.mode != SIDE and self.t > pc["shrink_start_s"]:
-            self.edge_k = max(pc["edge_k_min"], self.edge_k - pc["shrink_rate"] * self.speed_mult * self.pressure * dt)
+            rate = pc["shrink_rate"] * self.speed_mult * max(self.pressure, 0.6 if self.overtime else 0.0)
+            if self.overtime:
+                rate *= self.cfg["overtime"]["shrink_mult"]
+            self.edge_k = max(pc["edge_k_min"], self.edge_k - rate * dt)
             self.zones["edge_k"] = round(self.edge_k, 4)
         # leader + camera proxy for LEFT BEHIND (mirrors camera framing: leading 40% of surviving heroes)
         alive = self.alive()
@@ -543,13 +627,14 @@ class Sim:
 
     def _record(self) -> None:
         n = len(self.contestants)
-        rows = np.zeros((n, 6), np.float32)
+        rows = np.zeros((n, 7), np.float32)
         flags = np.zeros(n, np.uint8)
         expr = np.zeros(n, np.uint8)
         for i, c in enumerate(self.contestants):
             if c.alive:
                 b = c.body
-                rows[i] = (b.position.x, b.position.y, math.degrees(b.angle), b.velocity.x, b.velocity.y, c.squash)
+                rows[i] = (b.position.x, b.position.y, math.degrees(b.angle), b.velocity.x, b.velocity.y, c.squash,
+                           b.angular_velocity)
                 f = T.ALIVE
                 if c.stun > 0:
                     f |= T.STUNNED
@@ -557,8 +642,9 @@ class Sim:
                     f |= T.AIRBORNE
             else:
                 ex, ey = c.elim_pos or (0, 0)
-                rows[i] = (ex, ey, 0, 0, 0, max(0.0, min(1.0, c.fall_t / 0.5)) if c.fall_t >= 0 else 0)
-                f = T.FALLING if 0 <= c.fall_t < 0.5 else 0
+                fall = self.cfg["top_fall_s"]
+                rows[i] = (ex, ey, math.degrees(c.body.angle), 0, 0, max(0.0, min(1.0, c.fall_t / fall)) if c.fall_t >= 0 else 0, 0)
+                f = T.FALLING if 0 <= c.fall_t < fall else 0
             if self.winner == c.key:
                 f |= T.WINNER | T.VICTORY
             if c.fan_favorite:

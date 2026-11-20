@@ -108,17 +108,55 @@ class Arena:
 class Course(Arena):
     """SIDE_VIEW course composer: sections laid left to right from a cursor."""
 
+    LEDGE_Y = -560.0      # v3.0: every side-view course starts on a high ledge above a steep launch chute
+
     def __init__(self, sim: "Sim") -> None:
         super().__init__(sim)
-        self.x, self.y = -20.0, 0.0
-        self.low, self.high = 0.0, 0.0
+        self.x, self.y = -20.0, self.LEDGE_Y
+        self.low, self.high = 0.0, self.LEDGE_Y
+        self.spans: list[tuple[float, float, float, float]] = []   # course floor profile incl. virtual pit spans
+
+    def span(self, x0: float, y0: float, x1: float, y1: float) -> None:
+        if x1 < x0:
+            x0, y0, x1, y1 = x1, y1, x0, y0
+        self.spans.append((x0, y0, x1, y1))
+
+    def floor_y(self, x: float) -> float | None:
+        """Lowest course surface (or pit line) at x. Falling well below it means the contestant fell off the course."""
+        best = None
+        for x0, y0, x1, y1 in self.spans:
+            if x0 <= x <= x1:
+                y = y0 + (y1 - y0) * ((x - x0) / (x1 - x0) if x1 > x0 else 0.0)
+                best = y if best is None else max(best, y)
+        return best
+
+    def spawn_points(self, n: int, rng) -> list[tuple[float, float]]:
+        cols, step = 4, 74
+        return [(70 + (i % cols) * step + rng.uniform(-5, 5), self.LEDGE_Y - 44 - (i // cols) * 78 + rng.uniform(-5, 5))
+                for i in range(n)]
 
     def seg(self, dx: float, dy: float = 0.0, material: str = "ground", **kw):
         a, b = (self.x, self.y), (self.x + dx, self.y + dy)
         s = self.ground(a, b, material, **kw)
+        self.span(a[0], a[1], b[0], b[1])
         self.x, self.y = b
         self.low, self.high = max(self.low, self.y), min(self.high, self.y)
         return s
+
+    def wave(self, length: float, amp: float = 45.0, drift: float = 30.0) -> None:
+        """Undulating ground (gentle net downhill) instead of dead-flat floors: balls visibly roll, crest and dip."""
+        r = self.sim.rng
+        n = max(2, int(length / 150))
+        for i in range(n):
+            dy = (amp if i % 2 else -amp) * r.uniform(0.5, 1.0) + drift / n
+            self.seg(length / n, dy)
+
+    def pegs(self, count: int, height: tuple[float, float] = (70, 130)) -> None:
+        """Pinball pegs/bumpers above the floor ahead of the cursor: balls ricochet off them."""
+        r = self.sim.rng
+        for i in range(count):
+            px = self.x + 60 + i * r.uniform(70, 110)
+            self.sim.static_circle((px, self.y - r.uniform(*height)), r.uniform(14, 20), "bumper")
 
     def count(self, key: str, lo: int, hi: int) -> int:
         """Section count, scaled so fast heroes need ~30 s of gameplay to reach the finish."""
@@ -131,6 +169,7 @@ class Course(Arena):
 
     def gap(self, w: float, dy: float = 0.0) -> None:
         self.pits.append((self.x, self.x + w))
+        self.span(self.x, self.y, self.x + w, self.y + dy)
         self.x += w
         self.y += dy
         self.low, self.high = max(self.low, self.y), min(self.high, self.y)
@@ -141,8 +180,14 @@ class Course(Arena):
         self.seg(w)
 
     def start(self) -> None:
-        self.seg(640)
-        self.add_gate(560)
+        """Spawn ledge -> gate -> steep launch chute -> short landing -> the first lethal gap within 300 px."""
+        r = self.sim.rng
+        self.seg(360)
+        self.add_gate(self.x - 30, top=self.LEDGE_Y - 420)
+        self.seg(380, 320)                       # steep chute (40 deg)
+        self.seg(220, 240)                       # flattening run-out
+        self.seg(r.uniform(90, 160), 0)
+        self.gap(r.uniform(110, 150))            # first blood: within ~300 px of the drop zone
 
     def finish(self, length: float = 700) -> None:
         self.seg(length)
@@ -171,7 +216,9 @@ class FlatTrack(Course):
             elif kind == "gap":
                 self.seg(r.uniform(200, 320))
                 self.gap(r.uniform(90, 150) * self.ramp(i, n))
-            self.seg(r.uniform(260, 460))
+            if r.random() < 0.45:
+                self.pegs(r.randint(2, 4))
+            self.wave(r.uniform(260, 460))
         self.finish(800)
 
 
@@ -186,6 +233,8 @@ class RampDescent(Course):
             self.seg(r.uniform(420, 620), r.uniform(150, 240))
             if i % 2 == 0:
                 self.block(r.uniform(30, 50), r.uniform(30, 45))
+            if r.random() < 0.5:
+                self.pegs(r.randint(2, 3), (60, 110))
             self.seg(r.uniform(120, 220))
             if r.random() < 0.4:
                 self.gap(r.uniform(80, 130) * self.ramp(i, n), r.uniform(20, 60))
@@ -213,17 +262,16 @@ class TieredTower(Course):
         r = self.sim.rng
         self.start()
         n = self.count("tiers", 13, 16)
-        for i in range(n):
+        for i in range(n):              # v3.0: a descending tower of drops, launch pads and gaps (balls can't climb)
             if i % 3 == 2:
                 self.seg(r.uniform(90, 130), material="bouncy")    # launch pad
-                self.gap(r.uniform(60, 110) * self.ramp(i, n), -r.uniform(150, 220))
+                self.gap(r.uniform(60, 110) * self.ramp(i, n), r.uniform(40, 90))
             else:
-                self.seg(r.uniform(260, 380))
-                self.sim.static_poly([(self.x, self.y), (self.x + 40, self.y), (self.x + 40, self.y - r.uniform(90, 140)),
-                                      (self.x, self.y - r.uniform(90, 140))], "wall")
-                self.y -= r.uniform(90, 140)
-                self.x += 40
-                self.high = min(self.high, self.y)
+                self.wave(r.uniform(260, 380), 30, 20)
+                drop = r.uniform(90, 150)
+                self.span(self.x, self.y, self.x + 1, self.y + drop)
+                self.y += drop                  # ledge drop onto the next tier
+                self.low = max(self.low, self.y)
         self.finish(700)
 
 
@@ -288,6 +336,7 @@ class SeesawGauntlet(Course):
             span = r.uniform(380, 520)
             px, py = self.x + span / 2, self.y + 10
             self.pits.append((self.x, self.x + span))
+            self.span(self.x, self.y, self.x + span, self.y)
             body = pymunk.Body(12.0, pymunk.moment_for_box(12.0, (span, 18)))
             body.position = (px, py)
             plank = pymunk.Poly.create_box(body, (span + 40, 18), radius=6)
@@ -320,6 +369,56 @@ class ConveyorChaos(Course):
         self.finish(700)
 
 
+class PachinkoDrop(Course):
+    """v3.0 diagonal drop: downhill shelves stacked like a staircase, peg fields at every drop, seesaws, spring pads
+    and lethal mid-shelf holes. Shows off material contrast (Boing ricochets, Floater drifts, Juggernaut ploughs)."""
+    key = "pachinko_drop"
+
+    def build(self):
+        r = self.sim.rng
+        self.start()
+        n = self.count("shelves", 9, 12)
+        for i in range(n):
+            length = r.uniform(320, 440)
+            kind = r.choice(["plain", "hole", "spring", "seesaw", "hole"])
+            if kind == "hole" and i > 0:
+                a = length * r.uniform(0.35, 0.55)
+                self.seg(a, a * 0.16)
+                self.gap(r.uniform(80, 120) * self.ramp(i, n), 14)
+                rest = length - a
+                self.seg(rest, rest * 0.16)
+            elif kind == "spring":
+                self.seg(length * 0.6, length * 0.1)
+                self.seg(110, 0, material="bouncy")
+                self.seg(length * 0.4 - 110, length * 0.06)
+            elif kind == "seesaw":
+                self.seg(length * 0.35, length * 0.06)
+                span = r.uniform(300, 380)
+                px, py = self.x + span / 2, self.y + 10
+                self.pits.append((self.x, self.x + span))
+                self.span(self.x, self.y, self.x + span, self.y)
+                body = pymunk.Body(10.0, pymunk.moment_for_box(10.0, (span, 18)))
+                body.position = (px, py)
+                self.sim.add_prop(body, [pymunk.Poly.create_box(body, (span + 40, 18), radius=6)], "seesaw", material="plank")
+                self.sim.space.add(pymunk.PivotJoint(self.sim.space.static_body, body, (px, py)),
+                                   pymunk.RotaryLimitJoint(self.sim.space.static_body, body, -0.45, 0.45))
+                self.sim.statics.append({"type": "pivot", "c": (px, py + 30)})
+                self.x += span
+                self.seg(length * 0.25, length * 0.04)
+            else:
+                self.seg(length, length * 0.18)
+            # the drop to the next shelf: a peg field to bounce through, the next shelf starts underneath
+            drop = r.uniform(200, 280)
+            for row in range(2):
+                for k in range(3 - row):
+                    self.sim.static_circle((self.x + 30 + k * 70 + row * 35, self.y + 70 + row * 75), r.uniform(13, 17), "bumper")
+            nx, ny = self.x - 70, self.y + drop
+            self.span(self.x, self.y, self.x + 1, ny)
+            self.x, self.y = nx, ny
+            self.low = max(self.low, self.y)
+        self.finish(700)
+
+
 # ---------------------------------------------------------------------- TOP_DOWN arenas
 class TopArena(Arena):
     def spawn_points(self, n: int, rng) -> list[tuple[float, float]]:
@@ -343,7 +442,7 @@ class RotatingDisc(TopArena):
     def build(self):
         r = self.sim.rng
         self.R = self.p.setdefault("radius", round(r.uniform(390, 450)))
-        self.omega = self.p.setdefault("omega", round(r.uniform(0.22, 0.42), 2)) * r.choice([-1, 1])
+        self.omega = self.p.setdefault("omega", round(r.uniform(0.55, 0.8), 2)) * r.choice([-1, 1])
         self.spawn_r = self.R * 0.68
         self.sim.walkable = lambda x, y: x * x + y * y < self.R * self.R
         body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
@@ -353,21 +452,37 @@ class RotatingDisc(TopArena):
         p = self.sim.add_prop(body, spokes, "disc_marks")
         for s in spokes:
             s.sensor = True
+        # radial pinball bumpers riding on the disc
+        nb = self.p.setdefault("disc_bumpers", r.randint(3, 4))
+        bumpers = [pymunk.Circle(body, 26, (math.cos(2 * math.pi * k / nb + 0.4) * self.R * 0.52,
+                                            math.sin(2 * math.pi * k / nb + 0.4) * self.R * 0.52)) for k in range(nb)]
+        self.sim.space.add(*bumpers)
+        for b in bumpers:
+            self.sim._material(b, "bumper")
+        p.shapes += [{"type": "circle", "c": tuple(b.offset), "r": b.radius, "bumper": True} for b in bumpers]
+        self.bumpers = [(b, pymunk.Vec2d(*b.offset)) for b in bumpers]
         self.sim.statics.append({"type": "disc", "c": (0, 0), "r": self.R})
         self.sim.hooks_step.append(self._carry)
         self.frame_top(self.R)
         del p
 
     def _carry(self, dt: float):
-        w = self.omega * self.sim.speed_mult
+        k_edge = self.sim.edge_k
+        w = (self.omega if self.sim.t >= 1.0 else self.omega * 0.3) * self.sim.speed_mult
         self.disc.angular_velocity = w
+        tw = getattr(self.sim, "twist", None)
+        k_all = k_edge * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)
+        for b, base in getattr(self, "bumpers", []):      # bumpers ride inward as the platform shrinks
+            b.unsafe_set_offset(base * k_all)
         for c in self.sim.alive():
             x, y = c.pos
             tv = pymunk.Vec2d(-y * w, x * w)          # tangential surface velocity at the rider
             dv = tv - c.body.velocity
-            # friction-like coupling to the disc surface (relative velocity is damped toward the surface velocity)
-            k = 5.0 * (0.3 if c.hero is not None and c.hero.trait == "glide" else 1.0)
+            # friction coupling scales with traction: Grumble clings, Dash skates off (Magneto +30% adherence)
+            grip = c.traction * (1.3 if c.hero is not None and c.hero.trait == "traction" else 1.0)
+            k = 4.0 * grip
             c.body.apply_force_at_world_point((dv.x * c.body.mass * k, dv.y * c.body.mass * k), c.body.position)
+            c.body.torque += (w - c.body.angular_velocity) * c.body.moment * 3.0 * grip   # riders spin with the disc
 
 
 class MazeCorridors(TopArena):
@@ -508,7 +623,8 @@ class BumperRing(TopArena):
 
 
 ARENA_CLASSES = {c.key: c for c in (FlatTrack, RampDescent, PitPlatforms, TieredTower, NarrowBridge, BouncyPadField,
-                                     SeesawGauntlet, ConveyorChaos, RotatingDisc, MazeCorridors, HexTileDrop, BumperRing)}
+                                     SeesawGauntlet, ConveyorChaos, PachinkoDrop, RotatingDisc, MazeCorridors, HexTileDrop,
+                                     BumperRing)}
 
 
 def build(sim: "Sim") -> Arena:

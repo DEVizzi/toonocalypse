@@ -12,7 +12,7 @@ from src.physics.engine import Sim
 def _empty_frames(arena: str, goal: str, seed: int) -> int:
     r, _ = recipe_generator.generate([], 1, seed, arena=arena, goal=goal)
     rng = random.Random(seed)
-    tr = Sim(r, rng.sample(list(HEROES), 6), make_extras(12, rng), seed).run()
+    tr = Sim(r, list(HEROES), make_extras(4, rng), seed).run()
     bad = 0
     for f, c in enumerate(track(tr)):
         alive = [i for i in range(len(tr.keys)) if tr.flags[f][i] & T.ALIVE]

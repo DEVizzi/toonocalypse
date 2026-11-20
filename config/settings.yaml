@@ -13,56 +13,66 @@ video:
   fps: 30
   crf: 20
   preset: "veryfast"
-  duration_min_s: 25
+  duration_min_s: 20
   duration_max_s: 50
 
 # §4 master episode timeline (single source of truth; read through src/config.TIMELINE)
-# OWNER OVERRIDE 2026-11-20: tighter pacing for Shorts/Reels retention -> total video 25-32 s
-# (spec v3.0 had gameplay 26-36 s, replay 2.2 s, card 2.5 s).
+# OWNER OVERRIDES 2026-11-20: tighter pacing for Shorts/Reels retention. v3.0 ball pass -> total video 20-28 s:
+# 0.8 s cold-open teaser + gameplay 16-24 s + 1.5 s replay + 1.6 s card + 0.4 s loop tail.
 timeline:
-  cold_open_s: 0.5
+  cold_open_s: 0.8              # teaser: slow-mo of the episode's cleanest big collision
   flash_forward_s: 1.0
   flash_forward_chance: 0.30
-  gameplay_target_min_s: 20
-  gameplay_target_max_s: 27
-  forced_resolution_s: 27
-  hard_stop_s: 29
-  escalation: [[0, 1.0, ""], [9, 1.3, "SPEED UP!"], [17, 1.65, "OVERTIME CHAOS!"]]
+  gameplay_target_min_s: 16
+  gameplay_target_max_s: 23
+  forced_resolution_s: 23
+  hard_stop_s: 24
+  escalation: [[0, 1.0, ""], [8, 1.3, "SPEED UP!"], [18, 1.65, "OVERTIME CHAOS!"]]
   replay_s: 1.5
   replay_speed: 0.3
   replay_source_s: 0.45
   replay_zoom: 1.35
-  winner_card_s: 3.0
+  winner_card_s: 1.6
   loop_tail_s: 0.4
   two_stage_chance: 0.30
-  two_stage_qualifier_s: 10
+  two_stage_qualifier_s: 8
   two_stage_survivors: 6
   two_stage_sting_s: 0.6
-  two_stage_final_s: 12
+  two_stage_final_s: 10
 
 # §8 safe zones (y ranges, 1080x1920)
 layout:
   top_sky: [0, 140]
   header: [140, 330]
   viewport: [330, 1650]
-  action_bias: [400, 1250]
+  action_bias: [440, 1340]
   captions: {y: [1240, 1440], x: [100, 940]}
   bottom_band: [1650, 1920]
   right_ui_column: {x_min: 960, y: [900, 1650]}
 
 cast:
-  spotlight_heroes: 6
-  extras_range: [10, 14]       # bots (owner decision: fewer, hero-sized)
+  spotlight_heroes: 10          # v3.0: all 10 heroes every episode
+  extras_range: [3, 5]          # crash dummies
   mega_heroes: 10
-  mega_extras: 16
-  extra_radius: 24
+  mega_extras: 5
+  extra_radius: 20
 
 physics:
   substeps: 6
   gravity_side: 980
   topdown_damping: 0.88
-  velocity_clamp: 1400
-  stun_threshold: 900
+  velocity_clamp: 1450
+  angular_clamp: 24          # rad/s
+  stun_range: [0.35, 0.75]   # propulsion cut after a knock, scaled by impulse
+  fall_kill_depth: 240       # SIDE: this far below the course floor profile = fell off
+  top_fall_s: 0.4
+  floater_air_drag: 0.9      # per second while airborne
+  dummy_propulsion: 0.72
+  glitch_period_s: 2.5
+  magneto_downforce: 0.3
+  magneto_tug: 160
+  overtime: {survivors: 3, hazard_mult: 2.0, shrink_mult: 4.0}
+  stun_threshold: 650
   stun_s: 0.55
   unstick_window_s: 1.5
   unstick_min_px: 18
@@ -71,7 +81,7 @@ physics:
   speed_centre: 255        # effective max speed = centre + (stat - centre) * spread (keeps §9.2 ordering)
   speed_spread: 0.45
   pacing:                   # schedule-driven arena pressure (see Sim._pacing)
-    schedule_end_s: 25
+    schedule_end_s: 20
     schedule_power: 1.3
     pressure_gain: 4.0
     pressure_max: 3.0
@@ -105,7 +115,8 @@ physics:
 render:
   side_zoom: 1.4          # camera zoom in SIDE_VIEW (bigger, chunkier characters)
   top_zoom: 1.0           # multiplier on the fit-to-arena zoom in TOP_DOWN
-  final3_zoom: 1.5        # extra zoom when 3 or fewer contestants survive (every mode)
+  final3_zoom: 1.45       # SIDE extra zoom when 3 or fewer contestants survive
+  top_zoom_max: 2.15      # TOP: zoom grows 1.0x -> 2.15x as the arena shrinks
 
 mode_mix: {SIDE_VIEW: 0.65, TOP_DOWN: 0.35}
 
@@ -113,6 +124,11 @@ scorer:
   seeds_per_batch: 8
   max_seeds: 16
   min_score: 30
+  dummy_win_penalty: -1000
+  reject_penalty: -200
+  first_blood_s: 3.5
+  dead_stretch_s: 5.0
+  major_impulse: 700
 
 season:
   length_days: 90

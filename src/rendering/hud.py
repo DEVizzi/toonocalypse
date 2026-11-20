@@ -120,11 +120,17 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
     pygame.draw.rect(frame, BLACK, shadow, border_radius=36)
     pygame.draw.rect(frame, (255, 248, 230), panel, border_radius=36)
     pygame.draw.rect(frame, BLACK, panel, 6, border_radius=36)
-    blit_text(frame, outlined("WINNER!", 96, fill=(255, 214, 0), width=8), center=(W / 2, panel.top + 80))
+    pop = 1.0 + 0.35 * math.exp(-t * 5) * math.cos(t * 18)          # springy winner bounce
+    blit_text(frame, pygame.transform.rotozoom(outlined("WINNER!", 96, fill=(255, 214, 0), width=8), 0, pop),
+              center=(W / 2, panel.top + 80))
     if hero is not None:
-        renderer.draw_hero(frame, hero, (W / 2, panel.top + 270), 0, (0, 0), "celebrating", "victory", t, zoom=2.4)
-    elif bot is not None:      # a bot won: draw it big, celebrating with arms up
-        renderer.draw_extra(frame, bot, (W / 2, panel.top + 290), 0, "neutral", zoom=2.4, limb_state="victory", t=t)
+        from src.rendering import balls
+        hop = abs(math.sin(t * 7)) * 26
+        balls.draw_ball(frame, hero, None, (W / 2, panel.top + 280 - hop), 0.0, 0.0, (0, 0), 0.0, "celebrating",
+                        "victory", t, 2.6 / max(0.6, hero.radius / 25) * pop, force_grin=True)
+    elif bot is not None:
+        from src.rendering import balls
+        balls.draw_ball(frame, None, bot, (W / 2, panel.top + 280), 0.0, 0.0, (0, 0), 0.0, "neutral", "victory", t, 2.8)
     else:
         pygame.draw.circle(frame, BLACK, (W / 2, panel.top + 270), 64)
         pygame.draw.circle(frame, colour, (W / 2, panel.top + 270), 58)

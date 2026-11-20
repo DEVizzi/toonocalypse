@@ -146,50 +146,55 @@ def _fit(surf: pygame.Surface, width: float) -> pygame.Surface:
     return pygame.transform.smoothscale(surf, (int(width), max(1, int(surf.get_height() * width / surf.get_width()))))
 
 
+def _icon(frame, h: Hero, c, rad: float, expr: str = "neutral") -> None:
+    from src.rendering import balls
+    balls.draw_ball(frame, h, None, c, 0.0, 0.0, (0, 0), 0.0, expr, "none", 0.0, rad / max(1.0, h.radius))
+
+
 def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[Hero], status: dict[str, str],
                ranks: dict[str, int], text_boxes: list, pulse: float = 0.0) -> None:
-    """Single-row status bar: SURVIVORS n/N + up to 6 hero chips (face, name, live rank). Sundays show the top 6."""
+    """Mobile-readable bar: SURVIVORS n/N + the top-5 live leaders as big icons with bold #1-#5 ranks (no names)."""
     plate = pygame.Surface(PANEL.size, pygame.SRCALPHA)
-    pygame.draw.rect(plate, (24, 26, 40, 215), plate.get_rect(), border_radius=26)
+    pygame.draw.rect(plate, (24, 26, 40, 220), plate.get_rect(), border_radius=26)
     pygame.draw.rect(plate, (255, 255, 255, 70), plate.get_rect(), 3, border_radius=26)
     frame.blit(plate, PANEL)
-    lab = font(24).render("SURVIVORS", True, WHITE)
-    r1 = frame.blit(lab, (PANEL.x + 22, PANEL.y + 12))
+    lab = font(26).render("SURVIVORS", True, WHITE)
+    r1 = frame.blit(lab, (PANEL.x + 22, PANEL.y + 10))
     k = 1.0 + 0.15 * pulse
-    num = font(int(52 * k)).render(f"{survivors}", True, (255, 74, 74))
-    tot = font(int(52 * k)).render(f"/{total}", True, WHITE)
-    r2 = frame.blit(num, (PANEL.x + 22, PANEL.y + 40))
-    r3 = frame.blit(tot, (r2.right + 4, PANEL.y + 40))
+    num = font(int(56 * k)).render(f"{survivors}", True, (255, 74, 74))
+    tot = font(int(56 * k)).render(f"/{total}", True, WHITE)
+    r2 = frame.blit(num, (PANEL.x + 22, PANEL.y + 38))
+    r3 = frame.blit(tot, (r2.right + 4, PANEL.y + 38))
     text_boxes += [r1, r2, r3]
-    shown = list(heroes)
-    if len(shown) > 6:      # Sunday: only the 6 best-placed heroes, in rank order
-        shown = sorted(shown, key=lambda h: ranks.get(h.key, 99))[:6]
-    x0 = PANEL.x + 214
-    step = (PANEL.right - 10 - x0) / 6
-    rad = 27
-    f_name, f_rank = font(21), font(23)
-    for i, h in enumerate(shown):
-        cx, cy = x0 + step * i + rad + 6, PANEL.centery
-        st = status.get(h.key, "alive")
-        face = renderer.body_surface(h, "eliminated" if st == "out" else ("celebrating" if st == "crown" else "neutral"), 0)
-        sz = int(rad * 2.2)
-        f = pygame.transform.smoothscale(face, (sz, int(sz * face.get_height() / face.get_width())))
-        if st == "out":
-            f.set_alpha(105)
-        frame.blit(f, f.get_rect(center=(cx, cy)))
-        if st == "out":
-            for d in (1, -1):
-                pygame.draw.line(frame, (70, 74, 92), (cx - rad * 0.8, cy - d * rad * 0.8), (cx + rad * 0.8, cy + d * rad * 0.8), 8)
-        col = WHITE if st != "out" else (125, 130, 148)
-        room = step - 2 * rad - 16
-        nm = _fit(f_name.render(h.name.upper(), True, col), room)
-        rank = ranks.get(h.key)
-        rn = f_rank.render(_ordinal(rank) if rank else "", True, (255, 214, 0) if st != "out" else col)
-        ra = frame.blit(nm, nm.get_rect(bottomleft=(cx + rad + 8, cy - 1)))
-        rb = frame.blit(rn, rn.get_rect(topleft=(cx + rad + 8, cy + 3)))
-        if rank == 1 and st != "out":
-            _crown(frame, rb.right + 16, rb.centery, 20)
-        text_boxes += [ra, rb]
+    live = sorted((h for h in heroes if status.get(h.key) != "out"), key=lambda h: ranks.get(h.key, 99))[:5]
+    x0 = PANEL.x + 236
+    step = (PANEL.right - 12 - x0) / 5
+    f_rank = font(34)
+    for i, h in enumerate(live):
+        cx, cy = x0 + step * i + 40, PANEL.centery
+        _icon(frame, h, (cx, cy), 34, "celebrating" if status.get(h.key) == "crown" else "neutral")
+        rank = ranks.get(h.key, i + 1)
+        rn = f_rank.render(f"#{rank}", True, (255, 214, 0) if rank == 1 else WHITE)
+        rb = frame.blit(rn, rn.get_rect(midleft=(cx + 42, cy + 2)))
+        if rank == 1:
+            _crown(frame, cx, cy - 44, 24)
+        text_boxes.append(rb)
+
+
+def draw_pick_strip(frame: pygame.Surface, heroes: list[Hero], t: float, text_boxes: list) -> None:
+    """Cold-open PICK YOUR FIGHTER strip in the bar slot (y ~312-416), never over the balls."""
+    plate = pygame.Surface(PANEL.size, pygame.SRCALPHA)
+    pygame.draw.rect(plate, (24, 26, 40, 225), plate.get_rect(), border_radius=26)
+    pygame.draw.rect(plate, (255, 214, 0, 200), plate.get_rect(), 4, border_radius=26)
+    frame.blit(plate, PANEL)
+    lab = font(30).render("PICK YOUR FIGHTER!", True, (255, 214, 0))
+    text_boxes.append(frame.blit(lab, lab.get_rect(midtop=(W / 2, PANEL.y + 6))))
+    n = len(heroes)
+    step = (PANEL.width - 40) / max(1, n)
+    for i, h in enumerate(heroes):
+        cx = PANEL.x + 20 + step * (i + 0.5)
+        bob = 3 * math.sin(t * 9 + i)
+        _icon(frame, h, (cx, PANEL.y + 70 + bob), 26, "happy")
 
 
 # ---------------------------------------------------------------------------------------------- terrain
@@ -242,7 +247,7 @@ def draw_cap(frame: pygame.Surface, a, b, zoom: float, theme, mat: str) -> None:
 
 
 def draw_floating_platform(frame: pygame.Surface, centre, radius: float, zoom: float, theme, shape: str = "disc",
-                           half: float = 0.0) -> None:
+                           half: float = 0.0, spin_deg: float | None = None) -> None:
     """TOP_DOWN arena floor as a floating island: thick stone side wall below, capped surface with an outline."""
     cap, rock, dark, light = rock_colours(theme)
     cx, cy = centre
@@ -262,8 +267,16 @@ def draw_floating_platform(frame: pygame.Surface, centre, radius: float, zoom: f
     pygame.draw.line(frame, BLACK, (cx + radius + 3, cy), (cx + radius + 3, cy + depth), 6)
     pygame.draw.circle(frame, BLACK, (cx, cy), radius + 5)
     pygame.draw.circle(frame, theme.terrain, (cx, cy), radius)
+    if spin_deg is not None and radius > 8:       # high-contrast radial pie stripes: spin speed reads instantly
+        a0 = math.radians(spin_deg)
+        dark = mix(theme.terrain, BLACK, 0.28)
+        for k in range(0, 12, 2):
+            pts = [(cx, cy)] + [(cx + math.cos(a0 + (k + u / 4) * math.pi / 6) * radius,
+                                 cy + math.sin(a0 + (k + u / 4) * math.pi / 6) * radius) for u in range(5)]
+            pygame.draw.polygon(frame, dark, pts)
+        pygame.draw.circle(frame, BLACK, (cx, cy), radius * 0.16 + 3)
+        pygame.draw.circle(frame, (255, 205, 40), (cx, cy), radius * 0.16)
     pygame.draw.circle(frame, mix(theme.terrain, WHITE, 0.3), (cx, cy), radius * 0.92, max(2, int(4 * zoom)))
-    pygame.draw.circle(frame, mix(theme.terrain, BLACK, 0.1), (cx, cy), radius * 0.5, max(2, int(3 * zoom)))
 
 
 def shadow(frame: pygame.Surface, pos, r: float) -> None:

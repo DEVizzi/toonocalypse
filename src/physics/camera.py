@@ -51,6 +51,7 @@ def track(trace: T.Trace) -> list[Cam]:
     for e in trace.events:
         if (e.kind == "elimination" and e.data.get("hero")) or (e.kind == "impact" and e.data.get("impulse", 0) > 1400):
             chaos.append((pre + int(e.t * FPS), 1.0 if e.kind == "elimination" else 0.7))
+    thuds = [pre + int(e.t * FPS) for e in trace.events if e.kind == "heavy_land"]    # Juggernaut micro-shake
     if trace.mode == "TOP_DOWN":
         span = max(x1 - x0, (y1 - y0) * W / (VIEW_BOTTOM - VIEW_TOP))
         base_zoom = min(1.15, W / span) * settings()["render"]["top_zoom"]
@@ -83,7 +84,8 @@ def track(trace: T.Trace) -> list[Cam]:
         if trace.mode == "TOP_DOWN":      # follow the shrinking arena in so the fight stays big on screen
             z0 = trace.zones[f]
             ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * z0.get("ring_r", 1.0) / max(1.0, trace.zones[0].get("ring_r", 1.0))
-            tz = base_zoom / max(0.38, ek)
+            zmax = settings()["render"]["top_zoom_max"]
+            tz = base_zoom * min(zmax, 1.0 / max(ek, 1.0 / zmax))     # 1.0x -> 2.15x as the arena shrinks
         tx_lead, ty_lead = tx, ty
         if 0 < len(everyone) <= 3:        # final-3: tight zoom on the survivors' faces (all of them stay in frame)
             xs, ys = rows[everyone, 0], rows[everyone, 1]
@@ -122,6 +124,9 @@ def track(trace: T.Trace) -> list[Cam]:
                 j = focus if focus is not None else max(everyone, key=lambda i: rows[i, 0])
                 cx, cy, vx, vy = float(rows[j, 0]), float(rows[j, 1]) - (SCREEN_CY - (VIEW_TOP + VIEW_BOTTOM) / 2) / cz, 0.0, 0.0
         shake = (0.0, 0.0)
+        for cf in thuds:
+            if 0 <= f - cf < 3:
+                shake = (0.0, 3.0 * (1 if (f - cf) % 2 == 0 else -1))
         for cf, s in chaos:
             k = f - cf
             if 0 <= k < 10:

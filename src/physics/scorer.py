@@ -68,7 +68,20 @@ def score(trace: Trace, history: dict | None = None) -> Score:
                      and e.kind in ("elimination", "impact", "trait", "lead_change", "teleport", "collect", "bomb_pass"))
     dull = any(sum(1 for t in hero_ev if w <= t < w + 10) < 2 for w in range(0, max(1, int(end) - 9), 2))
     p["dull_window"] = -25 if dull else 0
+    # v3.0 hard locks (owner): a named hero must win; first blood by 3.5 s; no dead 5 s stretch mid-episode
+    sc = settings()["scorer"]
+    p["dummy_win"] = sc["dummy_win_penalty"] if winner and winner.startswith("extra") else 0
+    first = min((e.t for e in elims), default=99.0)
+    p["late_first_blood"] = sc["reject_penalty"] if first > sc["first_blood_s"] else 0
+    action = sorted([e.t for e in elims] + [e.t for e in ev if e.kind == "impact" and e.data.get("impulse", 0) >= sc["major_impulse"]])
+    gaps = [b - a for a, b in zip([0.0] + action, action + [end])]
+    p["dead_stretch"] = sc["reject_penalty"] if any(g > sc["dead_stretch_s"] for g in gaps[1:-1]) else 0
     return Score(sum(p.values()), p)
+
+
+def rejected(s: Score) -> bool:
+    """Hard-rule violations (Best-of-N never picks these if any valid run exists)."""
+    return any(s.parts.get(k, 0) < 0 for k in ("dummy_win", "late_first_blood", "dead_stretch", "duration"))
 
 
 def min_score() -> float:

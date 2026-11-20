@@ -10,7 +10,7 @@ SIDE, TOP, BOTH = "SIDE_VIEW", "TOP_DOWN", "BOTH"
 
 ARENAS: dict[str, str] = {
     "flat_track": SIDE, "ramp_descent": SIDE, "pit_platforms": SIDE, "tiered_tower": SIDE, "narrow_bridge": SIDE,
-    "bouncy_pad_field": SIDE, "seesaw_gauntlet": SIDE, "conveyor_chaos": SIDE,
+    "bouncy_pad_field": SIDE, "seesaw_gauntlet": SIDE, "conveyor_chaos": SIDE, "pachinko_drop": SIDE,
     "rotating_disc": TOP, "maze_corridors": TOP, "hex_tile_drop": TOP, "bumper_ring": TOP,
 }
 GOALS: dict[str, str] = {
@@ -29,7 +29,7 @@ TWISTS: dict[str, str] = {
 # Extra arena-specific compatibility (shrinking_arena also works on pit_platforms per §11.4).
 TWIST_ARENA_EXTRA = {"shrinking_arena": {"pit_platforms"}}
 # Combos that don't make sense physically or visually.
-INCOMPATIBLE = {("slippery_ice", "sticky_mud"), ("slippery_ice", "slippery_floor"), ("lava_floor", "falling_floor_tiles")}
+INCOMPATIBLE = {("slippery_ice", "slippery_floor"), ("lava_floor", "falling_floor_tiles")}
 # Goals that need a finish line vs. goals that need an elimination mechanic.
 GOAL_ARENA_EXCLUDE = {"reach_finish": {"rotating_disc", "maze_corridors", "hex_tile_drop", "bumper_ring"}}
 

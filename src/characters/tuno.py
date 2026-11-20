@@ -13,7 +13,7 @@ SKIN = (255, 214, 170)
 GOLD = (255, 200, 40)
 STONE = (150, 140, 170)
 STONE_DARK = (100, 92, 122)
-STATES = ("idle", "laughing", "shocked", "lever", "crowning")
+STATES = ("idle", "laughing", "shocked", "lever", "crowning", "evil")   # lever = EVIL_GRIN + lever pull
 
 
 def _crown(s: pygame.Surface, cx: float, top: float, w: float, lift: float = 0.0) -> None:
@@ -55,6 +55,11 @@ def draw_tuno(s: pygame.Surface, cx: float, base_y: float, state: str, t: float,
     if state == "laughing":
         for dx in (-0.25, 0.25):
             pygame.draw.arc(s, BLACK, (bx + dx * r - r * 0.12, fy - r * 0.1, r * 0.24, r * 0.2), 0.2, math.pi - 0.2, 4)
+    elif state in ("lever", "evil"):                 # EVIL_GRIN: narrowed eyes under sharp brows
+        for side in (-1, 1):
+            ex = bx + side * 0.25 * r
+            pygame.draw.ellipse(s, BLACK, (ex - r * 0.1, fy - r * 0.03, r * 0.2, r * 0.08))
+            pygame.draw.line(s, BLACK, (ex - side * r * 0.16, fy - r * 0.16), (ex + side * r * 0.12, fy - r * 0.06), 4)
     elif state == "shocked":
         for dx in (-0.25, 0.25):
             pygame.draw.circle(s, WHITE, (bx + dx * r, fy), r * 0.15)
@@ -72,6 +77,10 @@ def draw_tuno(s: pygame.Surface, cx: float, base_y: float, state: str, t: float,
     # mouth
     if state in ("laughing", "crowning"):
         pygame.draw.ellipse(s, BLACK, (bx - r * 0.18, fy + r * 0.28, r * 0.36, r * 0.22))
+    elif state in ("lever", "evil"):
+        pts = [(bx - r * 0.3, fy + r * 0.26), (bx + r * 0.3, fy + r * 0.26), (bx, fy + r * 0.46)]
+        pygame.draw.polygon(s, BLACK, pts)
+        pygame.draw.polygon(s, WHITE, [(bx - r * 0.24, fy + r * 0.28), (bx + r * 0.24, fy + r * 0.28), (bx, fy + r * 0.34)])
     elif state == "shocked":
         pygame.draw.ellipse(s, BLACK, (bx - r * 0.09, fy + r * 0.28, r * 0.18, r * 0.24))
     # crown

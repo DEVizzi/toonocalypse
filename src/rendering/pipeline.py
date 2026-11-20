@@ -22,10 +22,11 @@ from src.config import FPS, H, LAYOUT, TIMELINE, VIDEO, W  # noqa: E402
 from src.games.themes import THEME_BY_KEY, Theme  # noqa: E402
 from src.physics import trace as T  # noqa: E402
 from src.physics.camera import Cam, track  # noqa: E402
-from src.rendering import effects, hud, scenery  # noqa: E402
+from src.rendering import balls, effects, hud, scenery  # noqa: E402
 
 BLACK = (17, 17, 17)
 WHITE_ = (255, 255, 255)
+BANNER_S = 1.0
 
 
 @dataclass
@@ -52,19 +53,24 @@ def _lerp(a, b, k):
     return a + (b - a) * k
 
 
-def plan_shots(ep: Episode) -> list[Shot]:
+def plan_shots(ep: Episode, teaser_f: int | None = None) -> list[Shot]:
+    """0.8 s cold-open teaser (slow-mo of the cleanest big collision) -> gameplay from the gate drop -> 0.3x winner
+    replay -> 1.6 s winner card -> loop tail back into the teaser composition."""
     tr = ep.trace
     pre = tr.meta.get("preroll_frames", 0)
     end_t = tr.meta.get("resolved_at") or (tr.n_frames - pre) / FPS
     end_f = min(tr.n_frames - 1, pre + int(round(end_t * FPS)))
     winner = tr.meta.get("winner")
     shots: list[Shot] = []
-    if tr.meta["recipe"].get("flash_forward") and ep.flash_event is not None:
-        f0 = pre + int(ep.flash_event.t * FPS) - int(0.5 * FPS)
-        for i in range(int(TIMELINE.flash_forward_s * FPS)):
-            shots.append(Shot(max(0, f0 + i), "flash", i / FPS, 1.35, ep.flash_event.actors[0]))
-    for i in range(pre):
-        shots.append(Shot(i, "cold", i / FPS))
+    n_cold = int(round(TIMELINE.cold_open_s * FPS))
+    if teaser_f is not None:
+        src = 0.3 * FPS                                  # 0.3 s of real time stretched over the 0.8 s teaser
+        f0 = teaser_f - src * 0.55
+        for i in range(n_cold):
+            shots.append(Shot(max(pre, min(end_f, f0 + src * i / n_cold)), "cold", i / FPS, 1.3, None))
+    else:
+        for i in range(n_cold):
+            shots.append(Shot(pre, "cold", i / FPS))
     hitstops = {pre + int(e.t * FPS) for e in tr.events
                 if (e.kind == "elimination" and e.data.get("hero")) or (e.kind == "impact" and e.data.get("hero_pair")
                                                                        and e.data.get("impulse", 0) > 1600)}
@@ -72,7 +78,6 @@ def plan_shots(ep: Episode) -> list[Shot]:
         shots.append(Shot(f, "play", (f - pre) / FPS))
         if f in hitstops:
             shots += [Shot(f, "play", (f - pre) / FPS)] * 2
-    # winner replay: 0.4x of the final 0.9 s of gameplay
     src0 = end_f - TIMELINE.replay_source_s * FPS
     n = int(TIMELINE.replay_s * FPS)
     for i in range(n):
@@ -80,7 +85,7 @@ def plan_shots(ep: Episode) -> list[Shot]:
     for i in range(int(TIMELINE.winner_card_s * FPS)):
         shots.append(Shot(end_f, "card", i / FPS))
     for i in range(int(TIMELINE.loop_tail_s * FPS)):
-        shots.append(Shot(0, "tail", i / FPS))
+        shots.append(Shot(shots[0].tf, "tail", i / FPS, shots[0].zoom_mult, None))
     return shots
 
 
@@ -106,6 +111,71 @@ class Renderer:
         self.end_f = min(self.tr.n_frames - 1, self.pre + int(round(end_t * FPS)))
         self.end_t = end_t
         self.late_leads = [e.t for e in self.tr.events if e.kind == "lead_change" and e.t >= end_t - 3.0]
+        self.banners = self._schedule_banners()
+        self.face = self._face_angles()
+        self.teaser_f = self._teaser_frame()
+        self.disc_prop = next((i for i, p in enumerate(self.meta["props"]) if p["style"] == "disc_marks"), None)
+        self.tag_events = [(e.t, set(e.actors)) for e in self.tr.events
+                           if e.kind == "lead_change" or (e.kind == "elimination" and e.data.get("by_hero"))]
+        self.world_rect = pygame.Rect(0, scenery.PANEL.bottom, W, H - scenery.PANEL.bottom)
+
+    # ------------------------------------------------------------------ precomputed presentation state
+    def _schedule_banners(self) -> list[tuple[float, str]]:
+        """Single-slot banner queue: one centre banner at a time, >= 0.8 s apart, stale ones dropped."""
+        out: list[tuple[float, str]] = []
+        free_at = -9.0
+        for e in sorted(self.escalations, key=lambda e: e.t):
+            txt = e.data.get("banner") or {"twist": e.data.get("twist", "").replace("_", " ").upper() + "!",
+                                           "stage_final": "FINAL!", "reverse": "REVERSED!"}.get(e.kind, "")
+            if not txt or (out and out[-1][1] == txt and e.t - out[-1][0] < 6.0):
+                continue
+            start = max(e.t, free_at)
+            if start - e.t > 1.5:
+                continue
+            out.append((start, txt))
+            free_at = start + BANNER_S + 0.8
+        return out
+
+    def _face_angles(self):
+        """Spring-damped face tilt (+-35 deg, leans with motion, kicks on impacts); free spin above 9 rad/s."""
+        import numpy as np
+        n = len(self.tr.keys)
+        out = np.zeros((self.tr.n_frames, n), np.float32)
+        fa = np.zeros(n)
+        fv = np.zeros(n)
+        w, dt = 11.0, 1 / FPS
+        for f in range(self.tr.n_frames):
+            rows = self.tr.frames[f]
+            target = np.clip(rows[:, 3] * 0.045 + rows[:, 5] * 25 * np.sign(rows[:, 3] + 1e-6), -35, 35)
+            spin = np.abs(rows[:, 6]) > 9.0
+            e = np.exp(-w * dt)
+            d = fa - target
+            tmp = (fv + w * d) * dt
+            fa = target + (d + tmp) * e
+            fv = (fv - w * tmp) * e
+            fa = np.where(spin, rows[:, 2], fa)
+            out[f] = fa
+        return out
+
+    def _teaser_frame(self) -> int | None:
+        """Cleanest high-impact hero collision for the cold open (chase wall covering < 15% of the frame)."""
+        best, bs = None, -1.0
+        for e in self.tr.events:
+            if e.kind != "impact" or not e.data.get("hero_pair") or e.t < 1.0 or e.t > self.end_t - 1.0:
+                continue
+            f = self.pre + int(e.t * FPS)
+            cam = self.cams[min(f, len(self.cams) - 1)]
+            chase = self.tr.zones[f].get("chase_x")
+            if chase is not None and cam.to_screen(chase, 0)[0] > W * 0.15:
+                continue
+            sc = e.data.get("impulse", 0)
+            if sc > bs:
+                best, bs = f, sc
+        if best is None:
+            el = [e for e in self.elims if e.data.get("hero") and 1.0 <= e.t <= self.end_t - 1.0]
+            if el:
+                best = self.pre + int(el[0].t * FPS)
+        return best
 
     # ------------------------------------------------------------------ static layers
     def _sky(self) -> pygame.Surface:
@@ -156,11 +226,14 @@ class Renderer:
         fr.blit(self.sky, (par, 0))
         self._particles(cam, t_anim)
         z = cam.zoom
+        if self.tr.mode == "TOP_DOWN":            # eliminated balls tumble down BEHIND the platform
+            self.draw_contestants(cam, fi, t_anim, falling_only=True)
         # top-down platforms
         for s in self.meta["statics"]:
             if s["type"] == "disc":
                 k = self._k(zone)
-                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), s["r"] * z * k, z, th)
+                spin = float(self.tr.props[fi][self.disc_prop][2]) if self.disc_prop is not None else 0.0
+                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), s["r"] * z * k, z, th, spin_deg=spin)
             elif s["type"] == "ring":
                 r = zone.get("ring_r", s["r"]) * self._k(zone)
                 scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), r * z, z, th)
@@ -291,15 +364,25 @@ class Renderer:
                     bx = (i * 97 + t * 40) % W
                     pygame.draw.circle(fr, (255, 200, 60), (bx, y + 10 + 6 * math.sin(t * 5 + i)), 14)
                 pygame.draw.line(fr, (255, 230, 120), (0, y), (W, y), 6)
-        if "chase_x" in zone:
+        if "chase_x" in zone:                    # collapsing floor: a jagged animated wall of fire
             x = cam.to_screen(zone["chase_x"], 0)[0]
-            if x > -60:
-                surf = pygame.Surface((max(1, int(x) + 60), H), pygame.SRCALPHA)
-                surf.fill((30, 10, 40, 170))
-                fr.blit(surf, (0, 0))
-                for i in range(14):
-                    yy = (i * 140 + t * 300) % H
-                    pygame.draw.line(fr, (180, 120, 255), (x, yy), (x + 30 * math.sin(t * 7 + i), yy + 60), 5)
+            if x > -80:
+                top = scenery.PANEL.bottom
+                pts = [(0, top)]
+                for i in range(int((H - top) / 40) + 2):
+                    yy = top + i * 40
+                    jag = 34 + 22 * math.sin(t * 9 + i * 1.7) + (26 if i % 2 else 0)
+                    pts.append((x + jag, yy))
+                pts += [(0, H)]
+                pygame.draw.polygon(fr, (120, 20, 10), pts)
+                inner = [(px - 26 if px > 0 else 0, py) for px, py in pts]
+                pygame.draw.polygon(fr, (240, 90, 20), inner)
+                core = [(px - 52 if px > 0 else 0, py) for px, py in pts]
+                pygame.draw.polygon(fr, (255, 200, 60), core)
+                pygame.draw.lines(fr, BLACK, False, pts[1:-1], 5)
+                for i in range(10):
+                    ey = top + ((i * 157 + t * 260) % (H - top))
+                    pygame.draw.circle(fr, (255, 220, 120), (x + 40 + 18 * math.sin(t * 5 + i), ey), 5)
         if zone.get("zone"):
             zx, zy, r = zone["zone"]
             c = cam.to_screen(zx, zy)
@@ -352,6 +435,16 @@ class Renderer:
             st = styles[i]
             ca, sa = math.cos(ang), math.sin(ang)
             for sh in st["shapes"]:
+                if sh["type"] == "circle" and st["style"] == "disc_marks":   # pinball bumpers riding the disc
+                    k = self._k(self.tr.zones[fi])
+                    ox, oy = sh["c"][0] * k, sh["c"][1] * k
+                    c = cam.to_screen(x + ox * ca - oy * sa, y + ox * sa + oy * ca)
+                    rr = sh["r"] * cam.zoom
+                    pygame.draw.circle(self.frame, BLACK, c, rr + 4)
+                    pygame.draw.circle(self.frame, (230, 40, 60), c, rr)
+                    pygame.draw.circle(self.frame, WHITE_, c, rr * 0.62)
+                    pygame.draw.circle(self.frame, (230, 40, 60), c, rr * 0.36)
+                    continue
                 if sh["type"] == "circle":
                     ox, oy = sh["c"]
                     c = cam.to_screen(x + ox * ca - oy * sa, y + ox * sa + oy * ca)
@@ -367,12 +460,46 @@ class Renderer:
                                for px, py in (sh["a"], sh["b"])]
                         pygame.draw.line(self.frame, scenery.mix(th.terrain, BLACK, 0.25), pts[0], pts[1], 4)
                         continue
-                    pygame.draw.line(self.frame, BLACK, pts[0], pts[1], int(sh["r"] * 2 * cam.zoom) + 6)
-                    pygame.draw.line(self.frame, th.hazard, pts[0], pts[1], int(sh["r"] * 2 * cam.zoom))
+                    wd = int(sh["r"] * 2 * cam.zoom)
+                    pygame.draw.line(self.frame, BLACK, pts[0], pts[1], wd + 8)
+                    if st["style"] == "hammer":                  # wooden shaft with steel bands
+                        pygame.draw.line(self.frame, (150, 95, 45), pts[0], pts[1], wd + 2)
+                        for kk in (0.2, 0.5, 0.8):
+                            bx = pts[0][0] + (pts[1][0] - pts[0][0]) * kk
+                            by = pts[0][1] + (pts[1][1] - pts[0][1]) * kk
+                            pygame.draw.circle(self.frame, (190, 195, 205), (bx, by), wd * 0.9 + 2)
+                    else:                                        # striped hazard bar
+                        pygame.draw.line(self.frame, (245, 245, 245), pts[0], pts[1], wd)
+                        nseg = 8
+                        for kk in range(0, nseg, 2):
+                            a0, a1 = kk / nseg, (kk + 1) / nseg
+                            p0 = (pts[0][0] + (pts[1][0] - pts[0][0]) * a0, pts[0][1] + (pts[1][1] - pts[0][1]) * a0)
+                            p1 = (pts[0][0] + (pts[1][0] - pts[0][0]) * a1, pts[0][1] + (pts[1][1] - pts[0][1]) * a1)
+                            pygame.draw.line(self.frame, th.hazard, p0, p1, wd)
                 else:
                     pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in sh["verts"]]
+                    if st["style"] == "hammer":                  # iron spiked mace head
+                        mx, my = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
+                        rr = 34 * cam.zoom
+                        spikes = []
+                        for kk in range(16):
+                            a = ang + kk * math.pi / 8
+                            spikes.append((mx + math.cos(a) * rr * (1.45 if kk % 2 == 0 else 0.95),
+                                           my + math.sin(a) * rr * (1.45 if kk % 2 == 0 else 0.95)))
+                        pygame.draw.polygon(self.frame, BLACK, spikes)
+                        pygame.draw.polygon(self.frame, (150, 155, 165), [(mx + (sx - mx) * 0.86, my + (sy - my) * 0.86) for sx, sy in spikes])
+                        pygame.draw.circle(self.frame, BLACK, (mx, my), rr + 3)
+                        pygame.draw.circle(self.frame, (90, 95, 108), (mx, my), rr)
+                        pygame.draw.circle(self.frame, (200, 205, 215), (mx - rr * 0.35, my - rr * 0.35), rr * 0.25)
+                        continue
                     col = {"seesaw": (170, 120, 70), "tile": th.terrain, "wall_block": th.castle}.get(st["style"], th.hazard)
                     pygame.draw.polygon(self.frame, col, pts)
+                    if st["style"] == "seesaw":
+                        for kk in range(1, 6):
+                            a = kk / 6
+                            p0 = (pts[0][0] + (pts[1][0] - pts[0][0]) * a, pts[0][1] + (pts[1][1] - pts[0][1]) * a)
+                            p1 = (pts[3][0] + (pts[2][0] - pts[3][0]) * a, pts[3][1] + (pts[2][1] - pts[3][1]) * a)
+                            pygame.draw.line(self.frame, (110, 70, 35), p0, p1, 3)
                     pygame.draw.polygon(self.frame, BLACK, pts, 4)
 
     def _particles(self, cam: Cam, t: float) -> None:
@@ -399,63 +526,105 @@ class Renderer:
 
     # ------------------------------------------------------------------ contestants + juice
     def draw_contestants(self, cam: Cam, tf: float, t_anim: float, focus_winner: bool = False,
-                         ranks: dict[str, int] | None = None) -> None:
+                         ranks: dict[str, int] | None = None, falling_only: bool = False,
+                         show_tags: bool = True) -> None:
         if abs(tf - round(tf)) > 1e-6:
             rows, flags, expr = self.tr.sample(tf / FPS)
+            fi = int(tf)
         else:
             fi = int(round(tf))
             rows, flags, expr = self.tr.frames[fi], self.tr.flags[fi], self.tr.expr[fi]
         keys = self.tr.keys
         z = cam.zoom
+        top = self.tr.mode == "TOP_DOWN"
         order = sorted(range(len(keys)), key=lambda i: (keys[i] in HERO_BY_KEY, flags[i] & T.WINNER))
         pills = []
+        screen = {}
         for i in order:
             k = keys[i]
             f = int(flags[i])
-            x, y, ang, vx, vy, sq = (float(v) for v in rows[i])
+            x, y, ang, vx, vy, sq, w = (float(v) for v in rows[i][:7])
             alive = f & T.ALIVE
             falling = f & T.FALLING
+            if falling_only != bool(falling and top):
+                continue
             if not alive and not falling:
                 continue
-            if not cam.visible(x, y, 120):
+            if not cam.visible(x, y, 140):
                 continue
             sx, sy = cam.to_screen(x, y)
+            hero = HERO_BY_KEY.get(k)
+            extra = self.extras.get(k)
             ex = EXPRESSIONS[int(expr[i])]
-            if self.tr.mode == "TOP_DOWN" and alive:
-                scenery.shadow(self.frame, (sx, sy), (HERO_BY_KEY[k].radius if k in HERO_BY_KEY else 24) * z)
-            scale = z * (1 - sq if falling else 1)
-            spin = (t_anim * 900) % 360 if falling else ang
-            if k in HERO_BY_KEY:
-                h = HERO_BY_KEY[k]
-                limb = "victory" if f & T.VICTORY else ("stunned" if f & T.STUNNED else ("airborne" if f & T.AIRBORNE else
-                                                                                       ("running" if abs(vx) + abs(vy) > 40 else "idle")))
-                if self.tr.mode == "TOP_DOWN" and limb == "airborne":
-                    limb = "running"
-                display_angle = spin if (f & T.STUNNED or falling) else max(-12.0, min(12.0, vx * 0.02))
-                if abs(vx) + abs(vy) > 520:   # motion trail
-                    for k2 in (3, 2, 1):
-                        ghost = (sx - vx * 0.012 * k2 * z, sy - vy * 0.012 * k2 * z)
-                        s = renderer.body_surface(h, ex, 0)
-                        s2 = pygame.transform.rotozoom(s, 0, scale * 0.95)
-                        s2.set_alpha(50 * (4 - k2))
-                        self.frame.blit(s2, s2.get_rect(center=ghost))
-                renderer.draw_hero(self.frame, h, (sx, sy), display_angle, (vx, vy), ex, limb, t_anim + i, squash=sq if alive else 0,
-                                   zoom=max(0.05, scale))
-                if alive:
-                    pills.append((h, sx, sy - h.radius * z - 18, bool(f & T.FAN_FAV)))
-                if f & T.HAS_BOMB:
-                    self._bomb(sx, sy - h.radius * z - 10, t_anim)
-            else:
-                e = self.extras[k]
-                bl = "stunned" if f & T.STUNNED else ("airborne" if (f & T.AIRBORNE and self.tr.mode != "TOP_DOWN") else
-                                                      ("running" if abs(vx) + abs(vy) > 40 else "idle"))
-                if falling:
-                    bl = "airborne"
-                renderer.draw_extra(self.frame, e, (sx, sy), spin, ex, zoom=max(0.05, scale), limb_state=bl,
-                                    t=t_anim + i * 0.37, vx=vx)
-                if f & T.HAS_BOMB:
-                    self._bomb(sx, sy - 22 * z, t_anim)
-        self._pills(pills, ranks or {})
+            if alive and abs(w) > 9.0 and ex not in ("eliminated", "celebrating"):
+                ex = "dizzy"
+            scale, alpha = 1.0, 255
+            if falling:                       # TOP_DOWN fall: shrink 1.0 -> 0.12 and spin down behind the platform
+                scale = 1.0 - 0.88 * sq
+                ang = ang + sq * 540
+                alpha = int(255 * (1 - 0.4 * sq))
+            if top and alive:
+                scenery.shadow(self.frame, (sx, sy), balls.body_radius(hero, extra) * z)
+            pose = balls.pose_for(bool(alive), not (f & T.AIRBORNE), (vx, vy), w, sq if alive else 0.0,
+                                  bool(f & T.VICTORY), bool(hero and hero.key in ("grumble", "magneto")), top)
+            if falling:
+                pose = "flail"
+            spd = math.hypot(vx, vy)
+            look = (max(-1.0, min(1.0, vx / 300)), max(-1.0, min(1.0, vy / 300)))
+            face = float(self.face[min(fi, len(self.face) - 1)][i]) if alive else ang
+            if hero and hero.key == "dash" and spd > 400 and alive:        # ice-puck skid trail
+                for j in (3, 2, 1):
+                    pygame.draw.circle(self.frame, (200, 250, 255), (sx - vx * 0.012 * j * z, sy - vy * 0.012 * j * z),
+                                       max(2, 6 * z / j))
+            balls.draw_ball(self.frame, hero, extra, (sx, sy), ang, face, (vx, vy), w, ex, pose, t_anim + i * 0.37, z,
+                            squash=sq if alive else 0.0, scale=scale, alpha=alpha,
+                            phase="LEAD" if (hero and hero.key == "glitch" and self._glitch_lead(fi)) else "",
+                            look=look)
+            screen[k] = (sx, sy)
+            if alive and hero is not None:
+                pills.append((hero, sx, sy - hero.radius * z - 16, bool(f & T.FAN_FAV)))
+            if f & T.HAS_BOMB:
+                self._bomb(sx, sy - balls.body_radius(hero, extra) * z - 10, t_anim)
+        if show_tags and not falling_only:
+            self._pills(pills, ranks or {}, screen, fi)
+
+    def _glitch_lead(self, fi: int) -> bool:
+        t = (fi - self.pre) / FPS
+        last = [e for e in self.tr.events if e.kind == "glitch" and e.t <= t]
+        return bool(last and last[-1].data.get("effect") == "lead")
+
+    def _pills(self, pills, ranks: dict[str, int], screen: dict, fi: int) -> None:
+        """Smart name tags: only at 1.0-2.5 s, for 1.2 s around a lead change / betrayal, and in the final 3; hidden
+        whenever 3+ balls cluster within 115 px so faces stay readable."""
+        play_t = (fi - self.pre) / FPS
+        alive_n = int(sum(1 for f in self.tr.flags[fi] if f & T.ALIVE))
+        recent = set()
+        for t, actors in self.tag_events:
+            if 0 <= play_t - t < 1.2:
+                recent |= actors
+        window = 1.0 <= play_t <= 2.5
+        pts = list(screen.values())
+        boxes = []
+        for h, x, y, fan in pills:
+            if not (window or alive_n <= 3 or h.key in recent):
+                continue
+            sx, sy = screen[h.key]
+            if sum(1 for px, py in pts if math.hypot(px - sx, py - sy) < 115) >= 3:
+                continue
+            s = renderer.name_pill(h, crown=fan, size=22)
+            boxes.append([s, x - s.get_width() / 2, y - s.get_height()])
+        for _ in range(3):
+            for a in range(len(boxes)):
+                for b in range(a + 1, len(boxes)):
+                    ra = pygame.Rect(boxes[a][1], boxes[a][2], boxes[a][0].get_width(), boxes[a][0].get_height())
+                    rb = pygame.Rect(boxes[b][1], boxes[b][2], boxes[b][0].get_width(), boxes[b][0].get_height())
+                    if ra.colliderect(rb):
+                        dy = (ra.bottom - rb.top) / 2 + 1 if ra.centery <= rb.centery else -((rb.bottom - ra.top) / 2 + 1)
+                        boxes[a][2] -= dy
+                        boxes[b][2] += dy
+        for s, x, y in boxes:
+            y = max(scenery.PANEL.bottom + 6, min(y, LAYOUT["captions"]["y"][0] - 40))
+            self.frame.blit(s, (x, y))
 
     def _bomb(self, x, y, t):
         pygame.draw.circle(self.frame, BLACK, (x, y - 14), 16)
@@ -565,26 +734,62 @@ class Renderer:
         fi = int(min(self.tr.n_frames - 1, max(0, round(tf))))
         cam = self.cams[fi]
         t_anim = index / FPS
+        cap = self.cams[min(self.pre, len(self.cams) - 1)].zoom * 2.6     # keep sprites crisp
         if shot.zoom_mult != 1.0 and shot.focus:
             i = self.tr.index(shot.focus)
             rows, _, _ = self.tr.sample(tf / FPS)
-            cap = self.cams[min(self.pre, len(self.cams) - 1)].zoom * 2.6     # never blow sprites up into pixels
             cam = Cam(float(rows[i, 0]), float(rows[i, 1]), min(cam.zoom * shot.zoom_mult, cap))
-        if shot.segment == "tail":
-            cam = self.cams[0]
-            fi = 0
+        elif shot.zoom_mult != 1.0:
+            cam = Cam(cam.x, cam.y, min(cam.zoom * shot.zoom_mult, cap), cam.shake)
         play_t = (fi - self.pre) / FPS
-        # HUD never runs backwards: the teaser shows the opening state, replay/card show the final state
-        hud_fi = {"flash": self.pre, "replay": self.end_f, "card": self.end_f, "tail": 0}.get(shot.segment, fi)
+        # HUD never runs backwards: replay/card show the final state
+        hud_fi = {"replay": self.end_f, "card": self.end_f}.get(shot.segment, fi)
         ranks = self._ranks(hud_fi)
+        slow = shot.segment in ("cold", "tail", "replay")
+        self.frame.set_clip(None)
         self.draw_world(cam, fi, t_anim)
-        self.draw_contestants(cam, tf if shot.segment == "replay" else fi, t_anim, ranks=ranks)
+        self.frame.set_clip(self.world_rect)             # nothing in the world may bleed into the castle/HUD band
+        self.draw_contestants(cam, tf if slow else fi, t_anim, ranks=ranks,
+                              show_tags=shot.segment in ("play", "replay"))
         if shot.segment == "replay":
-            effects.draw_confetti(self.frame, shot.seg_t, 5, pygame.Rect(0, 330, W, 1320))
+            effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)
+        if shot.segment in ("play", "replay", "cold"):
+            self.draw_juice(cam, play_t if not slow else (tf - self.pre) / FPS, t_anim)
+        self._abyss(t_anim)
+        self.frame.set_clip(None)
         self._overlays(shot, play_t, t_anim, hud_fi, ranks)
-        if shot.segment in ("play", "replay", "flash"):     # comic popups sit above the HUD layer
-            self.draw_juice(cam, play_t if shot.segment != "replay" else (tf - self.pre) / FPS, t_anim)
         return self.frame
+
+    def _abyss(self, t: float) -> None:
+        """Themed lethal abyss along the bottom edge (lava / iron spikes / storm clouds); keeps y 1440-1620 clear."""
+        fr, key = self.frame, self.theme.key
+        y0 = 1640
+        if key in ("volcano", "desert", "clockwork", "jungle"):
+            pygame.draw.rect(fr, (200, 50, 10), (0, y0, W, H - y0))
+            pts = [(x, y0 + 12 * math.sin(t * 3 + x * 0.02)) for x in range(0, W + 20, 20)]
+            pygame.draw.polygon(fr, (255, 110, 20), pts + [(W, H), (0, H)])
+            pygame.draw.lines(fr, (255, 220, 90), False, pts, 6)
+            for i in range(9):
+                bx = (i * 131 + t * 30) % W
+                by = y0 + 50 + 30 * math.sin(t * 2 + i)
+                pygame.draw.circle(fr, (255, 200, 60), (bx, by), 10 + 4 * math.sin(t * 6 + i))
+        elif key in ("haunted", "ice", "meadow", "candy"):
+            pygame.draw.rect(fr, (40, 40, 52), (0, y0 + 50, W, H - y0))
+            for x in range(-20, W + 40, 56):
+                tip = (x + 28, y0 - 6)
+                pygame.draw.polygon(fr, BLACK, [(x - 4, y0 + 56), tip, (x + 60, y0 + 56)])
+                pygame.draw.polygon(fr, (150, 155, 170), [(x + 4, y0 + 52), (tip[0], tip[1] + 10), (x + 52, y0 + 52)])
+                pygame.draw.line(fr, (220, 225, 235), (tip[0] - 3, tip[1] + 16), (x + 14, y0 + 48), 3)
+        else:
+            pygame.draw.rect(fr, (50, 44, 80), (0, y0 + 30, W, H - y0))
+            for i in range(10):
+                cx = (i * 120 + t * 60 * (1 if i % 2 else -1)) % (W + 200) - 100
+                pygame.draw.circle(fr, (80, 72, 120), (cx, y0 + 40 + (i % 3) * 25), 70)
+                pygame.draw.circle(fr, (110, 100, 160), (cx + 20, y0 + 30 + (i % 3) * 25), 46)
+            if int(t * 3) % 4 == 0:
+                bx = (int(t * 3) * 271) % W
+                pygame.draw.lines(fr, (255, 240, 120), False, [(bx, y0 + 20), (bx + 20, y0 + 60), (bx - 5, y0 + 80),
+                                                               (bx + 25, y0 + 130)], 5)
 
     def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int, ranks: dict[str, int]) -> None:
         fr = self.frame
@@ -598,26 +803,24 @@ class Renderer:
         recent = sum(1 for e in self.tr.events if e.kind == "elimination" and 0 <= play_t - e.t < 1.5)
         scenery.draw_header(fr, self.castle, self.ep.ep_label, self.tuno_state(play_t, shot.segment), t_anim,
                             hud.TEXT_BOXES)
-        if shot.segment not in ("card",):
+        if shot.segment in ("cold", "tail"):             # pick-your-fighter strip replaces the bar, off the action
+            scenery.draw_pick_strip(fr, self.heroes, t_anim, hud.TEXT_BOXES)
+            hud.blit_text(fr, hud.outlined("WHO SURVIVES?", 84, fill=(255, 214, 0), width=8), center=(W / 2, 520))
+        elif shot.segment != "card":
             scenery.draw_panel(fr, alive, total, self.heroes, status, ranks, hud.TEXT_BOXES,
                                pulse=1.0 if recent >= 3 else 0.0)
-        if shot.segment == "cold" or (shot.segment == "tail"):
-            hud.draw_pick_your_fighter(fr, self.heroes, t_anim)
         if shot.segment == "play":
-            for e in self.escalations:
-                txt = e.data.get("banner") or ({"twist": e.data.get("twist", "").replace("_", " ").upper() + "!",
-                                                "stage_final": "FINAL!", "reverse": "REVERSED!"}.get(e.kind, ""))
-                if txt:
-                    hud.draw_banner(fr, txt, play_t - e.t)
-        if shot.segment == "flash":
-            hud.blit_text(fr, hud.outlined("WHO SURVIVES?", 84, fill=(255, 214, 0), width=8), center=(W / 2, 520))
+            for start, txt in self.banners:              # single slot: at most one centre banner at a time
+                if 0 <= play_t - start < BANNER_S:
+                    hud.draw_banner(fr, txt, (play_t - start) * 1.2 / BANNER_S)
+                    break
         if shot.segment == "card":
             w = self.meta.get("winner")
             hero = HERO_BY_KEY.get(w) if w else None
             name = hero.name if hero else (f"Number {self.extras[w].number}" if w in self.extras else "Nobody")
             col = renderer.hex_rgb(hero.colour) if hero else (200, 180, 140)
             hud.draw_winner_card(fr, hero, name, col, self.ep.season_line or "+10 SEASON POINTS",
-                                 self.ep.prompt or "Who wins tomorrow?", t_anim, bot=self.extras.get(w) if w else None)
+                                 self.ep.prompt or "Who wins tomorrow?", shot.seg_t, bot=self.extras.get(w) if w else None)
         if shot.segment == "tail":
             k = shot.seg_t / TIMELINE.loop_tail_s
             veil = pygame.Surface((W, H), pygame.SRCALPHA)
@@ -626,8 +829,8 @@ class Renderer:
 
 
 def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0) -> dict:
-    ep.shots = plan_shots(ep)
     r = Renderer(ep)
+    ep.shots = plan_shots(ep, r.teaser_f)
     out.parent.mkdir(parents=True, exist_ok=True)
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
            "-i", "-"]

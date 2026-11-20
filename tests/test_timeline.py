@@ -1,17 +1,17 @@
 """§4 timeline (with the owner's 2026-11-20 pacing override): every segment inside its limits and the total video
-lands in the 25-32 s retention target (validation range 25-50 s)."""
+lands in the 20-28 s v3.0 retention target (validation range 20-50 s)."""
 from src.config import TIMELINE, settings
 
 
 def test_segments_inside_limits():
     t = TIMELINE
-    assert t.cold_open_s == 0.5 and t.flash_forward_s <= 1.5
+    assert t.cold_open_s == 0.8 and t.flash_forward_s <= 1.5
     assert t.gameplay_target_min_s < t.gameplay_target_max_s <= t.forced_resolution_s <= t.hard_stop_s
     starts = [e[0] for e in t.escalation]
     assert starts == sorted(starts) and starts[0] == 0 and starts[-1] < t.forced_resolution_s
     assert [e[1] for e in t.escalation] == [1.0, 1.3, 1.65]
     assert abs(t.replay_source_s / t.replay_s - t.replay_speed) < 0.01
-    assert 2.5 <= t.winner_card_s <= 3.0 and t.loop_tail_s == 0.4
+    assert 1.5 <= t.winner_card_s <= 3.0 and t.loop_tail_s == 0.4
 
 
 def test_total_duration_range():
@@ -21,7 +21,7 @@ def test_total_duration_range():
             total = ff + t.cold_open_s + gameplay + t.tail_s()
             assert v["duration_min_s"] <= total <= v["duration_max_s"]
     for gameplay in (t.gameplay_target_min_s, t.gameplay_target_max_s):
-        assert 25 <= t.cold_open_s + gameplay + t.tail_s() <= 33
+        assert 20 <= t.cold_open_s + gameplay + t.tail_s() <= 28.5
 
 
 def test_two_stage_fits():

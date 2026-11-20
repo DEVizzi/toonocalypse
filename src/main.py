@@ -50,8 +50,7 @@ def simulate_best(recipe: Recipe, heroes: list, extras: list, seed: int, history
     report = []
     t_all = time.time()
     for i in range(sc["max_seeds"]):
-        if i == sc["seeds_per_batch"] and any(r[0] >= scorer.min_score() and r[3].parts.get("duration", 0) == 0
-                                              for r in results):
+        if i == sc["seeds_per_batch"] and any(r[0] >= scorer.min_score() and not scorer.rejected(r[3]) for r in results):
             break
         s = seed * 1000 + i
         t0 = time.time()
@@ -64,7 +63,7 @@ def simulate_best(recipe: Recipe, heroes: list, extras: list, seed: int, history
         log(f"  seed {s}: score={res.total:+.0f} winner={tr.meta['winner']} t={tr.meta['resolved_at']:.1f}s sim={dt:.1f}s")
     log(f"  {len(results)} sims in {time.time() - t_all:.1f}s")
     # a run whose gameplay length is out of range can never pass the quality gate: rank in-range runs first
-    results.sort(key=lambda r: (r[3].parts.get("duration", 0) == 0, r[0]), reverse=True)
+    results.sort(key=lambda r: (not scorer.rejected(r[3]), r[0]), reverse=True)
     best = results[0]
     return best[2], best[3], report
 
@@ -98,6 +97,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--goal", default=None)
     ap.add_argument("--mode", choices=["SIDE_VIEW", "TOP_DOWN"], default=None)
     ap.add_argument("--kind", choices=["spotlight", "rumble"], default="spotlight")
+    ap.add_argument("--hazards", default=None, help="comma-separated hazard override (test renders)")
+    ap.add_argument("--twist", default=None, help="twist override, or 'none'")
+    ap.add_argument("--theme", default=None)
     ap.add_argument("--flash-forward", choices=["auto", "on", "off"], default="auto")
     ap.add_argument("--episode", type=int, default=None, help="episode number shown on the badge")
     ap.add_argument("--out", default="output/episode.mp4")
@@ -114,6 +116,12 @@ def main(argv: list[str] | None = None) -> int:
     entries = history.get("entries", []) if isinstance(history, dict) else history
     day = (entries[-1]["day"] + 1) if entries else 1
     recipe, relaxed = recipe_generator.generate(entries, day, seed, mode=a.mode, arena=a.arena, goal=a.goal)
+    if a.hazards:
+        recipe.hazards = sorted(a.hazards.split(","))
+    if a.twist:
+        recipe.twist = None if a.twist == "none" else a.twist
+    if a.theme:
+        recipe.theme = a.theme
     if a.flash_forward != "auto":
         recipe.flash_forward = a.flash_forward == "on"
     recipe.episode_kind = "rumble_final" if a.kind == "rumble" else "spotlight"

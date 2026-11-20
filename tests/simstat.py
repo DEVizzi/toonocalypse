@@ -23,7 +23,7 @@ def recipe_for(arena: str, seed: int, goal: str | None = None) -> Recipe:
 def run(arena: str, seed: int, goal: str | None = None):
     rec = recipe_for(arena, seed, goal)
     rng = random.Random(seed)
-    heroes = rng.sample(list(HEROES), 6)
+    heroes = rng.sample(list(HEROES), 10)
     from src.config import settings
     extras = make_extras(rng.randint(*settings()["cast"]["extras_range"]), rng)
     t0 = time.time()
