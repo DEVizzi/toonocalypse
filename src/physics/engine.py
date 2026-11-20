@@ -121,7 +121,7 @@ class Sim:
         self.finish_x: float | None = None
         self.walkable: Callable[[float, float], bool] | None = None
         self.bounds = (-600.0, -1400.0, 6000.0, 700.0)   # x0, y0, x1, y1 for the camera
-        self.view_w = 1080.0            # camera zoom 1.0 in SIDE_VIEW (world px across the screen)
+        self.view_w = 1080.0 / settings()["render"]["side_zoom"]   # world px across the screen in SIDE_VIEW
         self.chase_x = -500.0           # SIDE: the collapsing castle floor chasing from the left
         self.edge_k = 1.0               # TOP: escalation shrinks every arena's walkable edge (§4 "arena shrinks")
         self.pressure = 1.0             # Lord Tuno's pacing pressure: >1 when more contestants remain than the schedule

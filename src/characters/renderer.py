@@ -100,19 +100,38 @@ def body_surface(hero: Hero, expression: str, face_bucket: int, look: tuple[floa
 
 @lru_cache(maxsize=256)
 def extra_surface(colour: str, radius: float, expression: str) -> pygame.Surface:
-    size = int(2 * (radius + 6))
-    s = pygame.Surface((size, size), pygame.SRCALPHA)
-    c = size / 2
-    pygame.draw.circle(s, (60, 48, 36), (c, c), radius + 2)
-    pygame.draw.circle(s, hex_rgb(colour), (c, c), radius)
+    """Bot extras: grey round robot with an antenna, outline, highlight and simple eyes (hero-sized, no name)."""
+    r = radius
+    pad = 8
+    size = (int(2 * (r + pad)), int(2 * (r + pad) + r * 0.7))
+    s = pygame.Surface(size, pygame.SRCALPHA)
+    cx, cy = size[0] / 2, size[1] - r - pad
+    base = hex_rgb(colour)
+    top = (cx, cy - r - r * 0.55)                                   # antenna
+    pygame.draw.line(s, BLACK, (cx, cy - r + 2), top, 4)
+    pygame.draw.circle(s, BLACK, top, r * 0.2 + 2)
+    pygame.draw.circle(s, (120, 220, 255) if expression != "eliminated" else (150, 150, 160), top, r * 0.2)
+    pygame.draw.circle(s, BLACK, (cx, cy), r + OUTLINE)
+    pygame.draw.circle(s, base, (cx, cy), r)
+    pygame.draw.circle(s, _shade(base, 0.86), (cx + r * 0.18, cy + r * 0.2), r * 0.78)
+    pygame.draw.circle(s, base, (cx - r * 0.06, cy - r * 0.04), r * 0.8)
+    pygame.draw.arc(s, (255, 255, 255), (cx - r * 0.8, cy - r * 0.8, r * 1.6, r * 1.6), 1.7, 2.9, 4)
+    ey = cy - r * 0.08
     if expression == "eliminated":
-        for dx in (-radius * 0.35, radius * 0.35):
-            pygame.draw.line(s, BLACK, (c + dx - 3, c - 5), (c + dx + 3, c + 1), 2)
-            pygame.draw.line(s, BLACK, (c + dx - 3, c + 1), (c + dx + 3, c - 5), 2)
+        for dx in (-r * 0.34, r * 0.34):
+            k = r * 0.16
+            pygame.draw.line(s, BLACK, (cx + dx - k, ey - k), (cx + dx + k, ey + k), 3)
+            pygame.draw.line(s, BLACK, (cx + dx - k, ey + k), (cx + dx + k, ey - k), 3)
+    elif expression == "scared":
+        for dx in (-r * 0.34, r * 0.34):
+            pygame.draw.circle(s, WHITE, (cx + dx, ey), r * 0.2)
+            pygame.draw.circle(s, BLACK, (cx + dx, ey), r * 0.2, 2)
+            pygame.draw.circle(s, BLACK, (cx + dx, ey), r * 0.08)
+        pygame.draw.ellipse(s, BLACK, (cx - r * 0.12, cy + r * 0.3, r * 0.24, r * 0.26))
     else:
-        er = 2.6 if expression != "scared" else 3.6
-        for dx in (-radius * 0.35, radius * 0.35):
-            pygame.draw.circle(s, BLACK, (c + dx, c - 2), er)
+        for dx in (-r * 0.34, r * 0.34):
+            pygame.draw.ellipse(s, BLACK, (cx + dx - r * 0.09, ey - r * 0.16, r * 0.18, r * 0.3))
+        pygame.draw.line(s, _shade(base, 0.5), (cx - r * 0.2, cy + r * 0.42), (cx + r * 0.2, cy + r * 0.42), 3)
     return s
 
 
@@ -237,11 +256,16 @@ def draw_hero(frame: pygame.Surface, hero: Hero, pos, angle_deg: float, vel, exp
     return blit_body(frame, src, pos, angle_deg, along, across, vdeg, zoom)
 
 
-def draw_extra(frame: pygame.Surface, extra: Extra, pos, angle_deg: float, expression: str, zoom: float = 1.0) -> None:
-    s = extra_surface(extra.colour, extra.radius, "eliminated" if expression == "eliminated" else
-                      ("scared" if expression == "scared" else "neutral"))
+def draw_extra(frame: pygame.Surface, extra: Extra, pos, angle_deg: float, expression: str, zoom: float = 1.0,
+               limb_state: str = "idle", t: float = 0.0, vx: float = 0.0) -> None:
+    r = extra.radius
+    draw_limbs(frame, pos, r, r, limb_state, t, vx, zoom)
+    s = extra_surface(extra.colour, r, "eliminated" if expression == "eliminated" else
+                      ("scared" if expression in ("scared", "dizzy") else "neutral"))
     s = pygame.transform.rotozoom(s, -angle_deg * 0.3, zoom)
-    frame.blit(s, s.get_rect(center=(int(pos[0]), int(pos[1]))))
+    # the bot surface is taller than wide (antenna): anchor the body centre on pos
+    off = (s.get_height() - s.get_width()) / 2
+    frame.blit(s, s.get_rect(center=(int(pos[0]), int(pos[1] - off))))
     if extra.cult:
         b = cult_badge(extra.number)
-        frame.blit(b, b.get_rect(midbottom=(int(pos[0]), int(pos[1] - extra.radius * zoom - 2))))
+        frame.blit(b, b.get_rect(midbottom=(int(pos[0]), int(pos[1] - r * 1.8 * zoom - 2))))

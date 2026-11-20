@@ -24,7 +24,8 @@ def run(arena: str, seed: int, goal: str | None = None):
     rec = recipe_for(arena, seed, goal)
     rng = random.Random(seed)
     heroes = rng.sample(list(HEROES), 6)
-    extras = make_extras(rng.randint(24, 30), rng)
+    from src.config import settings
+    extras = make_extras(rng.randint(*settings()["cast"]["extras_range"]), rng)
     t0 = time.time()
     tr = Sim(rec, heroes, extras, seed).run()
     el = sum(1 for e in tr.events if e.kind == "elimination")

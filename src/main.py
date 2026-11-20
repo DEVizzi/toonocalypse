@@ -102,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--episode", type=int, default=None, help="episode number shown on the badge")
     ap.add_argument("--out", default="output/episode.mp4")
     ap.add_argument("--no-render", action="store_true", help="simulate and score only")
+    ap.add_argument("--stills", type=int, default=0, help="also save N half-size PNG stills for review")
     a = ap.parse_args(argv)
 
     if not a.dry_run:
@@ -136,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
         ep = pipeline.Episode(trace, label, prompt=comment_prompt(heroes, trace.meta["winner"], rng),
                               flash_event=flash_event(trace))
         t0 = time.time()
-        info = pipeline.encode(ep, out)
+        info = pipeline.encode(ep, out, stills=a.stills)
         info["render_s"] = round(time.time() - t0, 1)
         print(f"rendered {out} frames={info['frames']} duration={info['duration']:.1f}s in {info['render_s']}s")
         summary.update(video=str(out), duration=info["duration"], frames=info["frames"], render_s=info["render_s"])

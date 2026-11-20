@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.config import FPS, H, LAYOUT, W
+from src.config import FPS, H, LAYOUT, W, settings
 from src.physics import trace as T
 
 VIEW_TOP, VIEW_BOTTOM = LAYOUT["viewport"]
@@ -53,9 +53,9 @@ def track(trace: T.Trace) -> list[Cam]:
             chaos.append((pre + int(e.t * FPS), 1.0 if e.kind == "elimination" else 0.7))
     if trace.mode == "TOP_DOWN":
         span = max(x1 - x0, (y1 - y0) * W / (VIEW_BOTTOM - VIEW_TOP))
-        base_zoom = min(1.15, W / span)
+        base_zoom = min(1.15, W / span) * settings()["render"]["top_zoom"]
     else:
-        base_zoom = 1.0
+        base_zoom = settings()["render"]["side_zoom"]
     cx, cy, cz = None, None, base_zoom
     vx = vy = vz = 0.0
     dt = 1 / FPS
@@ -76,11 +76,14 @@ def track(trace: T.Trace) -> list[Cam]:
             tx = min(max(tx, x0 + W / 2 / base_zoom), x1 - W / 2 / base_zoom)
             ty = min(max(ty, y0 + 300), y1 - 500)
         tz = base_zoom
+        if trace.mode == "TOP_DOWN":      # follow the shrinking arena in so the fight stays big on screen
+            ek = trace.zones[f].get("edge_k", 1.0) * trace.zones[f].get("ring_r", 1.0) / max(1.0, trace.zones[0].get("ring_r", 1.0))
+            tz = base_zoom / max(0.55, ek)
         strength = 0.0
         for cf, s in chaos:
             if 0 <= f - cf < int(0.6 * FPS):
                 strength = max(strength, s)
-                tz = base_zoom * 1.15
+                tz = tz * 1.15
         if cx is None:
             cx, cy = tx, ty
         cx, vx = _spring(cx, vx, tx, 3.2, dt)

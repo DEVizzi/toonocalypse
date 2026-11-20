@@ -22,9 +22,10 @@ from src.config import FPS, H, LAYOUT, TIMELINE, VIDEO, W  # noqa: E402
 from src.games.themes import THEME_BY_KEY, Theme  # noqa: E402
 from src.physics import trace as T  # noqa: E402
 from src.physics.camera import Cam, track  # noqa: E402
-from src.rendering import effects, hud  # noqa: E402
+from src.rendering import effects, hud, scenery  # noqa: E402
 
 BLACK = (17, 17, 17)
+WHITE_ = (255, 255, 255)
 
 
 @dataclass
@@ -92,7 +93,8 @@ class Renderer:
         self.theme: Theme = THEME_BY_KEY[self.meta["recipe"]["theme"]]
         self.cams = track(self.tr)
         self.frame = pygame.Surface((W, H))
-        self.sky = self._sky()
+        self.sky = scenery.sky(self.theme)
+        self.castle = scenery.castle_header(self.theme)
         self.heroes = [HERO_BY_KEY[k] for k in self.meta["heroes"]]
         self.extras = {k: Extra(v["number"], v["colour"], cult=v["cult"]) for k, v in self.meta["extras"].items()}
         self.pre = self.meta.get("preroll_frames", 0)
@@ -128,7 +130,7 @@ class Renderer:
         th = self.theme
         zone = self.tr.zones[fi]
         removed = set(zone.get("removed_statics", []))
-        par = (-cam.x * 0.15) % W
+        par = (-cam.x * 0.1) % W
         fr.blit(self.sky, (par - W, 0))
         fr.blit(self.sky, (par, 0))
         self._particles(cam, t_anim)
@@ -137,23 +139,14 @@ class Renderer:
         for s in self.meta["statics"]:
             if s["type"] == "disc":
                 k = zone.get("edge_k", 1.0)
-                c = cam.to_screen(*s["c"])
-                pygame.draw.circle(fr, BLACK, c, s["r"] * z * k + 8)
-                pygame.draw.circle(fr, th.terrain, c, s["r"] * z * k)
-                pygame.draw.circle(fr, th.terrain_outline, c, s["r"] * z * k * 0.55, 4)
+                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), s["r"] * z * k, z, th)
             elif s["type"] == "ring":
                 r = zone.get("ring_r", s["r"]) * zone.get("edge_k", 1.0)
-                c = cam.to_screen(*s["c"])
-                pygame.draw.circle(fr, BLACK, c, r * z + 8)
-                pygame.draw.circle(fr, th.terrain, c, r * z)
-                pygame.draw.circle(fr, th.accent, c, r * z, 6)
+                scenery.draw_floating_platform(fr, cam.to_screen(*s["c"]), r * z, z, th)
+                pygame.draw.circle(fr, th.accent, cam.to_screen(*s["c"]), r * z, max(3, int(6 * z)))
             elif s["type"] == "square":
                 k = zone.get("edge_k", 1.0)
-                hh = s["half"] * k
-                a, b = cam.to_screen(-hh, -hh), cam.to_screen(hh, hh)
-                rect = pygame.Rect(a[0], a[1], b[0] - a[0], b[1] - a[1])
-                pygame.draw.rect(fr, BLACK, rect.inflate(16, 16), border_radius=18)
-                pygame.draw.rect(fr, th.terrain, rect, border_radius=14)
+                scenery.draw_floating_platform(fr, cam.to_screen(0, 0), 0, z, th, "square", s["half"] * k * z)
             elif s["type"] == "hex_grid":
                 states = zone.get("tiles", [0] * len(s["tiles"]))
                 k = zone.get("edge_k", 1.0)
@@ -166,8 +159,11 @@ class Renderer:
                     if st == 1:
                         jx = math.sin(t_anim * 60 + x) * 3
                         pts = [(px + jx, py) for px, py in pts]
+                    side = [(px, py + 22 * z) for px, py in pts]
+                    pygame.draw.polygon(fr, BLACK, side)
+                    pygame.draw.polygon(fr, scenery.mix(col, BLACK, 0.3), [(px, py - 3) for px, py in side])
                     pygame.draw.polygon(fr, col, pts)
-                    pygame.draw.polygon(fr, th.terrain_outline, pts, 4)
+                    pygame.draw.polygon(fr, BLACK, pts, 4)
         # SIDE terrain fills + top edges
         for s in self.meta["statics"]:
             if s["id"] in removed if "id" in s else False:
@@ -176,9 +172,9 @@ class Renderer:
                 xs = [p[0] for p in s["verts"]]
                 if not (cam.visible(min(xs), s["verts"][0][1], 2000) or cam.visible(max(xs), s["verts"][1][1], 2000)):
                     continue
-                col = {"ice": (200, 235, 255), "mud": (110, 80, 50), "bouncy": (255, 120, 190), "conveyor": (90, 90, 100),
-                       "plank": (170, 120, 70)}.get(s["mat"], th.terrain)
-                pygame.draw.polygon(fr, col, self._poly_screen(cam, s["verts"]))
+                if s["mat"] == "plank":
+                    continue                     # bridges have no cliff body underneath
+                scenery.draw_cliff(fr, self._poly_screen(cam, s["verts"]), z, th, s["mat"])
         for s in self.meta["statics"]:
             if "id" in s and s["id"] in removed:
                 continue
@@ -186,9 +182,13 @@ class Renderer:
                 a, b = cam.to_screen(*s["a"]), cam.to_screen(*s["b"])
                 if max(a[0], b[0]) < -50 or min(a[0], b[0]) > W + 50:
                     continue
-                col = {"gate": (120, 70, 40), "wall": th.terrain_outline, "bouncy": (255, 60, 160), "plank": (110, 70, 30),
-                       "conveyor": (40, 40, 48)}.get(s["mat"], th.terrain_outline)
-                pygame.draw.line(fr, col, a, b, max(4, int(s["r"] * 2 * z)))
+                if s["mat"] in ("ground", "ice", "mud", "bouncy", "conveyor", "plank"):
+                    scenery.draw_cap(fr, a, b, z, th, s["mat"])
+                else:
+                    col = {"gate": (150, 92, 48), "wall": scenery.rock_colours(th)[1]}.get(s["mat"], th.terrain_outline)
+                    w = max(6, int(s["r"] * 2 * z))
+                    pygame.draw.line(fr, BLACK, a, b, w + 8)
+                    pygame.draw.line(fr, col, a, b, w)
                 if s.get("belt"):   # moving chevrons on conveyors
                     n = int(math.hypot(b[0] - a[0], b[1] - a[1]) / 40)
                     off = (t_anim * s["belt"] * 0.25) % 40
@@ -198,8 +198,10 @@ class Renderer:
                         pygame.draw.lines(fr, (255, 214, 0), False, [(x - d, a[1] - 6), (x, a[1]), (x - d, a[1] + 6)], 3)
             elif s["type"] == "poly":
                 pts = self._poly_screen(cam, s["verts"])
-                pygame.draw.polygon(fr, th.castle, pts)
-                pygame.draw.polygon(fr, BLACK, pts, 4)
+                stone = scenery.rock_colours(th)[1]
+                pygame.draw.polygon(fr, stone, pts)
+                pygame.draw.line(fr, scenery.mix(stone, WHITE_, 0.3), pts[2], pts[3], max(2, int(6 * z))) if len(pts) > 3 else None
+                pygame.draw.polygon(fr, BLACK, pts, 5)
             elif s["type"] == "circle":
                 c = cam.to_screen(*s["c"])
                 pygame.draw.circle(fr, BLACK, c, s["r"] * z + 4)
@@ -370,6 +372,8 @@ class Renderer:
                 continue
             sx, sy = cam.to_screen(x, y)
             ex = EXPRESSIONS[int(expr[i])]
+            if self.tr.mode == "TOP_DOWN" and alive:
+                scenery.shadow(self.frame, (sx, sy), (HERO_BY_KEY[k].radius if k in HERO_BY_KEY else 24) * z)
             scale = z * (1 - sq if falling else 1)
             spin = (t_anim * 900) % 360 if falling else ang
             if k in HERO_BY_KEY:
@@ -394,7 +398,12 @@ class Renderer:
                     self._bomb(sx, sy - h.radius * z - 10, t_anim)
             else:
                 e = self.extras[k]
-                renderer.draw_extra(self.frame, e, (sx, sy), spin, ex, zoom=max(0.05, scale))
+                bl = "stunned" if f & T.STUNNED else ("airborne" if (f & T.AIRBORNE and self.tr.mode != "TOP_DOWN") else
+                                                      ("running" if abs(vx) + abs(vy) > 40 else "idle"))
+                if falling:
+                    bl = "airborne"
+                renderer.draw_extra(self.frame, e, (sx, sy), spin, ex, zoom=max(0.05, scale), limb_state=bl,
+                                    t=t_anim + i * 0.37, vx=vx)
                 if f & T.HAS_BOMB:
                     self._bomb(sx, sy - 22 * z, t_anim)
         self._pills(pills)
@@ -448,6 +457,28 @@ class Renderer:
                 effects.draw_popup(self.frame, word, (sx, sy - 110), age, seed)
 
     # ------------------------------------------------------------------ frame
+    def _ranks(self, fi: int) -> dict[str, int]:
+        """Live placement of every hero: survivors by course progress (SIDE) / closeness to the centre (TOP),
+        then the eliminated in reverse order of elimination."""
+        rows, flags = self.tr.frames[fi], self.tr.flags[fi]
+        n = len(self.tr.keys)
+        alive = [i for i in range(n) if flags[i] & T.ALIVE]
+        if self.tr.mode == "TOP_DOWN":
+            alive.sort(key=lambda i: rows[i, 0] ** 2 + rows[i, 1] ** 2)
+        else:
+            alive.sort(key=lambda i: -rows[i, 0])
+        w = self.meta.get("winner")
+        if w and flags[self.tr.index(w)] & T.WINNER:
+            alive.sort(key=lambda i: self.tr.keys[i] != w)
+        out_t = {}
+        play_t = (fi - self.pre) / FPS
+        for e in self.tr.events:
+            if e.kind == "elimination" and e.t <= play_t:
+                out_t[e.actors[0]] = e.t
+        dead = sorted((i for i in range(n) if not flags[i] & T.ALIVE), key=lambda i: -out_t.get(self.tr.keys[i], 0))
+        order = alive + dead
+        return {self.tr.keys[i]: r + 1 for r, i in enumerate(order) if self.tr.keys[i] in HERO_BY_KEY}
+
     def tuno_state(self, play_t: float, segment: str) -> str:
         if segment in ("card", "replay"):
             return "crowning"
@@ -484,7 +515,6 @@ class Renderer:
 
     def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int) -> None:
         fr = self.frame
-        hud.draw_decor(fr, self.theme, t_anim)
         flags = self.tr.flags[fi]
         alive = int(sum(1 for f in flags if f & T.ALIVE))
         total = len(self.tr.keys)
@@ -493,8 +523,11 @@ class Renderer:
             f = flags[self.tr.index(h.key)]
             status[h.key] = "crown" if f & T.WINNER else ("alive" if f & T.ALIVE else "out")
         recent = sum(1 for e in self.tr.events if e.kind == "elimination" and 0 <= play_t - e.t < 1.5)
-        hud.draw_header(fr, self.ep.ep_label, alive, total, self.heroes, status, self.tuno_state(play_t, shot.segment),
-                        t_anim, pulse=1.0 if recent >= 3 else 0.0)
+        scenery.draw_header(fr, self.castle, self.ep.ep_label, self.tuno_state(play_t, shot.segment), t_anim,
+                            hud.TEXT_BOXES)
+        if shot.segment not in ("card",):
+            scenery.draw_panel(fr, alive, total, self.heroes, status, self._ranks(fi), hud.TEXT_BOXES,
+                               pulse=1.0 if recent >= 3 else 0.0)
         if shot.segment == "cold" or (shot.segment == "tail"):
             hud.draw_pick_your_fighter(fr, self.heroes, t_anim)
         if shot.segment == "play":
@@ -519,7 +552,7 @@ class Renderer:
             fr.blit(veil, (0, 0))
 
 
-def encode(ep: Episode, out: Path, audio: Path | None = None) -> dict:
+def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0) -> dict:
     ep.shots = plan_shots(ep)
     r = Renderer(ep)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -532,9 +565,14 @@ def encode(ep: Episode, out: Path, audio: Path | None = None) -> dict:
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     assert proc.stdin is not None
     boxes = []
+    n = len(ep.shots)
+    still_at = {int(n * k) for k in (0.01, 0.2, 0.45, 0.7, 0.86, 0.96)[:stills]} if stills else set()
     for i, shot in enumerate(ep.shots):
         frame = r.render_shot(shot, i)
         proc.stdin.write(pygame.image.tobytes(frame, "RGB"))
+        if i in still_at:
+            small = pygame.transform.smoothscale(frame, (W // 2, H // 2))
+            pygame.image.save(small, str(out.with_name(f"{out.stem}_f{i:04d}.png")))
         if i % 15 == 0:
             boxes.append([tuple(b) for b in hud.TEXT_BOXES])
     proc.stdin.close()

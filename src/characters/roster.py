@@ -72,16 +72,17 @@ HEROES: tuple[Hero, ...] = (
 )
 HERO_BY_KEY = {h.key: h for h in HEROES}
 
-# Extras: muted sand/khaki/taupe (never grey or white, which are reserved for heroes).
-EXTRA_COLOURS = ("#C8B48A", "#BFA77A", "#A8946F", "#B79F83", "#9C8A6E", "#C4AD8F", "#AE9877", "#D1BC94")
+# Extras are "bots": light cool-grey round robots with an antenna (owner decision 2026-11-20; overrides the original
+# sand/khaki spec). They stay distinct from Juggernaut (dark slate square) and Floater (white cloud) by shape and antenna.
+EXTRA_COLOURS = ("#C5CBD3", "#B9C0CA", "#CFD4DA", "#B1B9C4", "#C0C6CE")
 
 
 @dataclass
 class Extra:
     number: int                 # 1-based contestant number; cult extras keep theirs forever
     colour: str
-    radius: float = 14
-    mass: float = 1.1
+    radius: float = 24
+    mass: float = 2.4
     max_speed: float = 200
     friction: float = 0.6
     elasticity: float = 0.3
@@ -99,6 +100,6 @@ def make_extras(n: int, rng: random.Random, cult_numbers: set[int] | None = None
     for i in range(1, n + 1):
         # extras are deliberately less competent than heroes (lower speed, worse jumping and edge sense)
         b = Behaviour(rng.uniform(0.05, 0.35), rng.uniform(0.0, 0.35), rng.uniform(0.1, 0.4), rng.uniform(0.0, 0.25))
-        out.append(Extra(i, rng.choice(EXTRA_COLOURS), mass=rng.uniform(0.8, 1.4), max_speed=rng.uniform(110, 165),
+        out.append(Extra(i, rng.choice(EXTRA_COLOURS), mass=rng.uniform(2.0, 2.8), max_speed=rng.uniform(110, 165),
                          behaviour=b, cult=i in cult_numbers))
     return out
