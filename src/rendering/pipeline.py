@@ -631,31 +631,6 @@ class Renderer:
         pygame.draw.line(self.frame, (160, 120, 80), (x + 8, y - 26), (x + 16, y - 38), 4)
         pygame.draw.circle(self.frame, (255, 200, 40) if int(t * 10) % 2 else (255, 80, 40), (x + 17, y - 40), 6)
 
-    def _pills(self, pills, ranks: dict[str, int]) -> None:
-        """Name pills 18 px above heads with a 3-iteration screen-space repulsion pass. In a pile-up (2+ overlapping
-        pills) only the top-3 placed heroes (and the fan favourite) keep their pills so faces stay visible."""
-        boxes = []
-        for h, x, y, fan in pills:
-            s = renderer.name_pill(h, crown=fan, size=22)
-            boxes.append([s, x - s.get_width() / 2, y - s.get_height(), h, fan])
-        rects = [pygame.Rect(b[1], b[2], b[0].get_width(), b[0].get_height()) for b in boxes]
-        overlaps = sum(1 for i in range(len(rects)) for j in range(i + 1, len(rects)) if rects[i].colliderect(rects[j]))
-        if overlaps >= 2:
-            top = sorted(boxes, key=lambda b: ranks.get(b[3].key, 99))[:3]
-            boxes = [b for b in boxes if b in top or b[4]]
-        for _ in range(3):
-            for a in range(len(boxes)):
-                for b in range(a + 1, len(boxes)):
-                    ra = pygame.Rect(boxes[a][1], boxes[a][2], boxes[a][0].get_width(), boxes[a][0].get_height())
-                    rb = pygame.Rect(boxes[b][1], boxes[b][2], boxes[b][0].get_width(), boxes[b][0].get_height())
-                    if ra.colliderect(rb):
-                        dy = (ra.bottom - rb.top) / 2 + 1 if ra.centery <= rb.centery else -((rb.bottom - ra.top) / 2 + 1)
-                        boxes[a][2] -= dy
-                        boxes[b][2] += dy
-        for s, x, y, _h, _f in boxes:
-            y = max(scenery.PANEL.bottom + 6, min(y, LAYOUT["viewport"][1] - 40))
-            self.frame.blit(s, (x, y))
-
     def draw_juice(self, cam: Cam, play_t: float, t_anim: float) -> None:
         """Popups, ghosts, sparks and dust from trace events near play_t."""
         for e in self.tr.events:
