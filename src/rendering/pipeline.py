@@ -237,9 +237,22 @@ class Renderer:
                 else:
                     c = cam.to_screen(*zz[1])
                     r = int(zz[2] * z)
-                    surf = pygame.Surface((2 * r, 2 * r), pygame.SRCALPHA)
-                    pygame.draw.circle(surf, col, (r, r), r)
-                    fr.blit(surf, (c[0] - r, c[1] - r))
+                    surf = pygame.Surface((2 * r + 8, 2 * r + 8), pygame.SRCALPHA)
+                    o = r + 4
+                    pygame.draw.circle(surf, col, (o, o), r)
+                    edge = (255, 255, 255, 200) if key != "mud_zones" else (70, 45, 20, 230)
+                    pygame.draw.circle(surf, edge, (o, o), r, 5)
+                    if key == "mud_zones":           # bubbling mud puddle (not a hole)
+                        for j in range(5):
+                            a = j * 1.3 + t * 0.8
+                            bx, by = o + math.cos(a) * r * 0.55, o + math.sin(a * 1.3) * r * 0.45
+                            pygame.draw.circle(surf, (160, 115, 70, 230), (bx, by), max(3, r * 0.1 * (1 + 0.3 * math.sin(t * 4 + j))))
+                    elif key == "boost_zones":
+                        for j in (-1, 0, 1):
+                            pygame.draw.lines(surf, (255, 140, 0, 255), False,
+                                              [(o - r * 0.25, o + j * r * 0.35 - r * 0.15), (o + r * 0.1, o + j * r * 0.35),
+                                               (o - r * 0.25, o + j * r * 0.35 + r * 0.15)], 5)
+                    fr.blit(surf, (c[0] - o, c[1] - o))
         if "lava_y" in zone:
             y = cam.to_screen(0, zone["lava_y"])[1]
             if y < H:

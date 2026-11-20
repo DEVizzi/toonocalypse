@@ -75,6 +75,9 @@ class Brain:
         for mod in sim.surface_mods:
             surf *= mod(c)
         vmax = c.max_speed * sim.speed_mult * surf
+        if c.hero is not None and c.hero.trait == "bowling" and sim.mode == SIDE:
+            # slow start, terrifying momentum: top speed builds while he keeps rolling forward
+            vmax *= 1.0 + sim.cfg["juggernaut_momentum"] * min(1.0, max(0.0, c.body.velocity.x) / max(1.0, c.max_speed))
         v = c.body.velocity
         if sim.mode != SIDE:
             # top-down has no floor friction: steer with a capped force toward the desired velocity (also brakes)
@@ -87,7 +90,8 @@ class Brain:
         along = v.x * dx + v.y * dy
         if along >= vmax:
             return
-        k = mult * (1.0 if c.grounded else AIR_CONTROL) * min(1.0, (vmax - along) / max(1.0, vmax * 0.35))
+        air = AIR_CONTROL * (sim.cfg["floater_air_control"] if c.hero is not None and c.hero.trait == "glide" else 1.0)
+        k = mult * (1.0 if c.grounded else air) * min(1.0, (vmax - along) / max(1.0, vmax * 0.35))
         if c.grounded and sim.mode == SIDE:
             k *= 0.45 + 0.55 * min(1.0, c.shape.friction / 0.6)   # traction: slippery bodies accelerate poorly
         if c.extra is not None:

@@ -83,6 +83,8 @@ physics:
     panic_s: [0.3, 0.8]
     jump_k: 0.9              # bots jump lower than heroes
     goal_sight_px: 180       # TOP: extras ignore goal targets farther than this
+  juggernaut_momentum: 0.45  # SIDE: Juggernaut's top speed grows up to +45% while rolling at speed
+  floater_air_control: 0.45  # SIDE: Floater drifts; it steers poorly in the air
   hero_edge_margin: 1.35     # TOP: heroes keep this much more distance from drops
   shove_top: 240             # TOP shove impulse per unit mass (lunger mass capped at 3x the target's)
   course_length_scale: 1.45  # SIDE section counts multiplier

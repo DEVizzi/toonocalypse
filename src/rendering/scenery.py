@@ -161,7 +161,7 @@ def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[H
     cols = 5 if two_rows else max(1, n)
     step = (PANEL.right - 16 - x0) / cols
     rad = 26 if two_rows else min(40, step * 0.42)
-    small = font(20 if two_rows else int(min(26, step * 0.24)))
+    small = font(20 if two_rows else int(min(23, step * 0.2)))
     for i, h in enumerate(heroes):
         if two_rows:
             cx, cy = x0 + step * (i % cols) + rad + 4, PANEL.y + 14 + rad + (i // cols) * 80
