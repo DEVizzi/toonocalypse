@@ -316,8 +316,11 @@ class Renderer:
                     pygame.draw.circle(self.frame, (255, 255, 255), (c[0] - sh["r"] * 0.35 * cam.zoom, c[1] - sh["r"] * 0.35 * cam.zoom), sh["r"] * 0.2 * cam.zoom)
                 elif sh["type"] == "seg":
                     pts = [cam.to_screen(x + px * ca - py * sa, y + px * sa + py * ca) for px, py in (sh["a"], sh["b"])]
-                    if st["style"] == "disc_marks":
-                        pygame.draw.line(self.frame, th.terrain_outline, pts[0], pts[1], 4)
+                    if st["style"] == "disc_marks":     # spokes shrink with the platform
+                        k = self.tr.zones[fi].get("edge_k", 1.0)
+                        pts = [cam.to_screen(x + (px * ca - py * sa) * k, y + (px * sa + py * ca) * k)
+                               for px, py in (sh["a"], sh["b"])]
+                        pygame.draw.line(self.frame, scenery.mix(th.terrain, BLACK, 0.25), pts[0], pts[1], 4)
                         continue
                     pygame.draw.line(self.frame, BLACK, pts[0], pts[1], int(sh["r"] * 2 * cam.zoom) + 6)
                     pygame.draw.line(self.frame, th.hazard, pts[0], pts[1], int(sh["r"] * 2 * cam.zoom))

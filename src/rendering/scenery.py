@@ -157,11 +157,16 @@ def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[H
     text_boxes += [r1, r2, r3]
     n = len(heroes)
     x0 = PANEL.x + 250
-    step = (PANEL.right - 16 - x0) / max(1, n)
-    rad = min(40, step * 0.42)
-    small = font(int(min(26, step * 0.24)))
+    two_rows = n > 6                        # Sunday: 10 heroes in 2 rows of 5
+    cols = 5 if two_rows else max(1, n)
+    step = (PANEL.right - 16 - x0) / cols
+    rad = 26 if two_rows else min(40, step * 0.42)
+    small = font(20 if two_rows else int(min(26, step * 0.24)))
     for i, h in enumerate(heroes):
-        cx, cy = x0 + step * (i + 0.5), PANEL.y + 16 + rad
+        if two_rows:
+            cx, cy = x0 + step * (i % cols) + rad + 4, PANEL.y + 14 + rad + (i // cols) * 80
+        else:
+            cx, cy = x0 + step * (i + 0.5), PANEL.y + 16 + rad
         st = status.get(h.key, "alive")
         face = renderer.body_surface(h, "eliminated" if st == "out" else ("celebrating" if st == "crown" else "neutral"), 0)
         sz = int(rad * 2.1)
@@ -175,8 +180,12 @@ def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[H
         col = WHITE if st != "out" else (120, 124, 140)
         nm = small.render(h.name, True, col)
         rn = small.render(_ordinal(ranks[h.key]) if h.key in ranks else "", True, (255, 214, 0) if st != "out" else col)
-        ra = frame.blit(nm, nm.get_rect(midtop=(cx, cy + rad + 6)))
-        rb = frame.blit(rn, rn.get_rect(midtop=(cx - (10 if ranks.get(h.key) == 1 else 0), ra.bottom + 1)))
+        if two_rows:
+            ra = frame.blit(nm, nm.get_rect(bottomleft=(cx + rad + 6, cy + 2)))
+            rb = frame.blit(rn, rn.get_rect(topleft=(cx + rad + 6, cy + 2)))
+        else:
+            ra = frame.blit(nm, nm.get_rect(midtop=(cx, cy + rad + 6)))
+            rb = frame.blit(rn, rn.get_rect(midtop=(cx - (10 if ranks.get(h.key) == 1 else 0), ra.bottom + 1)))
         if ranks.get(h.key) == 1 and st != "out":
             _crown(frame, rb.right + 14, rb.centery, 20)
         text_boxes += [ra, rb]
@@ -193,10 +202,28 @@ def draw_cliff(frame: pygame.Surface, pts: list, zoom: float, theme, mat: str) -
     """SIDE ground section: stone cliff body with strata and a rounded cap (grass/snow/ice/mud) on top."""
     cap, rock, dark, light = rock_colours(theme)
     (ax, ay), (bx, by) = pts[0], pts[1]
-    pygame.draw.polygon(frame, rock, pts)
-    for d, col in ((70, light), (150, dark), (250, dark)):
-        dz = d * zoom
-        pygame.draw.line(frame, col, (ax + 6, ay + dz), (bx - 6, by + dz), max(2, int(5 * zoom)))
+    span = bx - ax
+    if span < 2:
+        return
+    n = max(2, int(span / (70 * zoom)))
+    rng = random.Random(int(span / zoom) * 31 + int((by - ay) / zoom))
+    depth = 300 * zoom
+    bottom = []
+    for i in range(n + 1):                    # jagged, tapering underside: a floating rock rather than a slab
+        k = i / n
+        edge = min(k, 1 - k)
+        d = depth * (0.35 + 0.65 * min(1.0, edge * 3.2)) * rng.uniform(0.82, 1.0)
+        x = ax + span * k + (span * 0.08 * (1 if k < 0.5 else -1) if 0 < k < 1 else 0)
+        bottom.append((x, ay + (by - ay) * k + d))
+    poly = [(ax, ay), (bx, by)] + bottom[::-1]
+    pygame.draw.polygon(frame, rock, poly)
+    # strata + shading
+    for f, col in ((0.28, light), (0.55, dark)):
+        pygame.draw.lines(frame, col, False, [(x, ay + (by - ay) * ((x - ax) / span) + (y - ay - (by - ay) * ((x - ax) / span)) * f)
+                                             for x, y in bottom[1:-1]] or [(ax, ay), (bx, by)], max(2, int(4 * zoom)))
+    shade = [(x, y) for x, y in bottom]
+    pygame.draw.lines(frame, dark, False, shade, max(3, int(10 * zoom)))
+    pygame.draw.polygon(frame, BLACK, poly, max(3, int(4 * zoom)))
 
 
 def draw_cap(frame: pygame.Surface, a, b, zoom: float, theme, mat: str) -> None:

@@ -79,8 +79,9 @@ physics:
     shrink_rate: 0.016
     edge_k_min: 0.12
   extras:                   # extras are fodder: they freeze in cartoon panic at drops and hazards
-    panic_per_s: 2.5
+    panic_per_s: 3.5
     panic_s: [0.3, 0.8]
+    jump_k: 0.9              # bots jump lower than heroes
     goal_sight_px: 180       # TOP: extras ignore goal targets farther than this
   hero_edge_margin: 1.35     # TOP: heroes keep this much more distance from drops
   shove_top: 240             # TOP shove impulse per unit mass (lunger mass capped at 3x the target's)

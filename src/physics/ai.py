@@ -128,7 +128,7 @@ class Brain:
             self._panic(sim, c)
             p_jump = (0.5 + 0.5 * bh.jumpiness) if c.is_hero else (0.12 + 0.35 * bh.jumpiness)
             if sim.rng.random() < p_jump and sim.t >= c.panic_until:
-                self._jump(c, vx_boost=60 * target_dx, k=(1.08 if c.is_hero else 1.0) + (0.12 if ground_ahead is None else 0.0))
+                self._jump(c, vx_boost=60 * target_dx, k=(1.08 if c.is_hero else sim.cfg["extras"]["jump_k"]) + (0.12 if ground_ahead is None else 0.0))
         caution = 1.0 - 0.35 * bh.caution if danger else 1.0
         self._drive(sim, c, target_dx, 0.0, caution)
         # shove a rival that is level and close, weighted by aggression
