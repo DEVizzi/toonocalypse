@@ -6,12 +6,19 @@
 client_secret*.json
 *service*account*.json
 kaggle.json
-# generated
+
+# generated media & temporary folders (NEVER commit media to git)
 output/
+renders/
+tmp/
 cache/
 work/
-*.wav
 *.mp4
+*.mov
+*.wav
+*.mp3
+
+# python / test caches
 __pycache__/
 *.pyc
 .pytest_cache/

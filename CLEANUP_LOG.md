@@ -1,6 +1,6 @@
-# Cleanup log — Toon Toon Castle (M0)
+# Cleanup log — ToonToonCastle (M0)
 
-The repo previously hosted abandoned AI-comic projects ("Toonocalypse" / "Tuno Clips").
+The repo previously hosted retired comic prototypes before being rebuilt from scratch for **ToonToonCastle** (`@ToonToonCastle`).
 They were removed without rewriting history in this cleanup. The last commit before cleanup is tagged **`legacy-final`**
 (`b39b883`); older snapshots stay tagged `legacy-v1` and `legacy-v2`. Nothing outside this repo was modified,
 and YouTube/Instagram were not touched.

@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ALLOWED_DIR = (ROOT / "output").resolve()
 
 LIMITS = {"w": 1080, "h": 1920, "fps": 30.0, "min_s": 15.0, "max_s": 60.0, "av_drift_s": 0.35,
-          "mean_db": -38.0, "max_db": -12.0}
+          "mean_db": -38.0, "max_db": -12.0, "zoom_min": 0.70, "zoom_max": 3.00}
 
 
 def _safe_path(p: str) -> Path:
@@ -56,6 +56,18 @@ def loudness(path: Path) -> tuple[float, float]:
     if not (mean and peak):
         raise RuntimeError("volumedetect produced no measurement (no decodable audio?)")
     return float(mean.group(1)), float(peak.group(1))
+
+
+def validate_camera_meta(meta: dict) -> list[str]:
+    """Verifies rendered camera zoom stayed inside sane broadcast bounds (catches 0.002x zoom collapses)."""
+    fails: list[str] = []
+    zmin = meta.get("cam_zoom_min")
+    zmax = meta.get("cam_zoom_max")
+    if zmin is not None and float(zmin) < LIMITS["zoom_min"]:
+        fails.append(f"camera zoom collapsed ({float(zmin):.4f} < {LIMITS['zoom_min']:.2f})")
+    if zmax is not None and float(zmax) > LIMITS["zoom_max"]:
+        fails.append(f"camera zoom exploded ({float(zmax):.4f} > {LIMITS['zoom_max']:.2f})")
+    return fails
 
 
 def validate(p: str) -> list[str]:
@@ -97,6 +109,12 @@ def validate(p: str) -> list[str]:
     mean_db, max_db = loudness(path)
     if mean_db < LIMITS["mean_db"] or max_db < LIMITS["max_db"]:
         fails.append(f"audio too quiet / silent (mean {mean_db:.1f} dB, max {max_db:.1f} dB)")
+    meta_path = path.with_suffix(".json")
+    if meta_path.is_file():
+        try:
+            fails.extend(validate_camera_meta(json.loads(meta_path.read_text())))
+        except (OSError, ValueError):
+            fails.append("companion metadata .json unreadable")
     return fails
 
 
@@ -113,7 +131,7 @@ def main(argv: list[str]) -> int:
         for f in fails:
             print(f"[FFPROBE GATE FAIL] {f}", file=sys.stderr)
         return 1
-    print(f"[FFPROBE GATE PASS] {Path(argv[0]).name}: H.264 1080x1920@30 + AAC 44.1k, A/V in sync, audible")
+    print(f"[FFPROBE + CAMERA GATE PASS] {Path(argv[0]).name}: H.264 1080x1920@30 + AAC 44.1k, A/V in sync, audible, zoom OK")
     return 0
 
 

@@ -27,10 +27,22 @@ class OAuthError(RuntimeError):
 
 
 def _creds() -> dict[str, str]:
-    missing = [k for k in REQUIRED if not (os.environ.get(k) or "").strip()]
+    aliases = {
+        "YOUTUBE_CLIENT_ID": ("YOUTUBE_CLIENT_ID", "YT_CLIENT_ID"),
+        "YOUTUBE_CLIENT_SECRET": ("YOUTUBE_CLIENT_SECRET", "YT_CLIENT_SECRET"),
+        "YOUTUBE_REFRESH_TOKEN": ("YOUTUBE_REFRESH_TOKEN", "YT_REFRESH_TOKEN"),
+    }
+    out: dict[str, str] = {}
+    missing: list[str] = []
+    for canonical, keys in aliases.items():
+        val = next(((os.environ.get(k) or "").strip() for k in keys if (os.environ.get(k) or "").strip()), "")
+        if not val:
+            missing.append(canonical)
+        else:
+            out[canonical] = val
     if missing:
         raise OAuthError(f"missing required secret(s): {', '.join(missing)}")
-    return {k: os.environ[k].strip() for k in REQUIRED}
+    return out
 
 
 def access_token() -> tuple[str, int, str]:

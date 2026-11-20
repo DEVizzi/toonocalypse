@@ -1,0 +1,43 @@
+name: Instagram 60-Day Token Refresh
+
+# Checks IG_TOKEN_REFRESHED_AT on the 1st and 15th of every month (0 10 1,15 * *) and refreshes the
+# 60-day Long-Lived Instagram Graph API token once it reaches >= 45 days old, writing the fresh token
+# back to GitHub Secret `IG_ACCESS_TOKEN` and opening a GitHub Issue immediately if refresh fails.
+on:
+  schedule:
+    - cron: "0 10 1,15 * *"
+  workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: "Force token refresh regardless of current token age"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  refresh_ig_token:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      META_APP_ID: ${{ secrets.META_APP_ID }}
+      META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+      GH_PAT: ${{ secrets.GH_PAT || secrets.GH_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_PAT || secrets.GH_TOKEN }}
+      FORCE: ${{ inputs.force_refresh && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests==2.32.5
+      - name: Check age & refresh IG_ACCESS_TOKEN (>= 45d)
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            python -m src.publish.ig_token --force
+          else
+            python -m src.publish.ig_token
+          fi

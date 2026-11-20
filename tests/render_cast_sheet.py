@@ -33,7 +33,7 @@ def main(out: str = "docs/cast_sheet.png") -> str:
     height = 120 + 50 + rows_h + 330 + 260 + 470
     sheet = pygame.Surface((width, height))
     sheet.fill((246, 241, 230))
-    sheet.blit(title_f.render("TOON TOON CASTLE  —  CAST SHEET", True, (40, 30, 60)), (30, 30))
+    sheet.blit(title_f.render("TOONTOONCASTLE  —  CAST SHEET", True, (40, 30, 60)), (30, 30))
     y0 = 120
     for c, name in enumerate(COLS):
         t = lab_f.render(name, True, (80, 70, 90))

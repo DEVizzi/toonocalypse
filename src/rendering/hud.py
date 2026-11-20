@@ -236,6 +236,15 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
     pygame.draw.rect(frame, BLACK, panel, 7, border_radius=36)
     pygame.draw.rect(frame, (255, 214, 40), panel.inflate(-16, -16), 5, border_radius=28)
 
+    # v4.4 Brand Handle Tag atop the IPL Winner Card
+    tag_surf = outlined("@ToonToonCastle", 24, fill=WHITE, outline=BLACK, width=3, face="Fredoka.ttf")
+    tag_box = pygame.Rect(0, 0, tag_surf.get_width() + 34, 36)
+    tag_box.center = (W // 2, panel.top - 56)
+    pygame.draw.rect(frame, BLACK, tag_box.move(0, 3), border_radius=18)
+    pygame.draw.rect(frame, (20, 18, 44), tag_box, border_radius=18)
+    pygame.draw.rect(frame, (255, 214, 48), tag_box, 3, border_radius=18)
+    blit_text(frame, tag_surf, center=tag_box.center)
+
     # Ribbon on the card's top edge
     pop = 1.0 + 0.24 * math.exp(-t * 5) * math.cos(t * 18)
     rib = pygame.Rect(int(W / 2 - 360), panel.top - 30, 720, 78)

@@ -1,11 +1,11 @@
-"""Toon Toon Castle v4.0 Autonomous Season League CLI (§22.4).
+"""ToonToonCastle v4.4 Autonomous Season League CLI (§22.4).
 
 Examples:
     # Preview / Showcase dry-run (synthesizes realistic season standings, never mutates state/):
     python -m src.main --dry-run --seed 101 --season 1 --race 12 --arena rotating_disc --goal last_one_standing
 
-    # Autonomous daily Season League production run (updates state/*.json atomically, auto-rolls over after Race 30):
-    python -m src.main --commit-state
+    # Autonomous daily Season League production run (YT Shorts + IG Reels + atomic state/*.json commit):
+    python -m src.main --publish --commit-state
 """
 from __future__ import annotations
 
@@ -107,12 +107,14 @@ def comment_prompt(heroes: list, winner: str | None, rng: random.Random) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Toon Toon Castle v4.0 IPL Season League pipeline")
+    ap = argparse.ArgumentParser(description="ToonToonCastle v4.4 IPL Season League pipeline")
     ap.add_argument("--dry-run", action="store_true", help="render only: no uploads, no state/ mutation")
     ap.add_argument("--commit-state", action="store_true", help="git pull --rebase + commit + push state/ after run")
     ap.add_argument("--commit-state-dry-run", action="store_true",
                     help="pull --rebase + local commit + `git push --dry-run` (verifies the state step, remote untouched)")
-    ap.add_argument("--publish", action="store_true", help="upload to YouTube after the ffprobe gate passes")
+    ap.add_argument("--publish", action="store_true", help="dual upload to YouTube Shorts + Instagram Reels after gates pass")
+    ap.add_argument("--skip-yt", action="store_true", help="skip YouTube Shorts upload during --publish")
+    ap.add_argument("--skip-ig", action="store_true", help="skip Instagram Reels upload during --publish")
     ap.add_argument("--privacy", choices=["public", "unlisted", "private"], default="public")
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--season", type=int, default=None, help="override season number (synthesizes mock table in --dry-run)")
@@ -248,8 +250,11 @@ def main(argv: list[str] | None = None) -> int:
     else:
         cta_prompt = comment_prompt(list(HEROES), outcome.winner_key, rng)
 
+    from src.publish import metadata as pub_meta
+
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
+    meta_bundle = pub_meta.build_upload_metadata(recipe.arena, outcome, cta_prompt)
     summary = {
         "season": outcome.season_number,
         "race": outcome.race_number,
@@ -271,6 +276,7 @@ def main(argv: list[str] | None = None) -> int:
         "lead_changed": outcome.lead_changed,
         "cta_heroes": cta_keys,
         "resolved_at": trace.meta["resolved_at"],
+        "upload_metadata": meta_bundle,
         "candidates": report,
     }
     line_ids: list[str] = []
@@ -297,17 +303,25 @@ def main(argv: list[str] | None = None) -> int:
             line_ids = list(info["sound"].get("line_ids") or [])
             cliches = list(info["sound"].get("cliches") or [])
             print(f"sound: {info['sound']}")
+        meta_bundle = pub_meta.build_upload_metadata(recipe.arena, outcome, ep.prompt)
         summary.update(
             video=str(out),
             duration=info["duration"],
             frames=info["frames"],
             render_s=info["render_s"],
             prompt_cta=ep.prompt,
+            upload_metadata=meta_bundle,
+            cam_zoom_min=info.get("cam_zoom_min"),
+            cam_zoom_max=info.get("cam_zoom_max"),
+            cam_rescues=info.get("cam_rescues"),
             sound=info.get("sound"),
         )
+        out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
+
     if not a.dry_run:
+        pub_errors: list[str] = []
         if not a.no_render:
-            # v4.3.1 ffprobe audio/video validation gate — FAIL CLOSED (no upload, no league advance)
+            # v4.4 ffprobe + loudness + camera zoom sanity gate — FAIL CLOSED (no upload, no league advance)
             from src.publish import validate as gate
 
             try:
@@ -315,29 +329,63 @@ def main(argv: list[str] | None = None) -> int:
             except (ValueError, FileNotFoundError, RuntimeError, subprocess.TimeoutExpired) as exc:
                 fails = [str(exc)]
             summary["ffprobe_gate"] = "PASS" if not fails else fails
+            summary["camera_gate"] = "PASS" if not any("camera zoom" in f for f in fails) else "FAIL"
             if fails:
                 for f in fails:
-                    print(f"[FFPROBE GATE FAIL] {f}")
+                    print(f"[VALIDATION GATE FAIL] {f}")
                 out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
                 return 3
-            print("[FFPROBE GATE PASS]")
-            if a.publish:
-                from src.publish import youtube
+            print(f"[VALIDATION GATES PASS] ffprobe=OK zoom=[{summary.get('cam_zoom_min')}..{summary.get('cam_zoom_max')}]")
 
-                w_name = HERO_BY_KEY[outcome.winner_key].name if outcome.winner_key in HERO_BY_KEY else "Somebody"
-                title = f"{w_name} WINS! {outcome.ribbon_text} | Toon Toon Castle #Shorts"
-                table = "\n".join(f"#{i + 1} {HERO_BY_KEY[k].name} — {p} pts" for i, (k, p) in enumerate(outcome.top3))
-                desc = (f"{outcome.ribbon_text} — {recipe.arena.replace('_', ' ').title()}\n\n"
-                        f"Season {outcome.season_number} standings:\n{table}\n\n{ep.prompt}\n\n#Shorts #ToonToonCastle")
-                try:
-                    vid = youtube.upload_short(out, title, desc, ["toon toon castle", "marble race", "shorts",
-                                                                   "ball race", "cartoon"], privacy=a.privacy)
-                except Exception as exc:          # noqa: BLE001 - generic message only, never leak tokens
-                    print(f"[PUBLISH FAIL] {type(exc).__name__}: {str(exc)[:160]}")
+            if a.publish:
+                from src.publish import alerts, instagram, youtube
+
+                attempted = 0
+                succeeded = 0
+                if not a.skip_yt:
+                    attempted += 1
+                    try:
+                        vid = youtube.upload_short(
+                            out,
+                            meta_bundle["title"],
+                            meta_bundle["description"],
+                            meta_bundle["tags"],
+                            privacy=a.privacy,
+                        )
+                        summary["youtube_id"] = vid
+                        succeeded += 1
+                        print(f"[PUBLISHED YT SHORTS] https://youtube.com/shorts/{vid}")
+                    except Exception as exc:          # noqa: BLE001 - redacted generic log, never leak tokens
+                        msg = alerts.redact(f"{type(exc).__name__}: {str(exc)[:180]}")
+                        summary["youtube_error"] = msg
+                        pub_errors.append(f"YouTube Shorts: {msg}")
+                        print(f"[YT PUBLISH FAIL] {msg}")
+
+                if not a.skip_ig:
+                    attempted += 1
+                    try:
+                        ig_id = instagram.upload_reel(out, meta_bundle["ig_caption"])
+                        summary["instagram_id"] = ig_id
+                        succeeded += 1
+                        print(f"[PUBLISHED IG REELS] media_id={ig_id}")
+                    except Exception as exc:          # noqa: BLE001 - redacted generic log, never leak tokens
+                        msg = alerts.redact(f"{type(exc).__name__}: {str(exc)[:180]}")
+                        summary["instagram_error"] = msg
+                        pub_errors.append(f"Instagram Reels: {msg}")
+                        print(f"[IG PUBLISH FAIL] {msg}")
+
+                if pub_errors:
+                    alerts.open_alert_issue(
+                        f"[ToonToonCastle Alert] S{outcome.season_number} E{outcome.race_number} Publish Error",
+                        f"Episode `S{outcome.season_number} E{outcome.race_number}` ({meta_bundle['title']}) encountered "
+                        f"upload error(s) ({succeeded}/{attempted} platforms succeeded):\n\n- "
+                        + "\n- ".join(pub_errors),
+                    )
+                if attempted > 0 and succeeded == 0:
+                    # Both platforms failed -> do NOT advance season_state.json so the race is preserved for retry
                     out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
                     return 4
-                summary["youtube_id"] = vid
-                print(f"[PUBLISHED] https://youtube.com/shorts/{vid}")
+
         entry = recipe_generator.history_entry(recipe, day)
         entry.update({
             "season": outcome.season_number,
@@ -349,6 +397,8 @@ def main(argv: list[str] | None = None) -> int:
         })
         if summary.get("youtube_id"):
             entry["youtube_id"] = summary["youtube_id"]
+        if summary.get("instagram_id"):
+            entry["instagram_id"] = summary["instagram_id"]
         entries.append(entry)
         league.save_all_state(next_state, next_hof, entries, state_dir=STATE)
         if a.commit_state or a.commit_state_dry_run:
@@ -360,6 +410,10 @@ def main(argv: list[str] | None = None) -> int:
             if not ok:
                 out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
                 return 5
+        if pub_errors:
+            # State was safely committed for the platform that succeeded, now surface partial failure clearly
+            out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
+            return 4
 
     out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
     return 0

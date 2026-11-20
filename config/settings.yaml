@@ -1,6 +1,7 @@
-# Toon Toon Castle — every behaviour-changing value lives here (§22.3).
-series_name: "Toon Toon Castle"
-made_for_kids: false            # README: true = YouTube comments off (vote loop uses Instagram only), no bell, limited ads
+# ToonToonCastle — every behaviour-changing value lives here (§22.3).
+series_name: "ToonToonCastle"
+channel_handle: "@ToonToonCastle"
+made_for_kids: false            # YouTube Shorts & Instagram Reels: false enables comments & full reach
 youtube_privacy_status: "private"   # private | unlisted | public (overridden by YOUTUBE_PRIVACY_STATUS env)
 youtube_category_id: "20"       # Gaming
 timezone: "Asia/Kolkata"

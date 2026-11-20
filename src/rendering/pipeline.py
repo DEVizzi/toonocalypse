@@ -2157,7 +2157,7 @@ class Renderer:
         w = min(560, txt.get_width() + 62 + extra_icon)
         h = 42
         box = pygame.Rect(0, 0, w, h)
-        box.midtop = (W // 2, LAYOUT["viewport"][0] + 10)
+        box.midtop = (W // 2, 296)
         plate = pygame.Surface((w, h), pygame.SRCALPHA)
         pygame.draw.rect(plate, (18, 18, 36, 224), (0, 0, w, h), border_radius=21)
         pygame.draw.rect(plate, (*accent, 245), (0, 0, w, h), 3, border_radius=21)
@@ -2191,6 +2191,15 @@ class Renderer:
         self.frame.blit(fit, fit.get_rect(midleft=(tx_left, icy + 1)))
         hud.TEXT_BOXES.append(box)
 
+    def _draw_watermark(self) -> None:
+        """v4.4 Subtle Anti-Scraper Watermark: `@ToonToonCastle` at 25% opacity (22px, thin black outline) at y=275."""
+        wm = getattr(self, "_wm_surf", None)
+        if wm is None:
+            wm = hud.outlined("@ToonToonCastle", 22, fill=WHITE_, width=2, face="Fredoka.ttf").copy()
+            wm.fill((255, 255, 255, 64), special_flags=pygame.BLEND_RGBA_MULT)
+            self._wm_surf = wm
+        self.frame.blit(wm, wm.get_rect(center=(W // 2, 275)))
+
     def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int, ranks: dict[str, int],
                   out_t: float = 0.0, voice_rms: float | None = None) -> None:
         fr = self.frame
@@ -2213,6 +2222,7 @@ class Renderer:
         t_st, _ = self.tuno_state(play_t, shot.segment)
         twist_badge = self._active_twist_badge(fi, play_t) if shot.segment == "play" else None
 
+        self._draw_watermark()
         if shot.segment != "card":
             scenery.draw_panel(fr, alive, total, self.heroes, status, ranks, hud.TEXT_BOXES,
                                pulse=pulse, t=t_anim, eff_slots=eff_slots, reigning_champion=reigning)
@@ -2289,4 +2299,13 @@ def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0, s
     proc.stdin.close()
     if proc.wait() != 0:
         raise RuntimeError("ffmpeg failed")
-    return {"frames": len(ep.shots), "duration": len(ep.shots) / FPS, "text_boxes": boxes, "sound": snd_info}
+    zooms = [float(c.zoom) for c in r.cams] if r.cams else [1.0]
+    return {
+        "frames": len(ep.shots),
+        "duration": len(ep.shots) / FPS,
+        "text_boxes": boxes,
+        "sound": snd_info,
+        "cam_zoom_min": round(min(zooms), 4),
+        "cam_zoom_max": round(max(zooms), 4),
+        "cam_rescues": int(getattr(track, "rescues", 0)),
+    }

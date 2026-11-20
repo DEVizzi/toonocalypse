@@ -349,6 +349,17 @@ def draw_header(frame: pygame.Surface, portrait_bg: pygame.Surface, ep_label: st
     live_plate.blit(live_txt, live_txt.get_rect(midleft=(25, 13)))
     frame.blit(live_plate, live_box.topleft)
 
+    # v4.4 Network Bug: crisp dark pill reading TOONTOONCASTLE along bottom border of MC Tuno's booth frame
+    bug_lbl = _fit(_outlined_text("TOONTOONCASTLE", 18, fill=(255, 232, 120), outline=BLACK, w=2), 182)
+    bug_w = max(172, min(208, bug_lbl.get_width() + 24))
+    bug_box = pygame.Rect(0, 0, bug_w, 26)
+    bug_box.center = (CAM_RECT.centerx, CAM_RECT.bottom - 1)
+    pygame.draw.rect(frame, BLACK, bug_box.inflate(4, 4), border_radius=13)
+    pygame.draw.rect(frame, (14, 14, 26), bug_box, border_radius=12)
+    pygame.draw.rect(frame, inner_gold, bug_box, 2, border_radius=12)
+    frame.blit(bug_lbl, bug_lbl.get_rect(center=(bug_box.centerx, bug_box.centery + 1)))
+    text_boxes.append(bug_box)
+
 
 def _crown(frame, cx: float, cy: float, w: float) -> None:
     pts = [(cx - w / 2, cy + w * 0.35), (cx - w / 2, cy - w * 0.1), (cx - w / 4, cy + w * 0.12), (cx, cy - w * 0.25),
