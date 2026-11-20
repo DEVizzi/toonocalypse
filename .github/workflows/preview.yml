@@ -1,13 +1,12 @@
 name: Preview
 
-# Run an on-demand render command on Actions and upload output/* as an auto-expiring workflow artifact
-# (never creates lingering GitHub Releases or git tags).
+# Manual single-video dry-run preview (never scheduled; uploads auto-expiring workflow artifact).
 on:
   workflow_dispatch:
     inputs:
       command:
         description: "Command to run"
-        default: "python -m src.main --dry-run --stills 4 --out output/dry_run_s1_e1.mp4"
+        default: "python run_daily_episode.py --dry-run --brand-stills --out output/dry_run_s1_e1.mp4"
 
 permissions:
   contents: read
@@ -15,26 +14,25 @@ permissions:
 jobs:
   preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       SDL_VIDEODRIVER: dummy
       SDL_AUDIODRIVER: dummy
-      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY || secrets.GEMINI_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.GOOGLE_API_KEY }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-      - name: ffmpeg (with retries)
-        timeout-minutes: 12
+      - name: Install ffmpeg (IPv4 fast path + retries)
+        timeout-minutes: 4
         run: |
           if which ffmpeg && which ffprobe; then ffmpeg -version | head -1; exit 0; fi
+          APT_OPTS="-o Acquire::ForceIPv4=true -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15"
           for i in 1 2 3; do
-            timeout 300 bash -c "sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg" && break
-            echo "apt attempt $i failed; retrying in 20s"; sleep 20
+            sudo apt-get $APT_OPTS update -q && sudo apt-get $APT_OPTS install -y -q --no-install-recommends ffmpeg && break
+            echo "apt attempt $i failed; retrying in 5s"; sleep 5
           done
           ffmpeg -version | head -1
       - run: pip install -r requirements.txt

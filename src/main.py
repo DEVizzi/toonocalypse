@@ -131,6 +131,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default="output/episode.mp4")
     ap.add_argument("--no-render", action="store_true", help="simulate and score only")
     ap.add_argument("--stills", type=int, default=0, help="also save N half-size PNG stills for review")
+    ap.add_argument("--brand-stills", action="store_true",
+                    help="export verify_gameplay_brand.png (t=5.0s) and verify_winner_brand.png (Winner Card)")
+    ap.add_argument("--stage-only", action="store_true",
+                    help="Step A transactional mode: simulate, render, validate gates, write pending_state to .json without touching state/")
     ap.add_argument("--no-audio", action="store_true", help="silent render (skip narration, SFX and music)")
     a = ap.parse_args(argv)
 
@@ -296,7 +300,7 @@ def main(argv: list[str] | None = None) -> int:
             league_ctx=league_ctx,
         )
         t0 = time.time()
-        info = pipeline.encode(ep, out, stills=a.stills, sound=not a.no_audio)
+        info = pipeline.encode(ep, out, stills=a.stills, sound=not a.no_audio, brand_stills=a.brand_stills)
         info["render_s"] = round(time.time() - t0, 1)
         print(f"rendered {out} frames={info['frames']} duration={info['duration']:.1f}s in {info['render_s']}s")
         if info.get("sound"):
@@ -321,7 +325,7 @@ def main(argv: list[str] | None = None) -> int:
     if not a.dry_run:
         pub_errors: list[str] = []
         if not a.no_render:
-            # v4.4 ffprobe + loudness + camera zoom sanity gate — FAIL CLOSED (no upload, no league advance)
+            # v4.4/v4.5 ffprobe + loudness + camera zoom sanity gate — FAIL CLOSED (no upload, no league advance)
             from src.publish import validate as gate
 
             try:
@@ -337,55 +341,6 @@ def main(argv: list[str] | None = None) -> int:
                 return 3
             print(f"[VALIDATION GATES PASS] ffprobe=OK zoom=[{summary.get('cam_zoom_min')}..{summary.get('cam_zoom_max')}]")
 
-            if a.publish:
-                from src.publish import alerts, instagram, youtube
-
-                attempted = 0
-                succeeded = 0
-                if not a.skip_yt:
-                    attempted += 1
-                    try:
-                        vid = youtube.upload_short(
-                            out,
-                            meta_bundle["title"],
-                            meta_bundle["description"],
-                            meta_bundle["tags"],
-                            privacy=a.privacy,
-                        )
-                        summary["youtube_id"] = vid
-                        succeeded += 1
-                        print(f"[PUBLISHED YT SHORTS] https://youtube.com/shorts/{vid}")
-                    except Exception as exc:          # noqa: BLE001 - redacted generic log, never leak tokens
-                        msg = alerts.redact(f"{type(exc).__name__}: {str(exc)[:180]}")
-                        summary["youtube_error"] = msg
-                        pub_errors.append(f"YouTube Shorts: {msg}")
-                        print(f"[YT PUBLISH FAIL] {msg}")
-
-                if not a.skip_ig:
-                    attempted += 1
-                    try:
-                        ig_id = instagram.upload_reel(out, meta_bundle["ig_caption"])
-                        summary["instagram_id"] = ig_id
-                        succeeded += 1
-                        print(f"[PUBLISHED IG REELS] media_id={ig_id}")
-                    except Exception as exc:          # noqa: BLE001 - redacted generic log, never leak tokens
-                        msg = alerts.redact(f"{type(exc).__name__}: {str(exc)[:180]}")
-                        summary["instagram_error"] = msg
-                        pub_errors.append(f"Instagram Reels: {msg}")
-                        print(f"[IG PUBLISH FAIL] {msg}")
-
-                if pub_errors:
-                    alerts.open_alert_issue(
-                        f"[ToonToonCastle Alert] S{outcome.season_number} E{outcome.race_number} Publish Error",
-                        f"Episode `S{outcome.season_number} E{outcome.race_number}` ({meta_bundle['title']}) encountered "
-                        f"upload error(s) ({succeeded}/{attempted} platforms succeeded):\n\n- "
-                        + "\n- ".join(pub_errors),
-                    )
-                if attempted > 0 and succeeded == 0:
-                    # Both platforms failed -> do NOT advance season_state.json so the race is preserved for retry
-                    out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
-                    return 4
-
         entry = recipe_generator.history_entry(recipe, day)
         entry.update({
             "season": outcome.season_number,
@@ -395,10 +350,74 @@ def main(argv: list[str] | None = None) -> int:
             "line_ids": list(line_ids),
             "cliches": list(cliches),
         })
+
+        if a.stage_only:
+            # Transactional Step A: store pending_state in summary .json without modifying state/*.json on disk
+            summary["pending_state"] = {
+                "next_state": next_state,
+                "next_hof": next_hof,
+                "history_entry": entry,
+            }
+            out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
+            return 0
+
+        if not a.no_render and a.publish:
+            from src.publish import alerts, instagram, youtube
+
+            attempted = 0
+            succeeded = 0
+            if not a.skip_yt:
+                attempted += 1
+                try:
+                    vid = youtube.upload_short(
+                        out,
+                        meta_bundle["title"],
+                        meta_bundle["description"],
+                        meta_bundle["tags"],
+                        privacy=a.privacy,
+                    )
+                    summary["youtube_id"] = vid
+                    succeeded += 1
+                    print(f"[PUBLISHED YT SHORTS] https://youtube.com/shorts/{vid}")
+                except Exception as exc:          # noqa: BLE001 - redacted generic log, never leak tokens
+                    msg = alerts.redact(f"{type(exc).__name__}: {str(exc)[:180]}")
+                    summary["youtube_error"] = msg
+                    pub_errors.append(f"YouTube Shorts: {msg}")
+                    print(f"[YT PUBLISH FAIL] {msg}")
+
+            if not a.skip_ig:
+                attempted += 1
+                try:
+                    ig_id = instagram.upload_reel(out, meta_bundle["ig_caption"])
+                    summary["instagram_id"] = ig_id
+                    succeeded += 1
+                    print(f"[PUBLISHED IG REELS] media_id={ig_id}")
+                except Exception as exc:          # noqa: BLE001 - redacted generic log, never leak tokens
+                    msg = alerts.redact(f"{type(exc).__name__}: {str(exc)[:180]}")
+                    summary["instagram_error"] = msg
+                    pub_errors.append(f"Instagram Reels: {msg}")
+                    print(f"[IG PUBLISH FAIL] {msg}")
+
+            if pub_errors:
+                alerts.open_alert_issue(
+                    f"[ToonToonCastle Alert] S{outcome.season_number} E{outcome.race_number} Publish Error",
+                    f"Episode `S{outcome.season_number} E{outcome.race_number}` ({meta_bundle['title']}) encountered "
+                    f"upload error(s) ({succeeded}/{attempted} platforms succeeded):\n\n- "
+                    + "\n- ".join(pub_errors),
+                )
+            if attempted > 0 and succeeded == 0:
+                # Both platforms failed -> do NOT advance season_state.json so the race is preserved for retry
+                out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
+                return 4
+
         if summary.get("youtube_id"):
             entry["youtube_id"] = summary["youtube_id"]
         if summary.get("instagram_id"):
             entry["instagram_id"] = summary["instagram_id"]
+        entry.update(
+            utc_date=time.strftime("%Y-%m-%d", time.gmtime()),
+            published=bool(summary.get("youtube_id") or summary.get("instagram_id")),
+        )
         entries.append(entry)
         league.save_all_state(next_state, next_hof, entries, state_dir=STATE)
         if a.commit_state or a.commit_state_dry_run:
@@ -411,7 +430,6 @@ def main(argv: list[str] | None = None) -> int:
                 out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
                 return 5
         if pub_errors:
-            # State was safely committed for the platform that succeeded, now surface partial failure clearly
             out.with_suffix(".json").write_text(json.dumps(summary, indent=2, default=str))
             return 4
 

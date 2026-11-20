@@ -33,11 +33,11 @@ their tags. Older releases `art-library-v1..v4`, `st-*`, `smoke-test` and `ep-*`
 
 | Secret name | Was used for | Action |
 |---|---|---|
-| `KAGGLE_USERNAME` | Kaggle GPU image generation | Delete the repo secret |
-| `KAGGLE_API_TOKEN` | Kaggle GPU image generation | Revoke at kaggle.com → Settings → API, then delete the repo secret |
+| `KAGGLE_USERNAME` (deleted from repo secrets) | Kaggle GPU image generation | Deleted |
+| `KAGGLE_API_TOKEN` (deleted from repo secrets) | Kaggle GPU image generation | Revoke at kaggle.com → Settings → API if still active |
 | `izaz246GemAPIKey` (already deleted from the repo) | Gemini image test | Revoke in Google AI Studio if it's not used elsewhere |
 | `HUGGINGFACE_API_TOKEN`, `REPLICATE_API_TOKEN`, `CLOUDINARY_*`, `CHAINGPT_API_KEY`, `TWITTER_*`, `VOICEOVER_JSON_B64` (old `.env`, purged) | Legacy image/voice/Twitter pipelines | Revoke at each provider (see the leak cleanup notes) |
 
-## Secrets the new system uses (kept)
+## Active production secrets (7 total)
 `GOOGLE_API_KEY` (Gemini text only), `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN`,
-`IG_ACCESS_TOKEN`, `IG_USER_ID`, `GH_TOKEN`. Optional: `GROQ_API_KEY`.
+`IG_ACCESS_TOKEN`, `IG_USER_ID`, `GH_TOKEN`.

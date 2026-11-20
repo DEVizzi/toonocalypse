@@ -14,7 +14,11 @@ from __future__ import annotations
 import os
 import sys
 
-import requests
+
+def _requests():
+    import requests
+    return requests
+
 
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 CHANNELS_URL = "https://www.googleapis.com/youtube/v3/channels"
@@ -48,14 +52,15 @@ def _creds() -> dict[str, str]:
 def access_token() -> tuple[str, int, str]:
     """Returns (access_token, expires_in_s, granted_scopes). Raises OAuthError on any failure."""
     c = _creds()
+    req = _requests()
     try:
-        resp = requests.post(TOKEN_URL, data={
+        resp = req.post(TOKEN_URL, data={
             "client_id": c["YOUTUBE_CLIENT_ID"],
             "client_secret": c["YOUTUBE_CLIENT_SECRET"],
             "refresh_token": c["YOUTUBE_REFRESH_TOKEN"],
             "grant_type": "refresh_token",
         }, timeout=TIMEOUT_S)
-    except requests.RequestException as exc:
+    except req.RequestException as exc:
         raise OAuthError(f"token endpoint unreachable ({type(exc).__name__})") from None
     if resp.status_code != 200:
         try:
@@ -74,10 +79,11 @@ def access_token() -> tuple[str, int, str]:
 
 def check_channel(token: str) -> int:
     """Proves the access token works for YouTube; returns the number of channels on the account."""
+    req = _requests()
     try:
-        resp = requests.get(CHANNELS_URL, params={"part": "id", "mine": "true"},
-                            headers={"Authorization": f"Bearer {token}"}, timeout=TIMEOUT_S)
-    except requests.RequestException as exc:
+        resp = req.get(CHANNELS_URL, params={"part": "id", "mine": "true"},
+                       headers={"Authorization": f"Bearer {token}"}, timeout=TIMEOUT_S)
+    except req.RequestException as exc:
         raise OAuthError(f"YouTube API unreachable ({type(exc).__name__})") from None
     if resp.status_code != 200:
         raise OAuthError(f"YouTube channels.list failed: HTTP {resp.status_code}")

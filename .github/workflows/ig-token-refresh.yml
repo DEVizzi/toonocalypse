@@ -23,10 +23,7 @@ jobs:
     timeout-minutes: 5
     env:
       IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
-      META_APP_ID: ${{ secrets.META_APP_ID }}
-      META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
-      GH_PAT: ${{ secrets.GH_PAT || secrets.GH_TOKEN }}
-      GH_TOKEN: ${{ secrets.GH_PAT || secrets.GH_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
       FORCE: ${{ inputs.force_refresh && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4

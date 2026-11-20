@@ -35,7 +35,10 @@ jobs:
           python-version: "3.11"
           cache: pip
       - name: ffmpeg
-        run: (which ffmpeg && ffmpeg -version | head -1) || (sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg)
-        timeout-minutes: 6
+        timeout-minutes: 4
+        run: |
+          if which ffmpeg && which ffprobe; then ffmpeg -version | head -1; exit 0; fi
+          APT_OPTS="-o Acquire::ForceIPv4=true -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15"
+          sudo apt-get $APT_OPTS update -q && sudo apt-get $APT_OPTS install -y -q --no-install-recommends ffmpeg
       - run: pip install -r requirements.txt
       - run: python -m pytest -q

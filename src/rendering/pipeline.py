@@ -1956,6 +1956,7 @@ class Renderer:
         self.frame.set_clip(None)
         rms = self.voice_rms[index] if (self.voice_rms is not None and index < len(self.voice_rms)) else None
         self._overlays(shot, play_t, t_anim, hud_fi, ranks, index / FPS, voice_rms=rms)
+        self._draw_brand_overlay(shot)
         return self.frame
 
     def _draw_glitch_blinks(self, cam: Cam, fi: int, play_t: float) -> None:
@@ -2157,7 +2158,7 @@ class Renderer:
         w = min(560, txt.get_width() + 62 + extra_icon)
         h = 42
         box = pygame.Rect(0, 0, w, h)
-        box.midtop = (W // 2, 296)
+        box.midtop = (W // 2, 314)
         plate = pygame.Surface((w, h), pygame.SRCALPHA)
         pygame.draw.rect(plate, (18, 18, 36, 224), (0, 0, w, h), border_radius=21)
         pygame.draw.rect(plate, (*accent, 245), (0, 0, w, h), 3, border_radius=21)
@@ -2191,14 +2192,53 @@ class Renderer:
         self.frame.blit(fit, fit.get_rect(midleft=(tx_left, icy + 1)))
         hud.TEXT_BOXES.append(box)
 
-    def _draw_watermark(self) -> None:
-        """v4.4 Subtle Anti-Scraper Watermark: `@ToonToonCastle` at 25% opacity (22px, thin black outline) at y=275."""
+    def _draw_brand_overlay(self, shot: Shot) -> None:
+        """v4.5 Unclipped Top-Most Branding Layer (rendered LAST after `set_clip(None)` and all HUD/card layers):
+        1. MC Tuno Broadcast Booth Network Plate (`#0F172A`, `2px` `#FACC15` border at `y=238`, `22px` bold white `TOONTOONCASTLE`).
+        2. Visible Anti-Scraper Watermark (`@ToonToonCastle` centered at `(540, 282)`, `30px` bold, `62%` opacity `alpha=160` + `4px` black outline).
+        3. Winner Card Header Brand Bar (`TOONTOONCASTLE` `34px` `#FACC15`-on-`#0F172A` header pill atop the IPL Winner Card)."""
+        self.frame.set_clip(None)
+        fr = self.frame
+        navy = (15, 23, 42)        # #0F172A
+        gold = (250, 204, 21)      # #FACC15
+
+        # 1. MC Tuno Broadcast Booth Network Plate (Always On, High Contrast)
+        booth_lbl = getattr(self, "_booth_brand_surf", None)
+        if booth_lbl is None:
+            raw_b = hud.outlined("TOONTOONCASTLE", 22, fill=(255, 255, 255), outline=(0, 0, 0), width=2)
+            booth_lbl = hud.fit_width(raw_b, 212)
+            self._booth_brand_surf = booth_lbl
+        plate_w = max(216, min(236, booth_lbl.get_width() + 24))
+        plate_rect = pygame.Rect(0, 0, plate_w, 32)
+        plate_rect.center = (scenery.CAM_RECT.centerx, 238)
+        pygame.draw.rect(fr, (0, 0, 0), plate_rect.inflate(4, 4), border_radius=13)
+        pygame.draw.rect(fr, navy, plate_rect, border_radius=12)
+        pygame.draw.rect(fr, gold, plate_rect, 2, border_radius=12)
+        fr.blit(booth_lbl, booth_lbl.get_rect(center=(plate_rect.centerx, plate_rect.centery + 1)))
+        hud.TEXT_BOXES.append(plate_rect)
+
+        # 2. Visible Anti-Scraper Watermark (`@ToonToonCastle`, 30px bold, 62% opacity / alpha=160, 4px black outline)
         wm = getattr(self, "_wm_surf", None)
         if wm is None:
-            wm = hud.outlined("@ToonToonCastle", 22, fill=WHITE_, width=2, face="Fredoka.ttf").copy()
-            wm.fill((255, 255, 255, 64), special_flags=pygame.BLEND_RGBA_MULT)
+            wm = hud.outlined("@ToonToonCastle", 30, fill=(255, 255, 255), outline=(0, 0, 0), width=4, face="Fredoka.ttf").copy()
+            wm.fill((255, 255, 255, 160), special_flags=pygame.BLEND_RGBA_MULT)
             self._wm_surf = wm
-        self.frame.blit(wm, wm.get_rect(center=(W // 2, 275)))
+        fr.blit(wm, wm.get_rect(center=(540, 282)))
+
+        # 3. Winner Card Header Brand Bar (`TOONTOONCASTLE` 34px gold-on-dark badge atop the IPL Winner Card)
+        if shot.segment == "card":
+            card_lbl = getattr(self, "_card_brand_surf", None)
+            if card_lbl is None:
+                card_lbl = hud.outlined("TOONTOONCASTLE", 34, fill=gold, outline=(0, 0, 0), width=4)
+                self._card_brand_surf = card_lbl
+            bar_w = card_lbl.get_width() + 48
+            bar_rect = pygame.Rect(0, 0, bar_w, 48)
+            bar_rect.center = (540, 336)
+            pygame.draw.rect(fr, (0, 0, 0), bar_rect.move(0, 4), border_radius=24)
+            pygame.draw.rect(fr, navy, bar_rect, border_radius=24)
+            pygame.draw.rect(fr, gold, bar_rect, 3, border_radius=24)
+            fr.blit(card_lbl, card_lbl.get_rect(center=(bar_rect.centerx, bar_rect.centery + 1)))
+            hud.TEXT_BOXES.append(bar_rect)
 
     def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int, ranks: dict[str, int],
                   out_t: float = 0.0, voice_rms: float | None = None) -> None:
@@ -2222,7 +2262,6 @@ class Renderer:
         t_st, _ = self.tuno_state(play_t, shot.segment)
         twist_badge = self._active_twist_badge(fi, play_t) if shot.segment == "play" else None
 
-        self._draw_watermark()
         if shot.segment != "card":
             scenery.draw_panel(fr, alive, total, self.heroes, status, ranks, hud.TEXT_BOXES,
                                pulse=pulse, t=t_anim, eff_slots=eff_slots, reigning_champion=reigning)
@@ -2260,7 +2299,8 @@ class Renderer:
             captions.draw_caption(fr, self.speech, out_t, hud.TEXT_BOXES)
 
 
-def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0, sound: bool = True) -> dict:
+def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0, sound: bool = True,
+           brand_stills: bool = False) -> dict:
     r = Renderer(ep)
     ep.shots = plan_shots(ep, r.teaser_f)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -2288,12 +2328,21 @@ def encode(ep: Episode, out: Path, audio: Path | None = None, stills: int = 0, s
     n = len(ep.shots)
     pcts = (0.02, 0.16, 0.42, 0.68, 0.84, 1.0)[:stills]
     still_at = {min(n - 1, int((n - 1) * k)) for k in pcts} if stills else set()
+    gp_brand_idx = min(n - 1, int(round(5.0 * FPS))) if brand_stills else -1
+    win_brand_idx = (
+        next((idx for idx in range(n - 1, -1, -1) if ep.shots[idx].segment == "card" and ep.shots[idx].seg_t >= 0.6), n - 1)
+        if brand_stills else -1
+    )
     for i, shot in enumerate(ep.shots):
         frame = r.render_shot(shot, i)
         proc.stdin.write(pygame.image.tobytes(frame, "RGB"))
         if i in still_at:
             small = pygame.transform.smoothscale(frame, (W // 2, H // 2))
             pygame.image.save(small, str(out.with_name(f"{out.stem}_f{i:04d}.png")))
+        if i == gp_brand_idx:
+            pygame.image.save(frame, str(out.parent / "verify_gameplay_brand.png"))
+        if i == win_brand_idx:
+            pygame.image.save(frame, str(out.parent / "verify_winner_brand.png"))
         if i % 15 == 0:
             boxes.append([tuple(b) for b in hud.TEXT_BOXES])
     proc.stdin.close()

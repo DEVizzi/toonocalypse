@@ -1,0 +1,93 @@
+name: Daily Episode (ToonToonCastle)
+
+# v4.5 Strict 1x/Day Transactional Production Pipeline (`run_daily_episode.py`):
+# - Single daily cron `17 14 * * *` (14:17 UTC -> live ~8:00 PM IST).
+# - Same-Day Duplicate Guard (`episode_history.json` `utc_date` + `published: true`).
+# - Hard 10-minute (`600s`) per-attempt watchdog, full local/remote/state rollback, and 1 automatic recreation (`MAX_ATTEMPTS = 2`).
+on:
+  schedule:
+    - cron: "17 14 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (render + gates + brand stills only; no uploads or state commit)"
+        type: boolean
+        default: true
+      force_run:
+        description: "Bypass Same-Day Duplicate Guard for manual re-run"
+        type: boolean
+        default: false
+      privacy:
+        description: "YouTube Shorts privacy for live uploads"
+        type: choice
+        default: public
+        options: [public, unlisted, private]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: toontooncastle-daily
+  cancel-in-progress: false
+
+jobs:
+  episode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run == true || inputs.dry_run == 'true') && 'true' || 'false' }}
+      FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.force_run == true || inputs.force_run == 'true') && 'true' || 'false' }}
+      PRIVACY: ${{ inputs.privacy || 'public' }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install ffmpeg (IPv4 fast path + retries)
+        timeout-minutes: 4
+        run: |
+          if which ffmpeg && which ffprobe; then ffmpeg -version | head -1; exit 0; fi
+          APT_OPTS="-o Acquire::ForceIPv4=true -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15"
+          for i in 1 2 3; do
+            sudo apt-get $APT_OPTS update -q && sudo apt-get $APT_OPTS install -y -q --no-install-recommends ffmpeg && break
+            echo "apt attempt $i failed; retrying in 5s"; sleep 5
+          done
+          ffmpeg -version | head -1 && ffprobe -version | head -1
+      - run: pip install -r requirements.txt
+      - name: Configure git identity
+        run: |
+          git config user.name "toontooncastle-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Run Transactional Daily Episode (600s Watchdog + Rollback + Auto-Recreate)
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python run_daily_episode.py --dry-run --brand-stills --out output/dry_run_s1_e1.mp4
+          elif [ "$FORCE_RUN" = "true" ]; then
+            python run_daily_episode.py --force-run --privacy "$PRIVACY"
+          else
+            python run_daily_episode.py --privacy "$PRIVACY"
+          fi
+      - name: Upload dry-run brand verification stills & preview (dry_run only; auto-expires in 2 days)
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dry-run-brand-verify
+          path: |
+            output/dry_run_s1_e1.mp4
+            output/dry_run_s1_e1.json
+            output/verify_gameplay_brand.png
+            output/verify_winner_brand.png
+          retention-days: 2

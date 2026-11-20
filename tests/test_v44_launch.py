@@ -62,9 +62,9 @@ class TestV44LaunchLock(unittest.TestCase):
         self.assertIn("[REDACTED]", clean)
 
     def test_workflows_schedule_and_concurrency(self) -> None:
-        daily = (ROOT / ".github" / "workflows" / "daily.yml").read_text()
+        daily = (ROOT / ".github" / "workflows" / "daily_episode.yml").read_text()
         self.assertIn('cron: "17 14 * * *"', daily)
-        self.assertIn("group: daily-episode", daily)
+        self.assertIn("group: toontooncastle-daily", daily)
         self.assertIn("cancel-in-progress: false", daily)
         ig_wf = (ROOT / ".github" / "workflows" / "ig-token-refresh.yml").read_text()
         self.assertIn('cron: "0 10 1,15 * *"', ig_wf)
