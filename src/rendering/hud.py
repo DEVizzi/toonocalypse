@@ -338,6 +338,15 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
             _mini_hero_ball(frame, hk, rect.left + 112, rect.centery, 21, reigning)
             hn = HERO_BY_KEY[hk].name.upper() if hk in HERO_BY_KEY else hk.upper()
             blit_text(frame, fit_width(outlined(hn, 32, fill=WHITE, width=4), 176), midleft=(rect.left + 142, rect.centery))
+            if idx == 0 and getattr(outcome, "lead_changed", False):
+                nl = outlined("NEW LEADER!", 20, fill=WHITE, outline=BLACK, width=3)
+                nr = pygame.Rect(0, 0, nl.get_width() + 22, 28)
+                nr.midleft = (rect.left + 136, rect.top + 1)
+                flash = 0.5 + 0.5 * math.sin(t * 9)
+                pygame.draw.rect(frame, BLACK, nr.move(0, 3), border_radius=14)
+                pygame.draw.rect(frame, (int(205 + 45 * flash), 30, 60), nr, border_radius=14)
+                pygame.draw.rect(frame, (255, 226, 72), nr, 2, border_radius=14)
+                blit_text(frame, nl, center=nr.center)
             pts_s = outlined(f"{hpts} PTS", 34, fill=(255, 236, 140) if idx == 0 else WHITE, width=4)
             pts_r = blit_text(frame, pts_s, midright=(rect.right - 14, rect.centery))
             right_edge = pts_r.left - 10

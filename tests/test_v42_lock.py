@@ -30,6 +30,16 @@ class TestV42Lock(unittest.TestCase):
                     "Zero room for error here!", "Pure chaos in the pack!"):
             self.assertFalse(script._valid_llm_line(b, bad), bad)
 
+    def test_winner_line_lead_fact_lock(self) -> None:
+        lead = script.Beat(20.0, "winner", 10, {"winner": "Floater", "leader": "Bonk"}, max_words=8)
+        lead.family = "winner_lead_other"
+        self.assertFalse(script._valid_llm_line(lead, "Floater wins! Bonk keeps his lead."))
+        self.assertTrue(script._valid_llm_line(lead, "Floater wins! Bonk grabs the lead!"))
+        plain = script.Beat(20.0, "winner", 10, {"winner": "Glitch", "leader": "Grumble"}, max_words=8)
+        plain.family = "winner"
+        self.assertFalse(script._valid_llm_line(plain, "Glitch wins and takes the lead!"))
+        self.assertTrue(script._valid_llm_line(plain, "Glitch steals it, Grumble stays king."))
+
     def test_prosody_voice_and_card_hold(self) -> None:
         self.assertEqual(tts.PROSODY["hype"], ("+24%", "+7Hz"))
         self.assertEqual(tts.PROSODY["deadpan"], ("+11%", "-2Hz"))

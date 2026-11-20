@@ -145,6 +145,12 @@ BANNED_PHRASES = (
 )
 _DOWN_TO_N = re.compile(r"\bdown to (two|three|four|five|six|\d+)\b", re.IGNORECASE)
 _HERO_ALT = "|".join(HERO_BY_KEY.keys())
+# v4.2 fact-lock: winner lines must state the league lead truthfully (LLM once said "keeps his lead" on a lead change)
+_LEAD_WORD = re.compile(r"\b(lead|leads|leader|top|table|summit|first|throne|number one)\b", re.IGNORECASE)
+_LEAD_STAY = re.compile(r"\b(keeps?|kept|stays?|still|holds?|held|remains?|retains?|clings?|safe)\b", re.IGNORECASE)
+_LEAD_CLAIM = re.compile(r"\b(new (league |season )?leader|takes? (over )?the (season |league )?lead|grabs? (the )?(lead|top)|"
+                         r"top spot|top of the table|first place|steals? (the )?lead|seizes?|dethron\w*|throne)\b",
+                         re.IGNORECASE)
 _STIFF_DOUBLE_ADJ = re.compile(rf"\b[a-z\-]+\s+({_HERO_ALT})\s+[a-z\-]+\s+[a-z\-]+\s+({_HERO_ALT})\b", re.IGNORECASE)
 
 ARENA_NAMES = {
@@ -445,6 +451,11 @@ def _valid_llm_line(b: Beat, ln: str) -> bool:
         return False
     if b.kind == "winner" and b.family == "winner_lead_other" and b.ctx.get("leader", "").lower() not in low:
         return False
+    if b.kind == "winner" and b.family in ("winner_lead_self", "winner_lead_other"):
+        if not _LEAD_WORD.search(ln) or _LEAD_STAY.search(ln):
+            return False
+    elif b.kind == "winner" and b.family != "winner_champion" and _LEAD_CLAIM.search(ln):
+        return False
     if b.kind == "outro":
         a, bb = b.ctx.get("a", "").lower(), b.ctx.get("b", "").lower()
         if (a and a not in low) or (bb and bb not in low):
@@ -484,7 +495,11 @@ def _prompt(beats: list[Beat], league_ctx: dict | None) -> str:
     stakes = ""
     if league_ctx:
         stakes = (f"Season {league_ctx.get('season_number')} race {league_ctx.get('episode_number')}/30, "
-                  f"stage {league_ctx.get('stage')}, leader after race {league_ctx.get('current_leader_name')}.\n")
+                  f"stage {league_ctx.get('stage')}, leader after race {league_ctx.get('current_leader_name')}. "
+                  + ("The season lead CHANGED HANDS this race: the winner line must say "
+                     f"{league_ctx.get('current_leader_name')} TAKES the lead (never 'keeps'/'still').\n"
+                     if league_ctx.get("lead_changed") else
+                     "The season lead did NOT change: never claim a new leader.\n"))
     return (
         "You are MC Tuno, an unhinged Takeshi's Castle / Ozzy Man Reviews style booth caster for a cartoon ball-race "
         "YouTube Short. Rewrite each draft to be FUNNIER: cheeky, punchy, roasty, 5-9 words, contractions, "

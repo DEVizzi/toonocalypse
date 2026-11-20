@@ -1079,6 +1079,7 @@ class Renderer:
             return
         fade = min(1.0, seg_t / 0.18) * (1.0 if seg_t < 1.2 else max(0.0, (1.45 - seg_t) / 0.25))
         styles = {"leader": (255, 214, 40), "rival": (255, 96, 48), "wildcard": (0, 229, 255)}
+        placed: list[pygame.Rect] = []
         for k, sp in enumerate(spots[:3]):
             try:
                 i = self.tr.index(sp["key"])
@@ -1101,11 +1102,21 @@ class Renderer:
             tx, ty = sx + math.cos(ang) * dist, sy + math.sin(ang) * dist
             tx = max(150.0, min(W - 150.0, tx))
             ty = max(LAYOUT["viewport"][0] + 40.0, ty)
-            pygame.draw.line(self.frame, BLACK, (sx, sy - ring_r), (tx, ty), 7)
-            pygame.draw.line(self.frame, col, (sx, sy - ring_r), (tx, ty), 3)
             txt = hud.outlined(sp.get("label", ""), 30, fill=WHITE_, width=4)
             box = pygame.Rect(0, 0, txt.get_width() + 56, txt.get_height() + 10)
             box.center = (int(tx), int(ty))
+            # de-overlap against tags already placed this frame (bunched gate): hop up, else down
+            top_lim = LAYOUT["viewport"][0] + 40 - box.height // 2
+            for _ in range(6):
+                hit = next((p for p in placed if box.inflate(8, 8).colliderect(p)), None)
+                if hit is None:
+                    break
+                up = hit.top - 6 - box.height
+                box.top = up if up >= top_lim else hit.bottom + 6
+            placed.append(box.copy())
+            tx, ty = float(box.centerx), float(box.centery)
+            pygame.draw.line(self.frame, BLACK, (sx, sy - ring_r), (tx, ty), 7)
+            pygame.draw.line(self.frame, col, (sx, sy - ring_r), (tx, ty), 3)
             plate = pygame.Surface(box.size, pygame.SRCALPHA)
             pygame.draw.rect(plate, (18, 16, 36, int(235 * fade)), plate.get_rect(), border_radius=14)
             pygame.draw.rect(plate, (*col, int(255 * fade)), plate.get_rect(), 4, border_radius=14)
