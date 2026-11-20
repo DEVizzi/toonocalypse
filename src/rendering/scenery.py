@@ -219,7 +219,8 @@ def draw_cliff(frame: pygame.Surface, pts: list, zoom: float, theme, mat: str) -
         k = i / n
         edge = min(k, 1 - k)
         d = depth * (0.35 + 0.65 * min(1.0, edge * 3.2)) * rng.uniform(0.82, 1.0)
-        x = ax + span * k + (span * 0.08 * (1 if k < 0.5 else -1) if 0 < k < 1 else 0)
+        taper = min(span * 0.08, 45 * zoom)
+        x = ax + span * k + (taper * (1 if k < 0.5 else -1) if 0 < k < 1 else 0)
         bottom.append((x, ay + (by - ay) * k + d))
     poly = [(ax, ay), (bx, by)] + bottom[::-1]
     pygame.draw.polygon(frame, rock, poly)

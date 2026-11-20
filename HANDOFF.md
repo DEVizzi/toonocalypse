@@ -48,6 +48,14 @@ The governing spec is **"Toon Toon Castle: Master Build Brief & Technical Specif
   shrinking platform, popups above HUD and clear of captions, monotonic HUD, pill declutter, reactive Tuno,
   WHO SURVIVES teaser, TUNO QUAKE opener (TOP), hazards ^1.5 escalation, COMMENT YOUR PICK card line, --episode N.
   Open: SIDE bots win ~25% (target <=15%) after the pacing change; ~40% of SIDE runs end < 20 s (Best-of-N copes).
+- **v3.0 ball physics & presentation pass DONE (2026-11-20)**:
+  - Roster: all 10 elemental heroes every episode + 3-5 Crash Dummies (dummy wins rejected by scorer).
+  - Physics: unlocked true rolling/tumbling (real moments, 24 rad/s clamp), torque + tangent drive in SIDE,
+    traction-scaled steering in TOP, impulse-scaled stun, full hero traits, chutes/waves/pegs/pachinko_drop,
+    overtime at <= 3 survivors.
+  - Renderer: `src/rendering/balls.py` (rotating surface art, spring faces, telemetry limbs), viewport clipping,
+    single-slot BannerQueue, falling-behind-disc, Top-5 mobile HUD, smart tags, striped disc + bumpers,
+    mace/striped hazards, fire wall, abyss art, EVIL_GRIN Lord Tuno, 1.6s springy winner card.
 - **M5–M8: not started.** Commentary/TTS/audio, state and lore, workflows and tokens, publishing.
 
 ## Notes
