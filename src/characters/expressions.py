@@ -5,7 +5,7 @@ import math
 
 import pygame
 
-EXPRESSIONS = ("neutral", "happy", "scared", "dizzy", "angry", "celebrating", "eliminated")
+from src.characters.roster import EXPRESSIONS  # noqa: F401  (pygame-free source of truth)
 BLACK = (17, 17, 17)
 WHITE = (255, 255, 255)
 SWEAT = (110, 190, 255)

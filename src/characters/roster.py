@@ -4,6 +4,8 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
+EXPRESSIONS = ("neutral", "happy", "scared", "dizzy", "angry", "celebrating", "eliminated")
+
 
 @dataclass(frozen=True)
 class Behaviour:

@@ -25,7 +25,9 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: sudo apt-get install -y -q ffmpeg
+      - name: ffmpeg
+        run: (which ffmpeg && ffmpeg -version | head -1) || (sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg)
+        timeout-minutes: 6
       - run: pip install -r requirements.txt
       - name: Run
         env:
