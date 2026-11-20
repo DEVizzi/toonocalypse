@@ -367,19 +367,35 @@ def _valid_llm_line(b: Beat, ln: str) -> bool:
     return True
 
 
+def _gemini_http(url: str, key: str, payload: dict | None = None, timeout: float = 8.0) -> tuple[int, dict]:
+    """Bounded-timeout HTTPS call to Gemini v1beta API using x-goog-api-key header (never in URL)."""
+    import urllib.error
+    import urllib.request
+
+    headers = {"x-goog-api-key": key, "Content-Type": "application/json"}
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST" if data is not None else "GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as e:
+        try:
+            body = json.loads(e.read().decode("utf-8") or "{}")
+        except Exception:
+            body = {"error": {"message": str(e)}}
+        return e.code, body
+    except Exception as exc:
+        return 0, {"error": {"message": f"{type(exc).__name__}: {exc}"}}
+
+
 def punch_up(beats: list[Beat], log=print) -> int:
-    """Rewrite lines with Gemini Flash in one batched call (cascading across model IDs on quota/404).
+    """Rewrite lines with Gemini Flash (v1beta, strict 8s timeout, dynamic Flash model discovery).
     Validates character lore, first-person voice, word counts, and exact CTA hero names."""
     key = (os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or "").strip()
     if not key:
         log("  gemini skipped: GOOGLE_API_KEY is empty/unset; using lore-accurate templates")
         return 0
     if not beats:
-        return 0
-    try:
-        from google import genai
-    except ImportError:
-        log("  gemini skipped: google-genai not installed; using lore-accurate templates")
         return 0
 
     lore_ref = "; ".join(f"{HERO_BY_KEY[k].name} = {desc}" for k, desc in HERO_LORE.items())
@@ -400,53 +416,54 @@ def punch_up(beats: list[Beat], log=print) -> int:
         + json.dumps(facts)
     )
 
-    a_cfg = settings()["audio"]
-    client = genai.Client(api_key=key)
-    models: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
-    for m in (a_cfg.get("gemini_models") or [a_cfg["gemini_model"]]):
-        if m not in models:
-            models.append(m)
-    # Dynamically discover active Flash models on this API key so model retirements never cause silent 404 fallback
-    try:
-        discovered = []
-        for m in client.models.list():
-            mname = (getattr(m, "name", "") or "").replace("models/", "")
+    base = "https://generativelanguage.googleapis.com/v1beta"
+    st_list, m_body = _gemini_http(f"{base}/models?pageSize=100", key, timeout=5.0)
+    candidates: list[str] = []
+    if st_list == 200:
+        for item in m_body.get("models", []):
+            mname = str(item.get("name", "")).replace("models/", "")
             low_m = mname.lower()
-            actions = getattr(m, "supported_actions", None) or getattr(m, "supported_generation_methods", None) or []
-            if actions and not any("generate" in str(act).lower() for act in actions):
+            methods = item.get("supportedGenerationMethods") or []
+            if "generateContent" not in methods:
                 continue
-            if "flash" in low_m and all(skip not in low_m for skip in ("tts", "image", "audio", "live", "thinking", "8b")):
-                discovered.append(mname)
-        # Prefer newest non-deprecated flash models first
-        discovered.sort(reverse=True)
-        models = list(dict.fromkeys(["gemini-flash-latest"] + discovered + models))
-    except Exception:
-        pass
+            if "flash" in low_m and all(sk not in low_m for sk in ("tts", "image", "audio", "live", "thinking", "8b")):
+                candidates.append(mname)
+        # Prioritize lite/standard latest flash models (highest free-tier RPM, fastest response)
+        candidates.sort(key=lambda s: ("lite" not in s, "3" not in s and "latest" not in s, s))
+    if not candidates:
+        candidates = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-2.5-flash"]
 
     lines = None
     used_model = ""
-    for idx, model in enumerate(models[:6]):
-        try:
-            resp = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config={"response_mime_type": "application/json", "temperature": 0.85},
-            )
-            raw = (resp.text or "").strip()
-            if raw.startswith("```"):
-                raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
-            lines = json.loads(raw or "[]")
-            used_model = model
-            break
-        except Exception as exc:
-            code = getattr(exc, "code", "") or getattr(exc, "status_code", "")
-            status = getattr(exc, "status", "")
-            msg = re.sub(r"AIza[0-9A-Za-z_\-]+", "[REDACTED]", str(exc))[:120]
-            log(f"  gemini {model} unavailable ({type(exc).__name__} {code} {status}: {msg})")
-            if str(code) in ("400", "401", "403") and "API_KEY" in msg.upper():
+    for model in candidates[:4]:
+        gen_cfg: dict = {"responseMimeType": "application/json", "temperature": 0.85}
+        if model.startswith(("gemini-2.5", "gemini-3")):
+            gen_cfg["thinkingConfig"] = {"thinkingBudget": 0}
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": gen_cfg,
+        }
+        code, body = _gemini_http(f"{base}/models/{model}:generateContent", key, payload=payload, timeout=9.0)
+        if code != 200 and "thinkingConfig" in str(body):
+            gen_cfg.pop("thinkingConfig", None)
+            code, body = _gemini_http(f"{base}/models/{model}:generateContent", key, payload=payload, timeout=9.0)
+        if code == 200:
+            try:
+                parts = body["candidates"][0]["content"]["parts"]
+                raw = "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
+                if raw.startswith("```"):
+                    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
+                lines = json.loads(raw or "[]")
+                used_model = model
                 break
-            if idx + 1 < min(6, len(models)):
-                time.sleep(0.3)
+            except Exception as exc:
+                log(f"  gemini {model} parse error ({type(exc).__name__})")
+        else:
+            err_msg = str(body.get("error", {}).get("message", body))
+            err_msg = re.sub(r"AIza[0-9A-Za-z_\-]+", "[REDACTED]", err_msg)[:110]
+            log(f"  gemini {model} HTTP {code}: {err_msg}")
+            if code in (400, 401, 403) and "API_KEY" in err_msg.upper():
+                break
 
     if not isinstance(lines, list) or len(lines) != len(beats):
         log("  gemini fallback: keeping lore-accurate templates")
