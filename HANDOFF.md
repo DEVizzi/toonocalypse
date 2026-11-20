@@ -43,6 +43,11 @@ The governing spec is **"Toon Toon Castle: Master Build Brief & Technical Specif
   - Latest samples (seeds 42 / 7 / 5): 38.1 s, 36.1 s, 44.2 s. Known: tiered_tower two-stage rumbles often end < 26 s
     (seeds 99/12 had no in-range run); TOP Juggernaut ~25% win share; the apt ffmpeg step occasionally times out (rerun).
   - Render takes ~10-20 s per video on Actions. `--stills N` saves half-size PNGs for review (I can't play mp4s).
+- **Owner review 2026-11-20 (P0-P3) applied** — see README "Owner overrides": 25-32 s timeline, top status bar,
+  finish line resolves all SIDE goals, camera never empty (tests/test_camera.py), final-3 zoom, holes masked to the
+  shrinking platform, popups above HUD and clear of captions, monotonic HUD, pill declutter, reactive Tuno,
+  WHO SURVIVES teaser, TUNO QUAKE opener (TOP), hazards ^1.5 escalation, COMMENT YOUR PICK card line, --episode N.
+  Open: SIDE bots win ~25% (target <=15%) after the pacing change; ~40% of SIDE runs end < 20 s (Best-of-N copes).
 - **M5–M8: not started.** Commentary/TTS/audio, state and lore, workflows and tokens, publishing.
 
 ## Notes
