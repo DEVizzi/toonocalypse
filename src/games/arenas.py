@@ -460,7 +460,7 @@ class RotatingDisc(TopArena):
         for b in bumpers:
             self.sim._material(b, "bumper")
         p.shapes += [{"type": "circle", "c": tuple(b.offset), "r": b.radius, "bumper": True} for b in bumpers]
-        self.bumpers = [(b, pymunk.Vec2d(*b.offset)) for b in bumpers]
+        self.bumpers = [{"shape": b, "base": pymunk.Vec2d(*b.offset), "fall_t": None} for b in bumpers]
         self.sim.statics.append({"type": "disc", "c": (0, 0), "r": self.R})
         self.sim.hooks_step.append(self._carry)
         self.frame_top(self.R)
@@ -472,8 +472,16 @@ class RotatingDisc(TopArena):
         self.disc.angular_velocity = w
         tw = getattr(self.sim, "twist", None)
         k_all = k_edge * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)
-        for b, base in getattr(self, "bumpers", []):      # bumpers ride inward as the platform shrinks
-            b.unsafe_set_offset(base * k_all)
+        cur_r = self.R * k_all
+        falls = []
+        for idx, bm in enumerate(getattr(self, "bumpers", [])):
+            if bm["fall_t"] is None and bm["base"].length > 0.78 * cur_r:
+                bm["fall_t"] = self.sim.t
+                if bm["shape"] in self.sim.space.shapes:
+                    self.sim.space.remove(bm["shape"])
+            falls.append(round(self.sim.t - bm["fall_t"], 3) if bm["fall_t"] is not None else -1.0)
+        if falls:
+            self.sim.zones["bumper_falls"] = falls
         for c in self.sim.alive():
             x, y = c.pos
             tv = pymunk.Vec2d(-y * w, x * w)          # tangential surface velocity at the rider

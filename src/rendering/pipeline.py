@@ -117,7 +117,14 @@ class Renderer:
         self.disc_prop = next((i for i, p in enumerate(self.meta["props"]) if p["style"] == "disc_marks"), None)
         self.tag_events = [(e.t, set(e.actors)) for e in self.tr.events
                            if e.kind == "lead_change" or (e.kind == "elimination" and e.data.get("by_hero"))]
-        self.world_rect = pygame.Rect(0, scenery.PANEL.bottom, W, H - scenery.PANEL.bottom)
+        self.world_rect = pygame.Rect(0, LAYOUT['viewport'][0], W, H - LAYOUT['viewport'][0])
+        self.splat_wins: dict[str, list[float]] = {}
+        for e in self.tr.events:
+            if e.kind == 'impact' and e.data.get('impulse', 0) > 450:
+                for a in e.actors:
+                    self.splat_wins.setdefault(a, []).append(e.t)
+            elif e.kind == 'elimination' and e.data.get('by_hero') and len(e.actors) > 1:
+                self.splat_wins.setdefault(e.actors[0], []).append(e.t)
 
     # ------------------------------------------------------------------ precomputed presentation state
     def _schedule_banners(self) -> list[tuple[float, str]]:
@@ -227,7 +234,8 @@ class Renderer:
         fr.set_clip(self.world_rect)               # world geometry/props never bleed into the castle/HUD band
         self._particles(cam, t_anim)
         z = cam.zoom
-        if self.tr.mode == "TOP_DOWN":            # eliminated balls tumble down BEHIND the platform
+        if self.tr.mode == "TOP_DOWN":            # eliminated balls & dropped bumpers tumble down BEHIND the platform
+            self._falling_bumpers(cam, fi, z)
             self.draw_contestants(cam, fi, t_anim, falling_only=True)
         # top-down platforms
         for s in self.meta["statics"]:
@@ -437,8 +445,11 @@ class Renderer:
             ca, sa = math.cos(ang), math.sin(ang)
             for sh in st["shapes"]:
                 if sh["type"] == "circle" and st["style"] == "disc_marks":   # pinball bumpers riding the disc
-                    k = self._k(self.tr.zones[fi])
-                    ox, oy = sh["c"][0] * k, sh["c"][1] * k
+                    falls = self.tr.zones[fi].get("bumper_falls", [])
+                    b_idx = sum(1 for prev in st["shapes"][:st["shapes"].index(sh)] if prev.get("bumper"))
+                    if b_idx < len(falls) and falls[b_idx] >= 0:
+                        continue
+                    ox, oy = sh["c"]
                     c = cam.to_screen(x + ox * ca - oy * sa, y + ox * sa + oy * ca)
                     rr = sh["r"] * cam.zoom
                     pygame.draw.circle(self.frame, BLACK, c, rr + 4)
@@ -503,6 +514,28 @@ class Renderer:
                             pygame.draw.line(self.frame, (110, 70, 35), p0, p1, 3)
                     pygame.draw.polygon(self.frame, BLACK, pts, 4)
 
+    def _falling_bumpers(self, cam: Cam, fi: int, z: float) -> None:
+        if self.disc_prop is None:
+            return
+        falls = self.tr.zones[fi].get("bumper_falls", [])
+        if not falls:
+            return
+        row = self.tr.props[fi][self.disc_prop]
+        x, y, ang = float(row[0]), float(row[1]), math.radians(float(row[2]))
+        ca, sa = math.cos(ang), math.sin(ang)
+        st = self.meta["props"][self.disc_prop]
+        bshapes = [sh for sh in st["shapes"] if sh.get("bumper")]
+        for sh, age in zip(bshapes, falls):
+            if age < 0 or age > 0.55:
+                continue
+            ox, oy = sh["c"]
+            wx, wy = x + ox * ca - oy * sa, y + ox * sa + oy * ca
+            d = math.hypot(wx, wy) or 1.0
+            sx, sy = cam.to_screen(wx + wx / d * 180 * age, wy + wy / d * 180 * age + 420 * age * age)
+            rr = sh["r"] * z * max(0.15, 1.0 - 1.4 * age)
+            pygame.draw.circle(self.frame, BLACK, (sx, sy), rr + 3)
+            pygame.draw.circle(self.frame, (230, 40, 60), (sx, sy), rr)
+
     def _particles(self, cam: Cam, t: float) -> None:
         kind = self.theme.particles
         rng = random.Random(3)
@@ -553,6 +586,11 @@ class Renderer:
                 continue
             if not cam.visible(x, y, 140):
                 continue
+            if falling and top:               # launch outward/downward behind the disc over 0.45 s
+                ft = sq * 0.45
+                d = math.hypot(x, y) or 1.0
+                x = x + (vx * 0.4 + x / d * 180) * ft
+                y = y + (vy * 0.4 + y / d * 180) * ft + 700 * ft * ft
             sx, sy = cam.to_screen(x, y)
             hero = HERO_BY_KEY.get(k)
             extra = self.extras.get(k)
@@ -560,16 +598,16 @@ class Renderer:
             if alive and abs(w) > 9.0 and ex not in ("eliminated", "celebrating"):
                 ex = "dizzy"
             scale, alpha = 1.0, 255
-            if falling:                       # TOP_DOWN fall: shrink 1.0 -> 0.12 and spin down behind the platform
-                scale = 1.0 - 0.88 * sq
+            if falling:                       # shrink 1.0 -> 0.15 over 0.45 s with frantic arms
+                scale = 1.0 - 0.85 * sq
                 ang = ang + sq * 540
                 alpha = int(255 * (1 - 0.4 * sq))
             if top and alive:
                 scenery.shadow(self.frame, (sx, sy), balls.body_radius(hero, extra) * z)
-            pose = balls.pose_for(bool(alive), not (f & T.AIRBORNE), (vx, vy), w, sq if alive else 0.0,
-                                  bool(f & T.VICTORY), bool(hero and hero.key in ("grumble", "magneto")), top)
-            if falling:
-                pose = "flail"
+            play_t = (fi - self.pre) / FPS
+            heavy = any(0.0 <= play_t - ht <= 0.22 for ht in self.splat_wins.get(k, ()))
+            over_drop = (not top) and bool(f & T.AIRBORNE) and vy > 480
+            pose = balls.pose_for(bool(falling), vy, over_drop, heavy, False)
             spd = math.hypot(vx, vy)
             look = (max(-1.0, min(1.0, vx / 300)), max(-1.0, min(1.0, vy / 300)))
             face = float(self.face[min(fi, len(self.face) - 1)][i]) if alive else ang
@@ -641,13 +679,21 @@ class Renderer:
             sx, sy = cam.to_screen(*e.pos)
             seed = int(e.t * 1000) % 997
             if e.kind == "elimination":
-                gy = min(max(sy, scenery.PANEL.bottom + 80), LAYOUT["captions"]["y"][0] - 40)
+                cause = e.data.get("cause", "")
+                if cause in ("fell", "lava") and self.tr.mode == "SIDE_VIEW":
+                    ky = self.meta.get("kill_y", e.pos[1])
+                    iy = cam.to_screen(e.pos[0], ky)[1]
+                    iy = min(max(iy, 320), H - 40)
+                    effects.draw_sparks(self.frame, (min(max(sx, 40), W - 40), iy), age, seed)
+                elif cause == "fell" and self.tr.mode == "TOP_DOWN":
+                    effects.draw_sparks(self.frame, (min(max(sx, 40), W - 40), 1640), age, seed)
+                gy = min(max(sy, 320), 1380)
                 gx = min(max(sx, 60), W - 60)
                 col = renderer.hex_rgb(HERO_BY_KEY[e.actors[0]].colour) if e.actors[0] in HERO_BY_KEY else (230, 220, 200)
                 effects.draw_ghost(self.frame, (gx, gy), age, col)
                 if e.data.get("hero") and age < effects.POPUP_S:
-                    word = "BETRAYAL!" if e.data.get("by_hero") else ("SPLAT!" if e.data.get("cause") == "lava" else "YEET!")
-                    effects.draw_popup(self.frame, word, (gx, max(gy - 120, scenery.PANEL.bottom + 90)), age, seed)
+                    word = "BETRAYAL!" if e.data.get("by_hero") else ("SPLAT!" if cause == "lava" else "YEET!")
+                    effects.draw_popup(self.frame, word, self._pop_xy(gx, gy - 110), age, seed)
             elif e.kind == "impact" and age < effects.POPUP_S and e.data.get("impulse", 0) > 900:
                 effects.draw_sparks(self.frame, (sx, sy), age, seed)
                 if e.data.get("hero_pair"):
@@ -658,51 +704,41 @@ class Renderer:
 
     @staticmethod
     def _pop_xy(x: float, y: float) -> tuple[float, float]:
-        # above the HUD bar's bottom edge and clear of the caption band / platform UI below
-        return min(max(x, 150), W - 150), min(max(y, scenery.PANEL.bottom + 90), LAYOUT["captions"]["y"][0] - 70)
+        # screen-safe comic popups (v3.1): x in [160, 920], y in [320, 1400]
+        return min(max(x, 160), 920), min(max(y, 320), 1400)
 
     # ------------------------------------------------------------------ frame
     def _ranks(self, fi: int) -> dict[str, int]:
-        """Live placement of every hero: survivors by course progress (SIDE) / closeness to the centre (TOP),
-        then the eliminated in reverse order of elimination."""
+        """v3.1: Ranks strictly over alive Heroes (excludes Crash Dummies so #1-#5 never skip)."""
         rows, flags = self.tr.frames[fi], self.tr.flags[fi]
-        n = len(self.tr.keys)
-        alive = [i for i in range(n) if flags[i] & T.ALIVE]
+        alive_heroes = [i for i in range(len(self.tr.keys)) if (flags[i] & T.ALIVE) and self.tr.keys[i] in HERO_BY_KEY]
         if self.tr.mode == "TOP_DOWN":
-            alive.sort(key=lambda i: rows[i, 0] ** 2 + rows[i, 1] ** 2)
+            alive_heroes.sort(key=lambda i: rows[i, 0] ** 2 + rows[i, 1] ** 2)
         else:
-            alive.sort(key=lambda i: -rows[i, 0])
+            alive_heroes.sort(key=lambda i: -rows[i, 0])
         w = self.meta.get("winner")
-        if w and flags[self.tr.index(w)] & T.WINNER:
-            alive.sort(key=lambda i: self.tr.keys[i] != w)
-        out_t = {}
-        play_t = (fi - self.pre) / FPS
-        for e in self.tr.events:
-            if e.kind == "elimination" and e.t <= play_t:
-                out_t[e.actors[0]] = e.t
-        dead = sorted((i for i in range(n) if not flags[i] & T.ALIVE), key=lambda i: -out_t.get(self.tr.keys[i], 0))
-        order = alive + dead
-        return {self.tr.keys[i]: r + 1 for r, i in enumerate(order) if self.tr.keys[i] in HERO_BY_KEY}
+        if w and w in HERO_BY_KEY and flags[self.tr.index(w)] & T.WINNER:
+            alive_heroes.sort(key=lambda i: self.tr.keys[i] != w)
+        return {self.tr.keys[i]: r + 1 for r, i in enumerate(alive_heroes)}
 
-    def tuno_state(self, play_t: float, segment: str) -> str:
-        """Lord Tuno reacts to the real trace: lever just BEFORE every twist/escalation banner, belly laugh on
-        multi-eliminations (3+ within 1 s), shock on betrayals and photo finishes."""
+    def tuno_state(self, play_t: float, segment: str) -> tuple[str, str]:
+        """v3.1: (state, brief speech tag) for the Royal Reaction Cam."""
         if segment in ("card", "replay"):
-            return "crowning"
+            return "crowning", "GG!"
         for e in self.escalations:
-            if -0.6 <= play_t - e.t < 0.5:
-                return "lever"
+            if -0.4 <= play_t - e.t < 0.8:
+                return "evil", "YES!"
         recent = [e for e in self.elims if 0 <= play_t - e.t < 1.2]
         if any(e.data.get("hero") and e.data.get("by_hero") for e in recent):
-            return "shocked"
+            return "shocked", "OOF!"
         for e in recent:
             if sum(1 for o in self.elims if e.t - 1.0 <= o.t <= e.t) >= 3:
-                return "laughing"
+                return "laughing", "RIP!"
         if len(self.late_leads) >= 2 and self.end_t - 2.5 <= play_t <= self.end_t:
-            return "shocked"
+            return "shocked", "WHOA!"
         if recent and play_t - recent[-1].t < 0.7:
-            return "shocked" if recent[-1].data.get("hero") else "laughing"
-        return "idle"
+            return ("shocked", "OOF!") if recent[-1].data.get("hero") else ("laughing", "RIP!")
+        return "idle", "" 
 
     def render_shot(self, shot: Shot, index: int) -> pygame.Surface:
         hud.TEXT_BOXES.clear()
@@ -731,15 +767,21 @@ class Renderer:
             effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)
         if shot.segment in ("play", "replay", "cold"):
             self.draw_juice(cam, play_t if not slow else (tf - self.pre) / FPS, t_anim)
-        self._abyss(t_anim)
+        self._abyss(cam, fi, t_anim)
         self.frame.set_clip(None)
         self._overlays(shot, play_t, t_anim, hud_fi, ranks)
         return self.frame
 
-    def _abyss(self, t: float) -> None:
-        """Themed lethal abyss along the bottom edge (lava / iron spikes / storm clouds); keeps y 1440-1620 clear."""
+    def _abyss(self, cam: Cam, fi: int, t: float) -> None:
+        """v3.1: in SIDE_VIEW, anchor spikes/lava to the actual world kill_y (or lava_y) so platforms never clip behind
+        a flat overlay. In TOP_DOWN, draw at the bottom edge (y=1640) where falling balls splash."""
         fr, key = self.frame, self.theme.key
-        y0 = 1640
+        if self.tr.mode == "SIDE_VIEW":
+            ky = self.tr.zones[fi].get("lava_y", self.meta.get("kill_y", 500.0))
+            y0 = int(cam.to_screen(0, ky)[1])
+            y0 = max(1280, min(1680, y0))
+        else:
+            y0 = 1640
         if key in ("volcano", "desert", "clockwork", "jungle"):
             pygame.draw.rect(fr, (200, 50, 10), (0, y0, W, H - y0))
             pts = [(x, y0 + 12 * math.sin(t * 3 + x * 0.02)) for x in range(0, W + 20, 20)]
@@ -770,15 +812,15 @@ class Renderer:
     def _overlays(self, shot: Shot, play_t: float, t_anim: float, fi: int, ranks: dict[str, int]) -> None:
         fr = self.frame
         flags = self.tr.flags[fi]
-        alive = int(sum(1 for f in flags if f & T.ALIVE))
+        alive = int(sum(1 for f in flags if (f & T.ALIVE) or (self.tr.mode == "TOP_DOWN" and (f & T.FALLING))))
         total = len(self.tr.keys)
         status = {}
         for h in self.heroes:
             f = flags[self.tr.index(h.key)]
             status[h.key] = "crown" if f & T.WINNER else ("alive" if f & T.ALIVE else "out")
         recent = sum(1 for e in self.tr.events if e.kind == "elimination" and 0 <= play_t - e.t < 1.5)
-        scenery.draw_header(fr, self.castle, self.ep.ep_label, self.tuno_state(play_t, shot.segment), t_anim,
-                            hud.TEXT_BOXES)
+        t_st, t_sp = self.tuno_state(play_t, shot.segment)
+        scenery.draw_header(fr, self.castle, self.ep.ep_label, t_st, t_anim, hud.TEXT_BOXES, speech=t_sp)
         if shot.segment in ("cold", "tail"):             # pick-your-fighter strip replaces the bar, off the action
             scenery.draw_pick_strip(fr, self.heroes, t_anim, hud.TEXT_BOXES)
             hud.blit_text(fr, hud.outlined("WHO SURVIVES?", 84, fill=(255, 214, 0), width=8), center=(W / 2, 520))

@@ -11,7 +11,7 @@ from src.physics import trace as T
 
 VIEW_TOP, VIEW_BOTTOM = LAYOUT["viewport"]
 ACTION_TOP, ACTION_BOTTOM = LAYOUT["action_bias"]
-SCREEN_CY = (ACTION_TOP + ACTION_BOTTOM) / 2 + 40      # world focus point lands in the action band
+SCREEN_CY = (ACTION_TOP + ACTION_BOTTOM) / 2           # v3.1: track framed at y = 720..1220
 
 
 @dataclass
@@ -61,10 +61,18 @@ def track(trace: T.Trace) -> list[Cam]:
     vx = vy = vz = 0.0
     dt = 1 / FPS
     final_zoom = settings()["render"]["final3_zoom"]
+    zmin, zmax_s = settings()["render"]["side_zoom_range"]
+    # 2-pass death cam bias: pre-index hero KO frames so camera biases/zooms out 0.35 s before each KO
+    hero_kos = []
+    for e in trace.events:
+        if e.kind == "elimination" and e.data.get("hero") and e.pos is not None:
+            hero_kos.append((pre + int(e.t * FPS), e.pos[0], e.pos[1]))
+    bias_win = int(0.50 * FPS)
     for f in range(trace.n_frames):
         rows, flags = trace.frames[f], trace.flags[f]
         everyone = [i for i in range(len(rows)) if flags[i] & T.ALIVE]
-        focus = None                                   # the contestant that must stay in the middle of the frame
+        focus = None
+        tz = base_zoom
         if trace.mode == "TOP_DOWN":
             tx, ty = (x0 + x1) / 2, (y0 + y1) / 2 + 20
         else:
@@ -74,26 +82,45 @@ def track(trace: T.Trace) -> list[Cam]:
             else:
                 order = sorted(alive, key=lambda i: rows[i, 0], reverse=True)
                 focus = order[0]
-                lead = order[: max(1, min(3, math.ceil(len(order) * 0.4)))]   # top-3 living leaders
-                w = np.array([1.0 + 0.5 * (k == 0) for k in range(len(lead))])
-                tx = float(np.average(rows[lead, 0], weights=w)) + 90
-                ty = float(np.average(rows[lead, 1], weights=w)) - 60
-            tx = min(max(tx, x0 + W / 2 / base_zoom), x1 - W / 2 / base_zoom)
-            ty = min(max(ty, y0 + 300), y1 - 300)
-        tz = base_zoom
-        if trace.mode == "TOP_DOWN":      # follow the shrinking arena in so the fight stays big on screen
+                pack = order[: min(5, len(order))]                    # top 4-5 alive Heroes
+                xs = rows[pack, 0]
+                ys = rows[pack, 1]
+                # 60% main cluster (median/mean of pack), 40% #1 leader
+                cluster_x, cluster_y = float(np.median(xs)), float(np.median(ys))
+                lead_x, lead_y = float(xs[0]), float(ys[0])
+                tx = 0.60 * cluster_x + 0.40 * lead_x
+                ty = 0.60 * cluster_y + 0.40 * lead_y - 30
+                # include approaching elimination wall if close behind pack
+                chase = trace.zones[f].get("chase_x")
+                left_x = float(xs.min())
+                if chase is not None and left_x - chase < 500:
+                    left_x = min(left_x, chase + 80)
+                span_x = max(520.0, float(xs.max()) - left_x + 280)
+                tz = min(zmax_s, max(zmin, (W * 0.88) / span_x))
+                # 2-pass death cam bias: 0.35 s before a Hero KO, bias toward the KO & zoom out slightly
+                for kf, kx, ky in hero_kos:
+                    if 0 <= kf - f <= bias_win:
+                        w_ko = 0.65 * (1.0 - (kf - f) / max(1, bias_win))
+                        tx = tx * (1.0 - w_ko) + kx * w_ko
+                        ty = ty * (1.0 - w_ko) + ky * w_ko
+                        tz = min(tz, max(0.58, (W * 0.85) / max(600.0, abs(lead_x - kx) + 280)))
+                        focus = None
+                        break
+            tx = min(max(tx, x0 + W / 2 / max(zmin, tz)), x1 - W / 2 / max(zmin, tz))
+            ty = min(max(ty, y0 + 250), y1 - 250)
+        if trace.mode == "TOP_DOWN":
             z0 = trace.zones[f]
             ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * z0.get("ring_r", 1.0) / max(1.0, trace.zones[0].get("ring_r", 1.0))
             zmax = settings()["render"]["top_zoom_max"]
-            tz = base_zoom * min(zmax, 1.0 / max(ek, 1.0 / zmax))     # 1.0x -> 2.15x as the arena shrinks
+            tz = base_zoom * min(zmax, 1.0 / max(ek, 1.0 / zmax))
         tx_lead, ty_lead = tx, ty
-        if 0 < len(everyone) <= 3:        # final-3: tight zoom on the survivors' faces (all of them stay in frame)
+        if 0 < len(everyone) <= 3:
             xs, ys = rows[everyone, 0], rows[everyone, 1]
             tx, ty = float(xs.mean()), float(ys.mean())
             spanx = float(xs.max() - xs.min()) + 360
             spany = float(ys.max() - ys.min()) + 420
             fit = min(W / spanx, (VIEW_BOTTOM - VIEW_TOP) / spany)
-            if fit >= base_zoom:          # only when they can all share the frame; else keep following the leader
+            if fit >= zmin:
                 tz = max(tz, min(base_zoom * final_zoom, fit))
                 focus = None
             else:
@@ -102,20 +129,19 @@ def track(trace: T.Trace) -> list[Cam]:
         for cf, s in chaos:
             if 0 <= f - cf < int(0.6 * FPS):
                 strength = max(strength, s)
-                tz = tz * 1.15
+                tz = tz * 1.12
         if cx is None:
             cx, cy = tx, ty
         cx, vx = _spring(cx, vx, tx, 4.5, dt)
         cy, vy = _spring(cy, vy, ty, 3.2, dt)
         cz, vz = _spring(cz, vz, tz, 7.0, dt)
-        if focus is not None:             # hard clamp: the leader is always inside the middle 50% of the frame
+        if focus is not None:             # keep #1 inside the frame (middle 65%) without hiding the pack
             fx, fy = float(rows[focus, 0]), float(rows[focus, 1])
-            hw = W * 0.25 / cz
-            mid, half = (VIEW_TOP + VIEW_BOTTOM) / 2, (VIEW_BOTTOM - VIEW_TOP) * 0.25
+            hw = W * 0.35 / cz
+            mid, half = (VIEW_TOP + VIEW_BOTTOM) / 2, (VIEW_BOTTOM - VIEW_TOP) * 0.30
             cx = min(max(cx, fx - hw), fx + hw)
-            # screen_y = (fy - cy) * cz + SCREEN_CY must stay within mid +- half
             cy = min(max(cy, fy + (SCREEN_CY - mid - half) / cz), fy + (SCREEN_CY - mid + half) / cz)
-        if everyone:                      # safety net: never a frame with nobody on screen (teleports, launches)
+        if everyone:
             def on_screen(i: int) -> bool:
                 sx = (rows[i, 0] - cx) * cz + W / 2
                 sy = (rows[i, 1] - cy) * cz + SCREEN_CY

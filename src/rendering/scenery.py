@@ -16,7 +16,7 @@ from src.characters.tuno import draw_tuno
 from src.config import H, LAYOUT, W, font_path
 
 HEADER_BOTTOM = LAYOUT["header"][1]
-PANEL = pygame.Rect(20, 312, W - 40, 104)       # compact status bar just under the castle wall (clear of Shorts/Reels UI)
+PANEL = pygame.Rect(28, 108, 762, 114)          # Top-left Top-5 Heroes Bar (y=0..255 broadcast header)
 
 
 def mix(a, b, k: float) -> tuple[int, int, int]:
@@ -70,67 +70,83 @@ def sky(theme) -> pygame.Surface:
     return s
 
 
-# ---------------------------------------------------------------------------------------------- castle header
+# ---------------------------------------------------------------------------------------------- broadcast header (v3.1)
+CAM_RECT = pygame.Rect(815, 22, 230, 220)       # Top-right: Lord Tuno Royal Reaction Cam
+
+
 def castle_header(theme) -> pygame.Surface:
-    """Castle wall with crenellations across the top band, a central tower with an arched window for the balcony."""
-    s = pygame.Surface((W, HEADER_BOTTOM + 40), pygame.SRCALPHA)
-    stone = mix(theme.castle, (165, 165, 175), 0.55)
-    dark, light = mix(stone, BLACK, 0.28), mix(stone, WHITE, 0.25)
-    wall_top = 150
-    pygame.draw.rect(s, stone, (0, wall_top, W, 120))
-    for x in range(-20, W, 96):                                          # merlons
-        pygame.draw.rect(s, stone, (x, wall_top - 46, 60, 50))
-        pygame.draw.rect(s, BLACK, (x, wall_top - 46, 60, 50), 4)
-    pygame.draw.line(s, BLACK, (0, wall_top), (W, wall_top), 4)
-    for row, y in enumerate(range(wall_top + 8, wall_top + 120, 34)):     # bricks
-        off = 0 if row % 2 else 48
-        for x in range(-off, W, 96):
-            pygame.draw.rect(s, dark, (x + 4, y, 88, 28), 2, border_radius=4)
-    pygame.draw.rect(s, dark, (0, wall_top + 112, W, 10))
-    pygame.draw.line(s, BLACK, (0, wall_top + 122), (W, wall_top + 122), 4)
-    tw = 300                                                              # central tower
-    tx = W / 2 - tw / 2
-    pygame.draw.rect(s, stone, (tx, 0, tw, wall_top + 122))
-    for row, y in enumerate(range(8, wall_top + 110, 34)):
-        off = 0 if row % 2 else 36
-        for x in range(int(tx) - off, int(tx + tw), 72):
-            r = pygame.Rect(x + 4, y, 64, 28).clip(pygame.Rect(tx, 0, tw, wall_top + 122))
-            if r.w > 6:
-                pygame.draw.rect(s, dark, r, 2, border_radius=4)
-    pygame.draw.rect(s, BLACK, (tx, -10, tw, wall_top + 132), 5)
-    arch = pygame.Rect(W / 2 - 96, 40, 192, 220)                          # arched window (dark interior)
-    pygame.draw.rect(s, (52, 44, 70), arch, border_top_left_radius=96, border_top_right_radius=96)
-    pygame.draw.rect(s, BLACK, arch, 5, border_top_left_radius=96, border_top_right_radius=96)
-    pygame.draw.rect(s, light, (arch.x + 10, arch.y + 10, 10, 120), border_radius=5)
+    """v3.1: stone-and-gold portrait frame for Lord Tuno in the top-right (full-width brick wall removed)."""
+    s = pygame.Surface((260, 260), pygame.SRCALPHA)
+    cx, cy, r = 130, 126, 108
+    # shadow + outer black + stone ring + gold trim
+    pygame.draw.circle(s, (0, 0, 0, 90), (cx + 4, cy + 6), r + 8)
+    pygame.draw.circle(s, BLACK, (cx, cy), r + 8)
+    pygame.draw.circle(s, (145, 138, 165), (cx, cy), r + 3)
+    pygame.draw.circle(s, BLACK, (cx, cy), r - 8)
+    pygame.draw.circle(s, (255, 205, 40), (cx, cy), r - 11, 5)
+    pygame.draw.circle(s, (46, 36, 72), (cx, cy), r - 16)
     return s
 
 
-def draw_header(frame: pygame.Surface, castle: pygame.Surface, ep_label: str, tuno_state: str, t: float,
-                text_boxes: list) -> None:
-    frame.blit(castle, (0, 0))
-    draw_tuno(frame, W / 2, 262, tuno_state, t, scale=1.12)
-    pill = episode_pill(ep_label)
-    r = pill.get_rect(topright=(W - 26, 150))
-    frame.blit(pill, r)
+def _outlined_text(text: str, size: int, fill=WHITE, outline=BLACK, w: int = 4) -> pygame.Surface:
+    f = font(size)
+    base = f.render(text, True, fill)
+    ring = f.render(text, True, outline)
+    out = pygame.Surface((base.get_width() + 2 * w, base.get_height() + 2 * w), pygame.SRCALPHA)
+    for k in range(12):
+        ang = k * math.pi / 6
+        out.blit(ring, (w + math.cos(ang) * w, w + math.sin(ang) * w))
+    out.blit(base, (w, w))
+    return out
+
+
+@lru_cache(maxsize=16)
+def episode_ribbon(text: str) -> pygame.Surface:
+    """Stylized cartoon episode ribbon with thick black outline (no plain white box)."""
+    txt = _outlined_text(text.upper(), 30, fill=(255, 214, 0), outline=BLACK, w=4)
+    w = min(540, txt.get_width() + 44)
+    h = 58
+    s = pygame.Surface((w, h), pygame.SRCALPHA)
+    pts = [(10, 4), (w - 4, 4), (w - 18, h - 4), (2, h - 4)]
+    pygame.draw.polygon(s, BLACK, [(x + 3, y + 4) for x, y in pts])
+    pygame.draw.polygon(s, (46, 48, 78), pts)
+    pygame.draw.polygon(s, BLACK, pts, 4)
+    fit = _fit(txt, w - 34)
+    s.blit(fit, fit.get_rect(center=(w / 2, h / 2 + 2)))
+    return s
+
+
+def draw_header(frame: pygame.Surface, portrait_bg: pygame.Surface, ep_label: str, tuno_state: str, t: float,
+                text_boxes: list, speech: str = "") -> None:
+    """Top-left episode ribbon + Top-right Royal Reaction Cam with 2.5x Lord Tuno & speech tag."""
+    rib = episode_ribbon(ep_label.replace(" - ", " • "))
+    r = rib.get_rect(topleft=(28, 30))
+    frame.blit(rib, r)
     text_boxes.append(r)
 
-
-@lru_cache(maxsize=8)
-def episode_pill(text: str) -> pygame.Surface:
-    f = font(30, "Fredoka.ttf")
-    f.set_bold(True)
-    t = f.render(text, True, (20, 20, 28))
-    s = pygame.Surface((t.get_width() + 44, t.get_height() + 20), pygame.SRCALPHA)
-    rect = s.get_rect()
-    pygame.draw.rect(s, BLACK, rect, border_radius=16)
-    pygame.draw.rect(s, WHITE, rect.inflate(-8, -8), border_radius=13)
-    s.blit(t, t.get_rect(center=rect.center))
-    return s
-
-
-# ---------------------------------------------------------------------------------------------- bottom panel
-def _ordinal(n: int) -> str:
-    return f"{n}{'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')}"
+    # Top-right Royal Reaction Cam
+    cx, cy = CAM_RECT.centerx, CAM_RECT.centery - 6
+    frame.blit(portrait_bg, portrait_bg.get_rect(center=(cx, cy)))
+    # Render Lord Tuno 2.5x larger inside a circular clip matching the inner frame
+    buf = pygame.Surface((220, 220), pygame.SRCALPHA)
+    draw_tuno(buf, 110, 214, tuno_state, t, scale=1.65)
+    mask = pygame.Surface((220, 220), pygame.SRCALPHA)
+    pygame.draw.circle(mask, (255, 255, 255, 255), (110, 110), 92)
+    buf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+    frame.blit(buf, buf.get_rect(center=(cx, cy)))
+    # Gold bezel highlight on top
+    pygame.draw.circle(frame, BLACK, (cx, cy), 100, 4)
+    pygame.draw.circle(frame, (255, 205, 40), (cx, cy), 96, 4)
+    if speech:
+        sp = _outlined_text(speech, 32, fill=(255, 255, 255), outline=BLACK, w=4)
+        bw, bh = sp.get_width() + 24, sp.get_height() + 12
+        tag = pygame.Surface((bw, bh), pygame.SRCALPHA)
+        pygame.draw.rect(tag, BLACK, tag.get_rect(), border_radius=14)
+        pygame.draw.rect(tag, (255, 80, 90), tag.get_rect().inflate(-6, -6), border_radius=11)
+        tag.blit(sp, sp.get_rect(center=(bw / 2, bh / 2 + 1)))
+        tr = tag.get_rect(midright=(cx - 104, cy - 12))
+        frame.blit(tag, tr)
+        text_boxes.append(tr)
 
 
 def _crown(frame, cx: float, cy: float, w: float) -> None:
@@ -153,48 +169,53 @@ def _icon(frame, h: Hero, c, rad: float, expr: str = "neutral") -> None:
 
 def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[Hero], status: dict[str, str],
                ranks: dict[str, int], text_boxes: list, pulse: float = 0.0) -> None:
-    """Mobile-readable bar: SURVIVORS n/N + the top-5 live leaders as big icons with bold #1-#5 ranks (no names)."""
+    """Top-left ALIVE pill beside the episode ribbon + Top 5 Heroes Bar (#1-#5 over alive heroes only)."""
+    # ALIVE: X/13 pill beside the episode ribbon
+    k = 1.0 + 0.12 * pulse
+    alive_rect = pygame.Rect(584, 30, 206, 58)
+    pygame.draw.rect(frame, BLACK, alive_rect.move(3, 4), border_radius=16)
+    pygame.draw.rect(frame, (24, 26, 40), alive_rect, border_radius=16)
+    pygame.draw.rect(frame, (255, 90, 90) if pulse > 0 else WHITE, alive_rect, 3, border_radius=16)
+    lab = font(26).render("ALIVE:", True, WHITE)
+    num = font(int(34 * k)).render(f"{survivors}/{total}", True, (255, 214, 0) if survivors <= 3 else (255, 90, 90))
+    r1 = frame.blit(lab, lab.get_rect(midleft=(alive_rect.x + 14, alive_rect.centery + 2)))
+    r2 = frame.blit(num, num.get_rect(midright=(alive_rect.right - 14, alive_rect.centery + 2)))
+    text_boxes += [r1, r2]
+
+    # Top 5 Heroes Bar directly below
     plate = pygame.Surface(PANEL.size, pygame.SRCALPHA)
-    pygame.draw.rect(plate, (24, 26, 40, 220), plate.get_rect(), border_radius=26)
-    pygame.draw.rect(plate, (255, 255, 255, 70), plate.get_rect(), 3, border_radius=26)
+    pygame.draw.rect(plate, (20, 22, 36, 215), plate.get_rect(), border_radius=24)
+    pygame.draw.rect(plate, (255, 255, 255, 75), plate.get_rect(), 3, border_radius=24)
     frame.blit(plate, PANEL)
-    lab = font(26).render("SURVIVORS", True, WHITE)
-    r1 = frame.blit(lab, (PANEL.x + 22, PANEL.y + 10))
-    k = 1.0 + 0.15 * pulse
-    num = font(int(56 * k)).render(f"{survivors}", True, (255, 74, 74))
-    tot = font(int(56 * k)).render(f"/{total}", True, WHITE)
-    r2 = frame.blit(num, (PANEL.x + 22, PANEL.y + 38))
-    r3 = frame.blit(tot, (r2.right + 4, PANEL.y + 38))
-    text_boxes += [r1, r2, r3]
     live = sorted((h for h in heroes if status.get(h.key) != "out"), key=lambda h: ranks.get(h.key, 99))[:5]
-    x0 = PANEL.x + 236
-    step = (PANEL.right - 12 - x0) / 5
+    step = (PANEL.width - 24) / 5
     f_rank = font(34)
     for i, h in enumerate(live):
-        cx, cy = x0 + step * i + 40, PANEL.centery
+        cx = PANEL.x + 12 + step * i + 44
+        cy = PANEL.centery + 2
         _icon(frame, h, (cx, cy), 34, "celebrating" if status.get(h.key) == "crown" else "neutral")
         rank = ranks.get(h.key, i + 1)
         rn = f_rank.render(f"#{rank}", True, (255, 214, 0) if rank == 1 else WHITE)
         rb = frame.blit(rn, rn.get_rect(midleft=(cx + 42, cy + 2)))
         if rank == 1:
-            _crown(frame, cx, cy - 44, 24)
+            _crown(frame, cx, cy - 42, 24)
         text_boxes.append(rb)
 
 
 def draw_pick_strip(frame: pygame.Surface, heroes: list[Hero], t: float, text_boxes: list) -> None:
-    """Cold-open PICK YOUR FIGHTER strip in the bar slot (y ~312-416), never over the balls."""
+    """Cold-open PICK YOUR FIGHTER strip in the top-left bar slot (y=108..222), never over the balls."""
     plate = pygame.Surface(PANEL.size, pygame.SRCALPHA)
-    pygame.draw.rect(plate, (24, 26, 40, 225), plate.get_rect(), border_radius=26)
-    pygame.draw.rect(plate, (255, 214, 0, 200), plate.get_rect(), 4, border_radius=26)
+    pygame.draw.rect(plate, (20, 22, 36, 225), plate.get_rect(), border_radius=24)
+    pygame.draw.rect(plate, (255, 214, 0, 210), plate.get_rect(), 4, border_radius=24)
     frame.blit(plate, PANEL)
-    lab = font(30).render("PICK YOUR FIGHTER!", True, (255, 214, 0))
-    text_boxes.append(frame.blit(lab, lab.get_rect(midtop=(W / 2, PANEL.y + 6))))
+    lab = font(28).render("PICK YOUR FIGHTER!", True, (255, 214, 0))
+    text_boxes.append(frame.blit(lab, lab.get_rect(midtop=(PANEL.centerx, PANEL.y + 6))))
     n = len(heroes)
-    step = (PANEL.width - 40) / max(1, n)
+    step = (PANEL.width - 30) / max(1, n)
     for i, h in enumerate(heroes):
-        cx = PANEL.x + 20 + step * (i + 0.5)
+        cx = PANEL.x + 15 + step * (i + 0.5)
         bob = 3 * math.sin(t * 9 + i)
-        _icon(frame, h, (cx, PANEL.y + 70 + bob), 26, "happy")
+        _icon(frame, h, (cx, PANEL.y + 74 + bob), 24, "happy")
 
 
 # ---------------------------------------------------------------------------------------------- terrain

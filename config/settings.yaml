@@ -42,10 +42,10 @@ timeline:
 
 # §8 safe zones (y ranges, 1080x1920)
 layout:
-  top_sky: [0, 140]
-  header: [140, 330]
-  viewport: [330, 1650]
-  action_bias: [440, 1340]
+  top_sky: [0, 0]
+  header: [0, 255]
+  viewport: [255, 1650]
+  action_bias: [720, 1220]
   captions: {y: [1240, 1440], x: [100, 940]}
   bottom_band: [1650, 1920]
   right_ui_column: {x_min: 960, y: [900, 1650]}
@@ -65,7 +65,8 @@ physics:
   angular_clamp: 24          # rad/s
   stun_range: [0.35, 0.75]   # propulsion cut after a knock, scaled by impulse
   fall_kill_depth: 240       # SIDE: this far below the course floor profile = fell off
-  top_fall_s: 0.4
+  top_fall_s: 0.45
+  victory_delay_s: 0.55      # TOP: wait after 2nd-to-last falls so zero losers remain on disc
   floater_air_drag: 0.9      # per second while airborne
   dummy_propulsion: 0.72
   glitch_period_s: 2.5
@@ -75,7 +76,7 @@ physics:
   stun_threshold: 650
   stun_s: 0.55
   unstick_window_s: 1.5
-  unstick_min_px: 18
+  unstick_min_px: 45
   bevel_radius: 8
   segment_radius: 6
   speed_centre: 255        # effective max speed = centre + (stat - centre) * spread (keeps §9.2 ordering)
@@ -113,7 +114,8 @@ physics:
   course_ramp: [0.6, 1.1]  # SIDE gap-width multiplier from the start to the finish of a course
 
 render:
-  side_zoom: 1.4          # camera zoom in SIDE_VIEW (bigger, chunkier characters)
+  side_zoom: 0.95         # default SIDE_VIEW zoom (pack-tracking adjusts 0.72x-1.05x)
+  side_zoom_range: [0.72, 1.05]
   top_zoom: 1.0           # multiplier on the fit-to-arena zoom in TOP_DOWN
   final3_zoom: 1.45       # SIDE extra zoom when 3 or fewer contestants survive
   top_zoom_max: 2.15      # TOP: zoom grows 1.0x -> 2.15x as the arena shrinks

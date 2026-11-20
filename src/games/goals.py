@@ -77,7 +77,13 @@ class Goal:
             self.force_resolve(t)          # nobody stalls against the end wall: the course is over
         alive = self.sim.alive()
         if len(alive) == 1 and not self.sim.winner:
-            self.declare(alive[0].key, t, "last_standing")
+            if self.sim.mode == SIDE:
+                self.declare(alive[0].key, t, "last_standing")
+            else:
+                if getattr(self, "_win_wait_t", None) is None:
+                    self._win_wait_t = t
+                if t - self._win_wait_t >= self.sim.cfg["victory_delay_s"]:
+                    self.declare(alive[0].key, t, "last_standing")
         elif not alive and not self.sim.winner:
             last = max(self.sim.contestants, key=lambda c: c.eliminated_at or 0)
             self.declare(last.key, t, "last_eliminated")

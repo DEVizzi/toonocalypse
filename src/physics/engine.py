@@ -44,10 +44,13 @@ class Contestant:
     air_time: float = 0.0
     anchor_pos: tuple[float, float] = (0.0, 0.0)
     anchor_t: float = 0.0
+    pos_hist: list[tuple[float, float, float]] = field(default_factory=list)
+    last_unstick_t: float = -9.0
     jump_cd: float = 0.0
     shove_cd: float = 0.0
     eliminated_at: float | None = None
     elim_pos: tuple[float, float] | None = None
+    elim_vel: tuple[float, float] = (0.0, 0.0)
     last_toucher: str | None = None
     last_touch_t: float = -9.0
     score: float = 0.0          # goal-specific points (items, zone time, KOs)
@@ -332,6 +335,7 @@ class Sim:
         c.alive = False
         c.eliminated_at = self.t
         c.elim_pos = c.pos
+        c.elim_vel = (float(c.body.velocity.x), float(c.body.velocity.y))
         if by is None and c.last_toucher and self.t - c.last_touch_t < 2.0:
             by = c.last_toucher
         if self.mode == TOP:
@@ -534,18 +538,21 @@ class Sim:
             if c.hero is not None and c.hero.trait == "glitch" and self.t - c.phase_t >= self.cfg["glitch_period_s"]:
                 self._glitch_phase(c, "FEATHER" if c.phase == "LEAD" else "LEAD")
             c.traction = min(1.3, max(0.03, c.shape.friction / 0.8))
-            # anti-stuck: living, unstunned body moving < 18 px over 1.5 s gets an unstick hop
-            if self.t - c.anchor_t >= self.cfg["unstick_window_s"]:
-                moved = math.hypot(x - c.anchor_pos[0], y - c.anchor_pos[1])
+            # anti-stuck: rolling 1.5 s displacement < 45 px -> crisp upward-and-forward eject impulse
+            win = self.cfg["unstick_window_s"]
+            c.pos_hist.append((self.t, x, y))
+            while len(c.pos_hist) > 1 and self.t - c.pos_hist[0][0] > win:
+                c.pos_hist.pop(0)
+            if self.t >= win and self.t - c.pos_hist[0][0] >= win * 0.9 and self.t - c.last_unstick_t >= win:
+                moved = math.hypot(x - c.pos_hist[0][1], y - c.pos_hist[0][2])
                 if moved < self.cfg["unstick_min_px"] and c.stun <= 0 and not c.finished:
-                    hop = (220 if self.mode == SIDE else 0)
-                    fwd = 160 if self.mode == SIDE else 0
                     if self.mode == TOP:
                         a = self.rng.uniform(0, 2 * math.pi)
-                        c.body.apply_impulse_at_local_point((math.cos(a) * 200 * c.body.mass, math.sin(a) * 200 * c.body.mass))
+                        c.body.apply_impulse_at_world_point((math.cos(a) * 240 * c.body.mass, math.sin(a) * 240 * c.body.mass),
+                                                            c.body.position)
                     else:
-                        c.body.apply_impulse_at_local_point((fwd * c.body.mass, -hop * c.body.mass))
-                c.anchor_pos, c.anchor_t = (x, y), self.t
+                        c.body.apply_impulse_at_world_point((260 * c.body.mass, -320 * c.body.mass), c.body.position)
+                    c.last_unstick_t = self.t
             # eliminations
             if self.mode == SIDE:
                 floor = self.arena.floor_y(x) if hasattr(self.arena, "floor_y") else None
@@ -643,7 +650,8 @@ class Sim:
             else:
                 ex, ey = c.elim_pos or (0, 0)
                 fall = self.cfg["top_fall_s"]
-                rows[i] = (ex, ey, math.degrees(c.body.angle), 0, 0, max(0.0, min(1.0, c.fall_t / fall)) if c.fall_t >= 0 else 0, 0)
+                rows[i] = (ex, ey, math.degrees(c.body.angle), c.elim_vel[0], c.elim_vel[1],
+                           max(0.0, min(1.0, c.fall_t / fall)) if c.fall_t >= 0 else 0, 0)
                 f = T.FALLING if 0 <= c.fall_t < fall else 0
             if self.winner == c.key:
                 f |= T.WINNER | T.VICTORY

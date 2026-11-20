@@ -241,83 +241,52 @@ def _limb(s, a, b, w):
 
 
 def draw_limbs(s, cx, cy, r, fa, pose: str, vel, angvel: float, t: float, zoom: float, hit_dir=None) -> None:
-    """Cosmetic stick limbs (no physics, no stride). Posed from telemetry only."""
+    """v3.1: ZERO legs anywhere. Retractable event-only arms: ONLY on flail (falling/launched), splat (heavy impact),
+    and victory (winner card). Normal rolling/bouncing draws NO arms at all."""
+    if pose not in ("flail", "splat", "victory"):
+        return
     w = max(2, int(5 * zoom))
     vx, vy = vel
     sp = math.hypot(vx, vy)
-    L = r * 0.75
-    sh = [(-r * 0.95, 0.05 * r), (r * 0.95, 0.05 * r)]      # shoulders / hips in the face frame
-    hp = [(-r * 0.4, r * 0.92), (r * 0.4, r * 0.92)]
+    L = r * 0.80
+    sh = [(-r * 0.94, 0.02 * r), (r * 0.94, 0.02 * r)]
 
     def P(x, y):
         return cx + x * math.cos(fa) - y * math.sin(fa), cy + x * math.sin(fa) + y * math.cos(fa)
 
-    if pose == "tuck":                                       # rolling fast: noodles trailing behind the motion
-        back = math.atan2(-vy, -vx) if sp > 1 else math.pi
-        wob = math.sin(t * 14) * 0.25
-        for k, (x, y) in enumerate(sh + hp):
-            base = P(x * 0.9, y * 0.9)
-            ang = back + (0.35 if k % 2 else -0.35) + wob * (1 if k < 2 else -1)
-            _limb(s, base, _rot(base[0], base[1], L * 0.75, ang), w)
-    elif pose == "flail":                                    # airborne panic: limbs whip outward
-        f = 10 + abs(vy) / 70 + abs(angvel) * 0.8
+    if pose == "flail":                                    # \o/ arms shoot up waving frantically overhead
+        f = 14 + abs(vy) / 60 + abs(angvel) * 0.8
         for k, (x, y) in enumerate(sh):
             base = P(x, y)
-            ang = fa + (math.pi if k == 0 else 0.0) + (-0.9 if k == 0 else 0.9) * (0.6 + 0.5 * math.sin(t * f + k * 2))
+            side = -1 if k == 0 else 1
+            wave = math.sin(t * f + k * 2.1) * 0.45
+            ang = fa - math.pi / 2 + side * 0.55 + wave
             _limb(s, base, _rot(base[0], base[1], L * 1.15, ang), w)
-        for k, (x, y) in enumerate(hp):
-            base = P(x, y)
-            ang = fa + math.pi / 2 + (-0.7 if k == 0 else 0.7) * (0.5 + 0.6 * math.sin(t * f * 1.3 + k))
-            _limb(s, base, _rot(base[0], base[1], L, ang), w)
-    elif pose == "splat":                                    # wall-splat: splayed flat across the hit
+    elif pose == "splat":                                    # splayed flat for 0.22 s right after heavy hit/betrayal
         hd = hit_dir if hit_dir is not None else (math.atan2(vy, vx) if sp > 1 else 0.0)
-        for k in range(4):
-            ang = hd + math.pi / 2 + (0.35 if k < 2 else -0.35) + (math.pi if k % 2 else 0)
-            base = _rot(cx, cy, r * 0.8, ang)
-            _limb(s, base, _rot(base[0], base[1], L * 1.1, ang), w)
-    elif pose == "brace":                                    # tiny hands braced against the motion
-        fwd = math.atan2(vy, vx) if sp > 1 else fa
-        for k in (-1, 1):
-            base = _rot(cx, cy, r * 0.85, fwd + k * 0.7)
-            _limb(s, base, _rot(base[0], base[1], L * 0.8, fwd + k * 0.25), w)
-        for k, (x, y) in enumerate(hp):
-            base = P(x, y)
-            _limb(s, base, P(x * 1.4, y + L * 0.6), w)
-    elif pose == "victory":                                  # bouncy celebratory wave
-        hop = abs(math.sin(t * 7)) * r * 0.25
+        for k in (0, 1):
+            ang = hd + math.pi / 2 + (math.pi if k else 0.0)
+            base = _rot(cx, cy, r * 0.85, ang)
+            _limb(s, base, _rot(base[0], base[1], L * 1.05, ang), w)
+    elif pose == "victory":                                  # celebratory waving arms on the winner card
+        hop = abs(math.sin(t * 7)) * r * 0.20
         for k, (x, y) in enumerate(sh):
             base = P(x, y - hop / max(1, r) * r)
-            wave = math.sin(t * 12 + k * 1.5) * 0.4
+            wave = math.sin(t * 12 + k * 1.5) * 0.45
             ang = fa - math.pi / 2 + (-0.6 if k == 0 else 0.6) + wave
             _limb(s, base, _rot(base[0], base[1], L * 1.2, ang), w)
-        for k, (x, y) in enumerate(hp):
-            base = P(x, y)
-            _limb(s, base, P(x * 1.3, y + L * 0.7 - hop), w)
-    else:                                                    # resting: little arms down, stubby legs
-        for k, (x, y) in enumerate(sh):
-            base = P(x, y)
-            _limb(s, base, P(x * 1.25, y + L * 0.7), w)
-        for k, (x, y) in enumerate(hp):
-            base = P(x, y)
-            _limb(s, base, P(x * 1.2, y + L * 0.62), w)
 
 
 # ------------------------------------------------------------------------------------------------ the ball
-def pose_for(alive: bool, grounded: bool, vel, angvel: float, squash: float, winner: bool, brace_hero: bool,
-             top_down: bool) -> str:
-    vx, vy = vel
-    if winner:
+def pose_for(falling: bool, vy: float, over_drop: bool, heavy_impact: bool, winner_card: bool) -> str:
+    """Strict event-only arm states (v3.1): none during normal rolling/sliding/bouncing."""
+    if winner_card:
         return "victory"
-    if squash > 0.55:
-        return "splat"
-    if not grounded and not top_down:
+    if falling or (over_drop and vy > 480):
         return "flail"
-    sp = math.hypot(vx, vy)
-    if brace_hero and squash > 0.15:
-        return "brace"
-    if sp > 180 or abs(angvel) > 6:
-        return "tuck"
-    return "idle"
+    if heavy_impact:
+        return "splat"
+    return "none"
 
 
 def draw_ball(frame: pygame.Surface, hero: Hero | None, extra: Extra | None, pos, angle_deg: float, face_deg: float,
