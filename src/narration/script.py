@@ -401,11 +401,31 @@ def punch_up(beats: list[Beat], log=print) -> int:
     )
 
     a_cfg = settings()["audio"]
-    models = list(a_cfg.get("gemini_models") or [a_cfg["gemini_model"]])
     client = genai.Client(api_key=key)
+    models: list[str] = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+    for m in (a_cfg.get("gemini_models") or [a_cfg["gemini_model"]]):
+        if m not in models:
+            models.append(m)
+    # Dynamically discover active Flash models on this API key so model retirements never cause silent 404 fallback
+    try:
+        discovered = []
+        for m in client.models.list():
+            mname = (getattr(m, "name", "") or "").replace("models/", "")
+            low_m = mname.lower()
+            actions = getattr(m, "supported_actions", None) or getattr(m, "supported_generation_methods", None) or []
+            if actions and not any("generate" in str(act).lower() for act in actions):
+                continue
+            if "flash" in low_m and all(skip not in low_m for skip in ("tts", "image", "audio", "live", "thinking", "8b")):
+                discovered.append(mname)
+        # Prefer newest non-deprecated flash models first
+        discovered.sort(reverse=True)
+        models = list(dict.fromkeys(["gemini-flash-latest"] + discovered + models))
+    except Exception:
+        pass
+
     lines = None
     used_model = ""
-    for idx, model in enumerate(models):
+    for idx, model in enumerate(models[:6]):
         try:
             resp = client.models.generate_content(
                 model=model,
@@ -424,9 +444,9 @@ def punch_up(beats: list[Beat], log=print) -> int:
             msg = re.sub(r"AIza[0-9A-Za-z_\-]+", "[REDACTED]", str(exc))[:120]
             log(f"  gemini {model} unavailable ({type(exc).__name__} {code} {status}: {msg})")
             if str(code) in ("400", "401", "403") and "API_KEY" in msg.upper():
-                break   # invalid/restricted key won't change across models
-            if idx + 1 < len(models):
-                time.sleep(0.4)
+                break
+            if idx + 1 < min(6, len(models)):
+                time.sleep(0.3)
 
     if not isinstance(lines, list) or len(lines) != len(beats):
         log("  gemini fallback: keeping lore-accurate templates")

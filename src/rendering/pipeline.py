@@ -976,10 +976,10 @@ class Renderer:
                 x = (x0 + math.sin(t + i) * 20 - cam.x * 0.3) % W
             if kind == "rain":
                 pygame.draw.line(self.frame, col, (x, y), (x - 6, y + 22), 2)
-            elif kind == "clouds":
+            elif kind == "clouds" and self.tr.mode != "TOP_DOWN":
                 pygame.draw.ellipse(self.frame, col, (x, y, 60, 22))
             else:
-                pygame.draw.circle(self.frame, col, (x, y), 3)
+                pygame.draw.circle(self.frame, (190, 215, 255) if kind == "clouds" else col, (x, y), 2 if kind == "clouds" else 3)
 
     # ------------------------------------------------------------------ contestants + elemental cues + juice
     def _glitch_state(self, fi: int) -> tuple[str, float]:
@@ -1251,9 +1251,13 @@ class Renderer:
             pygame.draw.polygon(fr, (185, 28, 28), [(-20.0, float(top - 20))] + pts1 + [(-20.0, float(H + 20))])
             pygame.draw.polygon(fr, (249, 115, 22), [(-20.0, float(top - 20))] + pts2 + [(-20.0, float(H + 20))])
             pygame.draw.polygon(fr, (254, 240, 138), [(-20.0, float(top - 20))] + pts3 + [(-20.0, float(H + 20))])
-            if base_x > 26:
-                hot = [(-20.0, float(top - 20))] + [(px - 28.0, py) for px, py in pts3] + [(-20.0, float(H + 20))]
-                pygame.draw.polygon(fr, (255, 252, 214), hot)
+            if base_x > 52:
+                # Scrolling roaring inferno depth behind the #FEF08A incandescent core ribbon (never a flat yellow/cream block!)
+                back_or = [(px - 44.0 - 12.0 * math.sin((py + t_anim * 260.0) * 0.035), py) for px, py in pts3]
+                pygame.draw.polygon(fr, (234, 88, 12), [(-20.0, float(top - 20))] + back_or + [(-20.0, float(H + 20))])
+                if base_x > 105:
+                    back_cr = [(px - 92.0 - 16.0 * math.sin((py + t_anim * 190.0) * 0.029 + 1.4), py) for px, py in pts3]
+                    pygame.draw.polygon(fr, (153, 27, 27), [(-20.0, float(top - 20))] + back_cr + [(-20.0, float(H + 20))])
 
             # 4. Rising bright ember sparks ahead of the flames
             for i in range(22):
