@@ -525,6 +525,16 @@ def _valid_llm_line(b: Beat, ln: str, blocked_cliches: set[str] | None = None) -
             return False
     elif b.kind == "winner" and b.family != "winner_champion" and _LEAD_CLAIM.search(ln):
         return False
+    if b.kind == "winner" and b.family == "winner_champion":
+        if _LEAD_WORD.search(ln) and not re.search(r"\b(champion|crown|title|trophy|king|queen)\b", ln, re.IGNORECASE):
+            return False
+        if re.search(r"\b(lead|leads|leader|points?|table)\b", ln, re.IGNORECASE):
+            return False                                       # Grand Final = champion glory, never league maths
+        if not re.search(r"\b(champion|champ|crown\w*|title|trophy|king|queen|season)\b", ln, re.IGNORECASE):
+            return False
+        others = {h.name.lower() for h in HERO_BY_KEY.values()} - {b.ctx.get("winner", "").lower()}
+        if any(re.search(rf"\b{re.escape(o)}\b", ln, re.IGNORECASE) for o in others):
+            return False
     if b.kind == "outro":
         a, bb = b.ctx.get("a", "").lower(), b.ctx.get("b", "").lower()
         if (a and a not in low) or (bb and bb not in low):
@@ -574,12 +584,16 @@ def _prompt(beats: list[Beat], league_ctx: dict | None) -> str:
     final = False
     if league_ctx:
         final = str(league_ctx.get("stage")) == "grand_final"
-        stakes = (f"Season {league_ctx.get('season_number')} race {league_ctx.get('episode_number')}/30, "
-                  f"stage {league_ctx.get('stage')}, leader after race {league_ctx.get('current_leader_name')}. "
-                  + ("The season lead CHANGED HANDS this race: the winner line must say "
-                     f"{league_ctx.get('current_leader_name')} TAKES the lead (never 'keeps'/'still').\n"
-                     if league_ctx.get("lead_changed") else
-                     "The season lead did NOT change: never claim a new leader.\n"))
+        if final:
+            stakes = (f"Season {league_ctx.get('season_number')} GRAND FINAL (race 30/30): the winner is crowned SEASON "
+                      "CHAMPION. Never mention league points, the table or who 'leads'.\n")
+        else:
+            stakes = (f"Season {league_ctx.get('season_number')} race {league_ctx.get('episode_number')}/30, "
+                      f"stage {league_ctx.get('stage')}, leader after race {league_ctx.get('current_leader_name')}. "
+                      + ("The season lead CHANGED HANDS this race: the winner line must say "
+                         f"{league_ctx.get('current_leader_name')} TAKES the lead (never 'keeps'/'still').\n"
+                         if league_ctx.get("lead_changed") else
+                         "The season lead did NOT change: never claim a new leader.\n"))
     recent = sorted(league_ctx.get("recent_cliches") or []) if league_ctx else []
     rules = (
         "Say 'race N' or 'round N', NEVER 'league N'. "

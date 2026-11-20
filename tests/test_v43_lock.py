@@ -42,6 +42,12 @@ class TestV43Lock(unittest.TestCase):
             self.assertTrue(script._valid_llm_line(b, txt), txt)
             self.assertTrue(8 <= len(txt.split()) <= 12, txt)
 
+    def test_grand_final_winner_line_is_champion_only(self) -> None:
+        b = script.Beat(24.0, "winner", 10, {"winner": "Pip", "leader": "Magneto", "season": 7}, max_words=8)
+        b.family = "winner_champion"
+        self.assertFalse(script._valid_llm_line(b, "Pip steals the win, Magneto keeps the lead."))
+        self.assertTrue(script._valid_llm_line(b, "Pip is your Season 7 Champion!"))
+
     def test_cliche_cooldown(self) -> None:
         self.assertEqual(script.cliches_in(["This is getting properly spicy!"]), ["properly_spicy"])
         self.assertIn("hunting_blood", script.cliches_in(["Bonk's hunting Magneto for blood!"]))
