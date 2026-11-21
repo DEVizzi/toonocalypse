@@ -157,26 +157,80 @@ def run(mode: str, season: int | None, dry_run: bool, privacy: str, end_race: in
         log(f"[RECAP] {key} already published: {recaps['recaps'][key].get('url')}")
         return 0
 
+    if kind == "widescreen_finale":
+        from src.rendering.widescreen_finale import render_widescreen_finale
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_mp4 = out_dir / f"tuno_report_{key}.mp4"
+        info_wf = render_widescreen_finale(
+            season=season,
+            seed=3000 + season * 30,
+            out_mp4=out_mp4,
+            use_tts=use_tts,
+            stills_dir=(out_dir / "stills") if stills else None,
+            max_frames=max_frames,
+            log=log,
+        )
+        if max_frames:
+            return 0
+        fails = validate_long_video(out_mp4, float(info_wf["duration_s"]))
+        if fails:
+            for f in fails:
+                log(f"[FINALE GATE FAIL] {f}")
+            return 3
+        log("[FINALE] ffprobe gate PASS (1920x1080 h264 + aac)")
+        if dry_run:
+            log(f"[FINALE DRY-RUN] {out_mp4} ready (state/ untouched)")
+            return 0
+        from src.publish import alerts, youtube
+        wf_title = f"Season {season} WIDESCREEN FINALE: 20-Ball Championship 👑 | ToonToonCastle"[:100]
+        wf_desc = (
+            f"The exclusive 16:9 ToonToonCastle Season {season} Championship Finale!\n"
+            "20 balls enter across 3 elimination rounds — only ONE claims the Season Crown! 👑\n\n"
+            "#ToonToonCastle #marblerace #marblerun #seasonfinale"
+        )
+        vid = youtube.upload_short(out_mp4, wf_title, wf_desc, TAGS, privacy=privacy, category_id="20")
+        url = f"https://www.youtube.com/watch?v={vid}"
+        recaps.setdefault("recaps", {})[key] = {
+            "video_id": vid, "url": url, "title": wf_title, "season": season, "kind": kind,
+            "duration_s": info_wf["duration_s"],
+            "posted_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        }
+        league.atomic_write_json(state_dir / "recaps.json", recaps)
+        if commit_git:
+            league.git_commit_state_safe(f"chore(finale): S{season} widescreen_finale published", ROOT)
+        return 0
+
     t0 = time.time()
     recap = data.build_recap(season, kind, state_dir=state_dir, end_race=end_race, strict=True)
     log(f"[RECAP] {key}: races {recap.start_race}-{recap.end_race} | {recap.verify_note}")
 
-    # ---- replay every race of the part (time machine), plus the cold-open freeze-frame victim
+    # ---- replay every race of the part in parallel across CPU cores (after pre-warming git trees)
+    from concurrent.futures import ThreadPoolExecutor
+    import os as _os
+
     clip_dir = out_dir / "clips"
     writer = Writer(recap, log=log)
     pick = writer.cold_open_pick({r.race for r in recap.part_races})
-    clips: dict[int, dict] = {}
-    cold = None
-    for ri in recap.part_races:
+    for sha_u in sorted({str(ri.record.get("code_sha") or "") for ri in recap.part_races if ri.record.get("code_sha")}):
+        timemachine.ensure_tree(sha_u, log=log)
+
+    def _one_clip(ri):
         freeze = {"victim": pick[0], "t": pick[2]} if (pick and pick[1].race == ri.race) else None
         label = league.header_label(ri.season, ri.race, ri.arena.replace("_", " ").upper())
         side = timemachine.render_race_clip(ri.record, label, ri.stage, clip_dir, ri.tag, freeze=freeze, log=log)
-        clips[ri.race] = side
-        if freeze and side.get("freeze"):
-            cold = side["freeze"]
+        return ri.race, freeze is not None, side
+
+    clips: dict[int, dict] = {}
+    cold = None
+    workers = max(1, min(4, _os.cpu_count() or 2, len(recap.part_races)))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for r_no, wanted_freeze, side in pool.map(_one_clip, recap.part_races):
+            clips[r_no] = side
+            if wanted_freeze and side.get("freeze"):
+                cold = side["freeze"]
     replayed = sum(1 for c in clips.values() if c.get("ok"))
     log(f"[RECAP] replayed {replayed}/{len(clips)} races in {time.time() - t0:.0f}s "
-        f"(cold open: {'yes' if cold else 'no'})")
+        f"(workers={workers}, cold open: {'yes' if cold else 'no'})")
 
     # ---- compose the 16:9 film
     from src.recap.video import RecapVideo, render_thumbnail
@@ -255,7 +309,7 @@ def run(mode: str, season: int | None, dry_run: bool, privacy: str, end_race: in
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="The Tuno Report — ToonToonCastle season recaps")
-    ap.add_argument("--mode", choices=["auto", "part1", "part2", "part3", "preview", "demo"], default="auto")
+    ap.add_argument("--mode", choices=["auto", "part1", "part2", "part3", "widescreen_finale", "preview", "demo"], default="auto")
     ap.add_argument("--season", type=int, default=None)
     ap.add_argument("--end-race", type=int, default=None, help="preview only: last race to include")
     ap.add_argument("--dry-run", action="store_true")

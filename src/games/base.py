@@ -8,6 +8,41 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 SIDE, TOP, BOTH = "SIDE_VIEW", "TOP_DOWN", "BOTH"
+WIDESCREEN = "widescreen_finale"
+
+# Part 6: Exclusive 16:9-Native Season Finale Mega-Event (3-Round 20-Participant Championship)
+WIDESCREEN_FINALE_ROUNDS: tuple[dict[str, Any], ...] = (
+    {
+        "round": 1,
+        "key": "royal_gauntlet",
+        "title": "ROUND 1 • 20-BALL ROYAL GAUNTLET",
+        "arenas": ("crusher_gauntlet", "ramp_descent", "pachinko_drop"),
+        "goal": "reach_finish",
+        "heroes_in": 10,
+        "dummies_in": 10,
+        "heroes_advance": 6,
+    },
+    {
+        "round": 2,
+        "key": "shrinking_crucible",
+        "title": "ROUND 2 • SHRINKING SUMO CRUCIBLE",
+        "arenas": ("rotating_disc", "sumo_pool_pit"),
+        "goal": "last_one_standing",
+        "heroes_in": 6,
+        "dummies_in": 4,
+        "heroes_advance": 3,
+    },
+    {
+        "round": 3,
+        "key": "championship_bridge",
+        "title": "GRAND FINAL • CHAMPIONSHIP BRIDGE",
+        "arenas": ("crumbling_bridge", "narrow_bridge"),
+        "goal": "reach_finish",
+        "heroes_in": 3,
+        "dummies_in": 6,
+        "heroes_advance": 1,
+    },
+)
 
 # 7 core showcase arenas + procedural variety pool
 SHOWCASE_ARENAS: tuple[str, ...] = (

@@ -68,15 +68,18 @@ def draw_popup(frame: pygame.Surface, word: str, pos: tuple[float, float], age: 
         s = pygame.transform.smoothscale(s, (980, max(1, int(s.get_height() * 980 / s.get_width()))))
     r = s.get_rect(center=(int(pos[0]), int(pos[1])))
     if frame.get_size() == (W, H):
-        # v3.2: strict full-bounding-box clamp inside x in [40, 1040] and safe viewport y
+        # P0.4: strict full-bounding-box clamp clear of top HUD (y <= 248) and captions / 15% safe zone (y >= 1400)
         if r.left < 40:
             r.left = 40
         if r.right > 1040:
             r.right = 1040
-        if r.top < 268:
-            r.top = 268
-        if r.bottom > 1425:
-            r.bottom = 1425
+        if r.top < 264:
+            r.top = 264
+        if r.bottom > 1390:
+            r.bottom = 1390
+    elif frame.get_size() == (1920, 1080):
+        r.left = max(40, min(1880 - r.width, r.left))
+        r.top = max(112, min(928 - r.height, r.top))
     frame.blit(s, r)
     return r
 

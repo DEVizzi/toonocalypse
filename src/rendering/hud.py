@@ -191,19 +191,52 @@ def _down_arrow(frame: pygame.Surface, cx: float, cy: float, s: float) -> None:
     pygame.draw.polygon(frame, BLACK, pts, 3)
 
 
-def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour: tuple[int, int, int], points: str,
-                     prompt: str, t: float, bot=None, outcome: Any = None) -> None:
-    """v4.2 Broadcast IPL Winner Card (panel y = 396..1360; captions zone stays clear):
-    - Top 42%: spinning sunburst + bouncing crowned winner + `{WINNER} WINS!` + `+10 PTS` / `+2 KO: {HERO}` pills.
-    - Middle 46%: `SEASON {S} STANDINGS` header + RACES LEFT pill + 4 stacked scoreboard rows (rank, 42px icon, name,
-      animated fill bar vs #1, points, green `+N ▲` delta). Grand Final: points-free champion podium instead.
-    - Bottom 12%: single-line verbatim spoken CTA pill."""
-    is_final = bool(outcome and getattr(outcome, "is_grand_final", False))
-    effects.draw_confetti(frame, t + 0.4, 19, pygame.Rect(0, 260, W, H - 260), n=150 if is_final else 90)
+def _should_show_finale_teaser(outcome: Any, override: bool | None) -> bool:
+    if override is not None:
+        return bool(override)
+    from src.config import settings
+    scfg = settings().get("season") or {}
+    if not scfg.get("finale_cross_promo_enabled", True):
+        return False
+    if outcome is None:
+        return False
+    races = set(scfg.get("finale_cross_promo_races") or [28, 29, 30])
+    return int(getattr(outcome, "race_number", 0)) in races
 
-    panel = pygame.Rect(64, 396, W - 128, 964)
+
+def _draw_finale_cross_promo(frame: pygame.Surface, y_top: int, t: float) -> None:
+    """Part 6: Configurable cross-promotion banner on the final 3 Shorts of a season (strictly above y=1632 safe zone)."""
+    bar = pygame.Rect(76, y_top, W - 152, 58)
+    pygame.draw.rect(frame, BLACK, bar.move(0, 4), border_radius=29)
+    pygame.draw.rect(frame, (22, 18, 52), bar, border_radius=29)
+    pulse = 0.5 + 0.5 * math.sin(t * 7.0)
+    bd = (int(230 + 25 * pulse), int(185 + 40 * pulse), 28)
+    pygame.draw.rect(frame, bd, bar, 3, border_radius=29)
+    # Mini 16:9 widescreen screen icon on the left
+    tv = pygame.Rect(bar.left + 22, bar.centery - 13, 42, 26)
+    pygame.draw.rect(frame, BLACK, tv.inflate(4, 4), border_radius=5)
+    pygame.draw.rect(frame, (0, 229, 255), tv, border_radius=4)
+    pygame.draw.polygon(frame, BLACK, [(tv.centerx - 5, tv.centery - 6), (tv.centerx - 5, tv.centery + 6),
+                                       (tv.centerx + 7, tv.centery)])
+    lbl = fit_width(outlined("WATCH THE 16:9 SEASON FINALE ON THE CHANNEL!", 26, fill=(255, 236, 120), width=3),
+                    bar.width - 96)
+    blit_text(frame, lbl, midleft=(tv.right + 14, bar.centery + 1))
+
+
+def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour: tuple[int, int, int], points: str,
+                     prompt: str, t: float, bot=None, outcome: Any = None,
+                     finale_teaser: bool | None = None) -> None:
+    """v5.0 Broadcast IPL Winner Card (panel y = 376..1340; bottom 15% y >= 1632 stays 100% clear):
+    - Top 41%: spinning sunburst + bouncing crowned winner + `{WINNER} WINS!` + `+10 PTS` / `+2 KO: {HERO}` pills.
+    - Middle 45%: `SEASON {S} STANDINGS` header + RACES LEFT pill + 4 stacked scoreboard rows.
+    - Bottom 14%: Rivalry question (`"{Winner} or {Rival} tomorrow?"`) + `"Comment your pick 👇"` sub-line,
+      plus configurable `"Watch the 16:9 Season Finale on the channel!"` teaser on the final 3 episodes."""
+    is_final = bool(outcome and getattr(outcome, "is_grand_final", False))
+    effects.draw_confetti(frame, t + 0.4, 19, pygame.Rect(0, 248, W, H - 248), n=150 if is_final else 90)
+
+    panel = pygame.Rect(64, 376, W - 128, 964)
     cw, ch = panel.size
-    top_h, mid_h = int(ch * 0.42), int(ch * 0.46)
+    top_h, mid_h = int(ch * 0.41), int(ch * 0.45)
     mid_top = panel.top + top_h
     bot_top = mid_top + mid_h
 
@@ -226,7 +259,6 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
                              (scx + math.cos(a1) * ray_r, scy + math.sin(a1) * ray_r)])
     pygame.draw.circle(burst, (255, 232, 96, 140), (scx, scy), 122)
     pygame.draw.circle(burst, (255, 255, 255, 105), (scx, scy), 86)
-    # sunburst stays inside the top section only
     pygame.draw.rect(burst, (0, 0, 0, 0), (0, top_h, cw, ch - top_h))
     card.blit(burst, (0, 0))
     mask = pygame.Surface(panel.size, pygame.SRCALPHA)
@@ -246,15 +278,15 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
     ribbon_label = getattr(outcome, "ribbon_text", None) or "WINNER!"
     blit_text(frame, fit_width(outlined(ribbon_label, 42, fill=(255, 236, 120), width=6), rib.width - 44), center=rib.center)
 
-    # ---- TOP 42%: bouncing crowned winner + WINS! + pills
+    # ---- TOP 41%: bouncing crowned winner + WINS! + pills
     champ_y = panel.top + scy + 6
     hop = abs(math.sin(t * 7.5)) * 16
     reigning = getattr(outcome, "reigning_champion", None)
     if hero is not None:
         from src.rendering import balls
         balls.draw_ball(frame, hero, None, (W / 2, champ_y - hop), 0.0, 0.0, (0, 0), 0.0, "celebrating",
-                        "victory", t, 2.15 / max(0.6, hero.radius / 25) * pop, force_grin=True)
-        _crown_badge(frame, W / 2, champ_y - hop - 88, 62)
+                        "victory", t, 2.12 / max(0.6, hero.radius / 25) * pop, force_grin=True)
+        _crown_badge(frame, W / 2, champ_y - hop - 86, 60)
         if reigning == hero.key:
             scenery.draw_gold_star(frame, W / 2 + 66, champ_y - hop - 54, 18)
         if is_final:
@@ -264,8 +296,8 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
         from src.rendering import balls
         balls.draw_ball(frame, None, bot, (W / 2, champ_y - hop), 0.0, 0.0, (0, 0), 0.0, "neutral", "victory", t, 2.3)
     name_col = colour if sum(colour) > 160 else (0, 245, 255)
-    blit_text(frame, fit_width(outlined(f"{name.upper()} WINS!", 64, fill=name_col, width=7), cw - 80),
-              center=(W / 2, panel.top + top_h - 98))
+    blit_text(frame, fit_width(outlined(f"{name.upper()} WINS!", 62, fill=name_col, width=7), cw - 80),
+              center=(W / 2, panel.top + top_h - 94))
 
     pills: list[tuple[str, tuple[int, int, int], tuple[int, int, int]]] = []
     pts_str = getattr(outcome, "winner_points_pill", None) or points
@@ -280,17 +312,17 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
         total = pill_w * len(pills) + gap * (len(pills) - 1)
         x0 = W / 2 - total / 2
         for k, (txt, bd, fc) in enumerate(pills):
-            r = pygame.Rect(int(x0 + k * (pill_w + gap)), panel.top + top_h - 54, pill_w, 46)
+            r = pygame.Rect(int(x0 + k * (pill_w + gap)), panel.top + top_h - 52, pill_w, 44)
             pygame.draw.rect(frame, BLACK, r.move(0, 4), border_radius=16)
             pygame.draw.rect(frame, (20, 18, 42), r, border_radius=16)
             pygame.draw.rect(frame, bd, r, 3, border_radius=16)
-            blit_text(frame, fit_width(outlined(txt, 30, fill=fc, width=4), r.width - 24), center=r.center)
+            blit_text(frame, fit_width(outlined(txt, 29, fill=fc, width=4), r.width - 24), center=r.center)
 
-    # ---- MIDDLE 46%: vertical IPL Top-4 points table (or Grand Final podium)
-    inner = pygame.Rect(panel.left + 24, mid_top + 6, cw - 48, mid_h - 12)
+    # ---- MIDDLE 45%: vertical IPL Top-4 points table (or Grand Final podium)
+    inner = pygame.Rect(panel.left + 24, mid_top + 6, cw - 48, mid_h - 10)
     pygame.draw.rect(frame, (14, 14, 30), inner, border_radius=22)
     pygame.draw.rect(frame, (255, 255, 255, 60), inner, 2, border_radius=22)
-    head = pygame.Rect(inner.left, inner.top, inner.width, 62)
+    head = pygame.Rect(inner.left, inner.top, inner.width, 60)
     pygame.draw.rect(frame, (36, 30, 74), head, border_top_left_radius=22, border_top_right_radius=22)
     pygame.draw.line(frame, (255, 208, 44), head.bottomleft, head.bottomright, 3)
     snum = getattr(outcome, "season_number", 1) if outcome else 1
@@ -303,15 +335,15 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
         if outcome is not None:
             rt = outcome.right_status_text
             rs = outlined(rt, 26, fill=(28, 20, 8), outline=(255, 236, 140), width=2)
-            pr = pygame.Rect(0, 0, rs.get_width() + 30, 42)
+            pr = pygame.Rect(0, 0, rs.get_width() + 30, 40)
             pr.midright = (head.right - 16, head.centery)
-            pygame.draw.rect(frame, BLACK, pr.move(0, 3), border_radius=21)
-            pygame.draw.rect(frame, (255, 212, 36), pr, border_radius=21)
-            pygame.draw.rect(frame, BLACK, pr, 3, border_radius=21)
+            pygame.draw.rect(frame, BLACK, pr.move(0, 3), border_radius=20)
+            pygame.draw.rect(frame, (255, 212, 36), pr, border_radius=20)
+            pygame.draw.rect(frame, BLACK, pr, 3, border_radius=20)
             blit_text(frame, rs, center=pr.center)
 
-    rows_top = head.bottom + 8
-    row_h = (inner.bottom - 8 - rows_top) / 4.0
+    rows_top = head.bottom + 6
+    row_h = (inner.bottom - 6 - rows_top) / 4.0
     medal = [(255, 214, 44), (214, 222, 236), (226, 146, 82), (148, 158, 184)]
     grow = min(1.0, max(0.0, (t - 0.15) / 0.7))
     grow = 1.0 - (1.0 - grow) ** 3
@@ -329,7 +361,7 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
             blit_text(frame, outlined(labels[idx], 30, fill=medal[idx], width=4), midright=(rect.right - 18, rect.centery))
     elif outcome is not None:
         rows = list(getattr(outcome, "top4", None) or [(k, p, 0) for k, p in outcome.top3])
-        rows.sort(key=lambda r_: -int(r_[1]))              # v4.3 P0: strictly points DESC (stable tie order)
+        rows.sort(key=lambda r_: -int(r_[1]))
         assert all(rows[i][1] >= rows[i + 1][1] for i in range(len(rows) - 1)), rows
         top_pts = max(1, rows[0][1]) if rows else 1
         for idx, (hk, hpts, delta) in enumerate(rows[:4]):
@@ -338,23 +370,23 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
             pygame.draw.rect(frame, (28, 26, 52) if idx % 2 == 0 else (22, 20, 42), rect, border_radius=14)
             if hk == outcome.winner_key:
                 pygame.draw.rect(frame, (0, 229, 255), rect, 3, border_radius=14)
-            rk = outlined(f"#{idx + 1}", 40, fill=medal[idx], width=5)
+            rk = outlined(f"#{idx + 1}", 38, fill=medal[idx], width=5)
             blit_text(frame, rk, midleft=(rect.left + 12, rect.centery))
             if idx == 0:
-                _crown_badge(frame, rect.left + 12 + rk.get_width() / 2, rect.centery - 30, 22)
-            _mini_hero_ball(frame, hk, rect.left + 112, rect.centery, 21, reigning)
+                _crown_badge(frame, rect.left + 12 + rk.get_width() / 2, rect.centery - 28, 22)
+            _mini_hero_ball(frame, hk, rect.left + 112, rect.centery, 20, reigning)
             hn = HERO_BY_KEY[hk].name.upper() if hk in HERO_BY_KEY else hk.upper()
-            blit_text(frame, fit_width(outlined(hn, 32, fill=WHITE, width=4), 176), midleft=(rect.left + 142, rect.centery))
+            blit_text(frame, fit_width(outlined(hn, 31, fill=WHITE, width=4), 176), midleft=(rect.left + 142, rect.centery))
             if idx == 0 and getattr(outcome, "lead_changed", False):
                 nl = outlined("NEW LEADER!", 20, fill=WHITE, outline=BLACK, width=3)
-                nr = pygame.Rect(0, 0, nl.get_width() + 22, 28)
+                nr = pygame.Rect(0, 0, nl.get_width() + 22, 26)
                 nr.midleft = (rect.left + 136, rect.top + 1)
                 flash = 0.5 + 0.5 * math.sin(t * 9)
-                pygame.draw.rect(frame, BLACK, nr.move(0, 3), border_radius=14)
-                pygame.draw.rect(frame, (int(205 + 45 * flash), 30, 60), nr, border_radius=14)
-                pygame.draw.rect(frame, (255, 226, 72), nr, 2, border_radius=14)
+                pygame.draw.rect(frame, BLACK, nr.move(0, 3), border_radius=13)
+                pygame.draw.rect(frame, (int(205 + 45 * flash), 30, 60), nr, border_radius=13)
+                pygame.draw.rect(frame, (255, 226, 72), nr, 2, border_radius=13)
                 blit_text(frame, nl, center=nr.center)
-            pts_s = outlined(f"{hpts} PTS", 34, fill=(255, 236, 140) if idx == 0 else WHITE, width=4)
+            pts_s = outlined(f"{hpts} PTS", 32, fill=(255, 236, 140) if idx == 0 else WHITE, width=4)
             pts_r = blit_text(frame, pts_s, midright=(rect.right - 14, rect.centery))
             right_edge = pts_r.left - 10
             if delta > 0:
@@ -370,31 +402,41 @@ def draw_winner_card(frame: pygame.Surface, hero: Hero | None, name: str, colour
                 pygame.draw.rect(frame, (255, 255, 255), (track.left + 4, track.top + 3, max(0, fill_w - 8), 4), border_radius=2)
             pygame.draw.rect(frame, BLACK, track, 2, border_radius=9)
 
-    # ---- BOTTOM 12%: Ep 1-29 single-line verbatim spoken CTA pill | Ep 30 golden championship banner (zero CTA)
-    cta = pygame.Rect(panel.left + 30, bot_top + 14, cw - 60, ch - (bot_top - panel.top) - 32)
+    # ---- BOTTOM 14%: Rivalry question + "Comment your pick 👇" sub-line | Ep 30 golden championship banner
+    cta = pygame.Rect(panel.left + 26, bot_top + 10, cw - 52, ch - (bot_top - panel.top) - 24)
     bob = 2.5 * math.sin(t * 6.5)
+    show_finale_promo = _should_show_finale_teaser(outcome, finale_teaser)
     if is_final:
         shine = 0.5 + 0.5 * math.sin(t * 5.0)
-        pygame.draw.rect(frame, BLACK, cta.move(0, 5), border_radius=cta.height // 2)
-        pygame.draw.rect(frame, (int(222 + 30 * shine), int(160 + 40 * shine), 18), cta, border_radius=cta.height // 2)
-        pygame.draw.rect(frame, (255, 246, 170), cta.inflate(-12, -12), 3, border_radius=cta.height // 2 - 6)
-        pygame.draw.rect(frame, BLACK, cta, 5, border_radius=cta.height // 2)
+        pygame.draw.rect(frame, BLACK, cta.move(0, 5), border_radius=28)
+        pygame.draw.rect(frame, (int(222 + 30 * shine), int(160 + 40 * shine), 18), cta, border_radius=28)
+        pygame.draw.rect(frame, (255, 246, 170), cta.inflate(-10, -10), 3, border_radius=23)
+        pygame.draw.rect(frame, BLACK, cta, 5, border_radius=28)
         txt = f"ALL HAIL SEASON {snum} CHAMPION: {name.upper()}!"
-        cs = fit_width(outlined(txt, 36, fill=(255, 252, 230), outline=(92, 52, 6), width=4), cta.width - 150)
+        cs = fit_width(outlined(txt, 35, fill=(255, 252, 230), outline=(92, 52, 6), width=4), cta.width - 150)
         r_txt = blit_text(frame, cs, center=(cta.centerx, cta.centery + bob))
         _draw_trophy_cup(frame, r_txt.left - 34, cta.centery + 4 + bob, scale=0.42)
         _crown_badge(frame, r_txt.right + 36, cta.centery + bob, 40)
+        if show_finale_promo:
+            _draw_finale_cross_promo(frame, panel.bottom + 18, t)
         gold = pygame.Rect(0, 200, W, H - 200)
-        effects.draw_confetti(frame, t + 0.2, 97, gold, n=170)     # denser championship confetti
+        effects.draw_confetti(frame, t + 0.2, 97, gold, n=170)
         effects.draw_confetti(frame, t, 73, panel.inflate(120, 80), n=70)
         return
-    pygame.draw.rect(frame, BLACK, cta.move(0, 4), border_radius=cta.height // 2)
-    pygame.draw.rect(frame, (250, 204, 21), cta, border_radius=cta.height // 2)
-    pygame.draw.rect(frame, BLACK, cta, 4, border_radius=cta.height // 2)
-    txt = (prompt or "Drop your pick below!").strip().upper()
-    cs = fit_width(outlined(txt, 38, fill=(26, 18, 40), outline=(255, 250, 220), width=3), cta.width - 110)
-    r_txt = blit_text(frame, cs, center=(cta.centerx - 24, cta.centery + bob))
-    _down_arrow(frame, r_txt.right + 34, cta.centery + bob * 1.6, 30)
+
+    pygame.draw.rect(frame, BLACK, cta.move(0, 4), border_radius=28)
+    pygame.draw.rect(frame, (250, 204, 21), cta, border_radius=28)
+    pygame.draw.rect(frame, BLACK, cta, 4, border_radius=28)
+    raw_q = (prompt or f"{name} or Rival tomorrow?").replace("👇", "").strip()
+    q_part = raw_q.split("?")[0].strip() + "?" if "?" in raw_q else raw_q
+    q_surf = fit_width(outlined(q_part.upper(), 34, fill=(24, 16, 38), outline=(255, 250, 224), width=3), cta.width - 52)
+    blit_text(frame, q_surf, center=(cta.centerx, cta.top + int(cta.height * 0.34) + bob * 0.6))
+    sub_surf = fit_width(outlined("COMMENT YOUR PICK", 26, fill=WHITE, outline=BLACK, width=3), cta.width - 120)
+    r_sub = blit_text(frame, sub_surf, center=(cta.centerx - 18, cta.top + int(cta.height * 0.74) + bob))
+    _down_arrow(frame, r_sub.right + 26, cta.top + int(cta.height * 0.74) + bob * 1.5, 22)
+
+    if show_finale_promo:
+        _draw_finale_cross_promo(frame, panel.bottom + 18, t)
 
     effects.draw_confetti(frame, t, 73, panel.inflate(80, 60), n=30)
 

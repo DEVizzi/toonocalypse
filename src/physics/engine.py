@@ -142,6 +142,10 @@ class Sim:
         self.hazard_mult = 1.0          # hazards escalate harder than racers (speed_mult ** hazard_escalation_exp)
         self.overtime = False           # OVERTIME CHAOS: <= 3 survivors or the overtime escalation time
         self.overtime_t = 999.0
+        self.overtime_projectile_mult = 1.0
+        self.eliminated_ids: set[str] = set()
+        self._shrink_announced = False
+        self._finish_won = False
         self.cam_x = 0.0
         self.fan_favorite = fan_favorite
         self.arena = arenas.build(self)
@@ -239,9 +243,6 @@ class Sim:
 
     def event(self, kind: str, actors: list[str], pos=None, **data) -> None:
         self.events.append(T.Event(round(self.t, 3), kind, actors, data, pos))
-
-    def alive(self, heroes_only: bool = False) -> list[Contestant]:
-        return [c for c in self.contestants if c.alive and (c.is_hero or not heroes_only)]
 
     # ------------------------------------------------------------------ contestants
     def _spawn(self, heroes: list[Hero], extras: list[Extra]) -> None:
@@ -422,9 +423,16 @@ class Sim:
         c, k = self.cfg["speed_centre"], self.cfg["speed_spread"]
         return c + (stat - c) * k
 
+    def alive(self, heroes_only: bool = False) -> list[Contestant]:
+        return [
+            c for c in self.contestants
+            if c.alive and c.key not in self.eliminated_ids and (c.is_hero or not heroes_only)
+        ]
+
     def eliminate(self, c: Contestant, cause: str, by: str | None = None) -> None:
-        if not c.alive or self.winner:
+        if not c.alive or c.key in self.eliminated_ids or self.winner:
             return
+        self.eliminated_ids.add(c.key)
         c.alive = False
         c.eliminated_at = self.t
         c.elim_pos = c.pos
@@ -433,7 +441,8 @@ class Sim:
             by = c.last_toucher
         if self.mode == TOP:
             c.fall_t = 0.0
-        self.space.remove(c.body, c.shape)
+        if c.body in self.space.bodies or c.shape in self.space.shapes:
+            self.space.remove(c.body, c.shape)
         self.event("elimination", [c.key] + ([by] if by else []), c.pos, cause=cause, hero=c.is_hero,
                    by_hero=bool(by and self.by_key[by].is_hero))
 
@@ -530,6 +539,25 @@ class Sim:
             return
         self.event("trait", [c.key], c.pos, name=name, **data)
 
+    def _check_finish_substep(self, sub_t: float) -> None:
+        """P0.1: Check `body.position.x >= finish_line_x` on EVERY Pymunk substep so the winner locks on the exact step."""
+        if self.mode != SIDE or self.finish_x is None or self.winner:
+            return
+        at_fin = getattr(self.arena, "at_finish", None)
+        for c in self.contestants:
+            if not c.alive or c.key in self.eliminated_ids:
+                continue
+            crossed = at_fin(c) if at_fin else (float(c.body.position.x) >= self.finish_x)
+            if crossed:
+                c.finished = True
+                self._finish_won = True
+                self.event("finish", [c.key], c.pos)
+                if self.goal.key == "reach_finish":
+                    self.goal.declare(c.key, round(sub_t, 4), "finish")
+                else:
+                    self.goal.force_resolve(round(sub_t, 4))
+                return
+
     # ------------------------------------------------------------------ main loop
     def run(self, max_gameplay: float | None = None) -> T.Trace:
         from src.physics import ai
@@ -537,11 +565,11 @@ class Sim:
         hard = max_gameplay or TIMELINE.hard_stop_s
         start = time.time()
         brain = ai.Brain(self)
-        # v4.2 live starting-gate spotlight: 1.5 s (1.6 s Grand Final VS clash) of real motion behind the gate
-        open_s = 1.6 if getattr(self.recipe, "finale", False) else TIMELINE.cold_open_s
+        # v5.0 instant-action cold open (<= 1.5 s; Rotating Disc / TOP_DOWN spins immediately from frame 0)
+        open_s = 1.5 if getattr(self.recipe, "finale", False) else TIMELINE.cold_open_s
         pre = int(round(open_s * FPS))
         self.trace.meta["preroll_frames"] = pre
-        spin_up = self.mode != SIDE and self.arena.key == "rotating_disc"
+        spin_up = self.mode != SIDE
         for i in range(pre):
             self.t = (i - pre) / FPS
             if self.mode == SIDE:
@@ -560,22 +588,25 @@ class Sim:
         self.arena.open_gate()
         self.event("gate", [], None)
         frame = 0
+        substeps = self.cfg["substeps"]
         while True:
             self.t = frame / FPS
             self._escalate()
             brain.think(self)
             for h in self.hooks_frame:
                 h(self.t)
-            for _ in range(self.cfg["substeps"]):
+            for sub_i in range(substeps):
                 self._apply_drives()
                 for h in self.hooks_step:
                     h(self.dt)
                 self.space.step(self.dt)
+                self._check_finish_substep(self.t + (sub_i + 1) * self.dt)
             self._post_frame(1.0 / FPS)
             self.goal.update(self.t)
             self._record()
             frame += 1
-            if self.winner and self.resolved_at is not None and self.t >= self.resolved_at + 0.65:
+            post_hold = 0.15 if self._finish_won else 0.55
+            if self.winner and self.resolved_at is not None and self.t >= self.resolved_at + post_hold:
                 break
             true_finish = getattr(self.arena, "true_finish", False)
             cap = float(self.cfg["disc"]["hard_stop_s"]) if true_finish else hard
@@ -588,6 +619,7 @@ class Sim:
         self.trace.events = self.events
         self.trace.meta.update(winner=self.winner, resolved_at=self.resolved_at, sim_s=round(time.time() - start, 2),
                                seed=self.seed, ranking=self.goal.ranking(),
+                               finish_won=self._finish_won,
                                props=[{"shapes": p.shapes, "style": p.style} for p in self.props])
         return self.trace
 
@@ -627,19 +659,28 @@ class Sim:
                 self._start_overtime(banner)
             else:
                 self.event("escalation", [], None, mult=mult, banner=banner)
-        if not self.overtime and self.t > 15.8 and len(self.alive()) <= self.cfg["overtime"]["survivors"]:
+        if not self.overtime and self.t > 14.5 and len(self.alive()) <= self.cfg["overtime"]["survivors"]:
             self.escalation_idx = len(esc) - 1
             _, mult, banner = esc[-1]
             self.speed_mult = mult
             self._start_overtime(banner)
 
     def _start_overtime(self, banner: str) -> None:
-        """OVERTIME CHAOS: hazards at double speed, the floor collapses behind the last place / the arena shrinks hard."""
+        """P1.3 True OVERTIME CHAOS: 2x projectile cadence & velocity, sequential floor collapse behind last place,
+        and escalated global restitution (bounciness) + gravity modifier."""
         if self.overtime:
             return
         self.overtime = True
         self.overtime_t = self.t
         self.hazard_mult = self.cfg["overtime"]["hazard_mult"]
+        self.overtime_projectile_mult = 2.0
+        for c in self.alive():
+            c.shape.elasticity = min(1.38, c.shape.elasticity * 1.32 + 0.14)
+        for sh in self.space.shapes:
+            if getattr(sh, "material", None) in ("ground", "plank", "bouncy", "bumper"):
+                sh.elasticity = min(1.45, sh.elasticity * 1.25 + 0.10)
+        if self.mode == SIDE:
+            self.set_gravity_scale(self.gravity_scale * 1.16)
         self.event("escalation", [], None, mult=self.speed_mult, banner=banner or "OVERTIME CHAOS!", overtime=True)
 
     def _post_frame(self, dt: float) -> None:
@@ -728,7 +769,10 @@ class Sim:
                 self.chase_x += (lag_floor - self.chase_x) * min(1.0, dt * 1.2)
             self.zones["chase_x"] = self.chase_x
         pc = self.cfg["pacing"]
-        if self.mode != SIDE and self.t > pc["shrink_start_s"]:
+        if self.mode != SIDE and self.t >= pc["shrink_start_s"]:
+            if not self._shrink_announced:
+                self._shrink_announced = True
+                self.event("escalation", [], None, mult=self.speed_mult, banner="SHRINKING ARENA!", shrink_trigger=True)
             tw_k = getattr(self.twist, "k", 1.0) if (self.twist is not None and self.twist.key == "shrinking_arena") else 1.0
             sched = getattr(self.arena, "shrink_target", None)
             if sched is not None:
@@ -827,6 +871,7 @@ class Sim:
                           for p in self.props], np.float32).reshape(-1, 3)
         zone = {k: v for k, v in self.zones.items()}
         zone["speed_mult"] = self.speed_mult
+        zone["alive_count"] = len(self.contestants) - len(self.eliminated_ids)
         zone.update(self.goal.zone_state())
         for hz in self.hazards:
             zone.update(hz.zone_state())

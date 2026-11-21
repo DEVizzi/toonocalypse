@@ -73,9 +73,22 @@ def duel_zoom(spread: float, duel_min: float = 0.76) -> tuple[float, bool]:
     return 0.92, True
 
 
-def track(trace: T.Trace) -> list[Cam]:
-    """One camera per trace frame (v4.3 smooth-damp: critically damped springs + strict max pan velocity +
-    0.85 s target-switch hysteresis -> the camera never teleports between heroes)."""
+def final3_zoom_target(spread: float, duel_min: float = 0.76) -> tuple[float, bool]:
+    """v5.0 Final-3 dynamic zoom (1.40x-1.60x when clustered, smooth pullback for mid-spread, leader lock if >1100px)."""
+    if spread <= 520.0:
+        return 1.60 - 0.20 * (spread / 520.0), False
+    if spread <= 1100.0:
+        return max(duel_min, min(1.40, (W * 0.86) / (spread + 260.0))), False
+    return 1.42, True
+
+
+def track(trace: T.Trace, screen_w: float | None = None, screen_cy: float | None = None) -> list[Cam]:
+    """One camera per trace frame:
+    - Smooth spring damping + top-3 leader tracking on side-scrolling courses.
+    - Automated Final-3 dynamic zoom (1.4x-1.6x) centered on remaining survivors' bounding box across ALL modes.
+    - Hard viewport clamp guaranteeing >= 1 living character stays inside the middle 50% horizontal frame at all times."""
+    sw = float(screen_w or W)
+    scy = float(screen_cy or SCREEN_CY)
     meta = trace.meta
     rs = settings()["render"]
     heroes = [trace.index(k) for k in meta["heroes"]]
@@ -95,58 +108,76 @@ def track(trace: T.Trace) -> list[Cam]:
     dt = 1 / FPS
     zmin, zmax = rs["side_zoom_range"]
     duel_min = float(rs.get("duel_min_zoom", 0.76))
-    max_vx = float(rs.get("cam_max_vx", 680.0))
-    max_vy = float(rs.get("cam_max_vy", 520.0))
-    hyst_f = int(round(float(rs.get("cam_switch_hysteresis_s", 0.85)) * FPS))
+    max_vx = float(rs.get("cam_max_vx", 760.0))
+    max_vy = float(rs.get("cam_max_vy", 560.0))
+    hyst_f = int(round(float(rs.get("cam_switch_hysteresis_s", 0.55)) * FPS))
     window = float(rs["cluster_window_px"])
     lock_px = float(rs["leader_lock_px"])
     top_zmax = float(rs["top_zoom_max"])
     hero_kos = [(pre + int(e.t * FPS), e.pos[0], e.pos[1]) for e in trace.events
                 if e.kind == "elimination" and e.data.get("hero") and e.pos is not None]
-    bias_win = int(0.50 * FPS)
+    bias_win = int(0.45 * FPS)
     r0 = next((float(s["r"]) for s in meta.get("statics", []) if s.get("type") == "ring"),
               float(trace.zones[0].get("ring_r", 1.0)))
     vert_tower = bool(meta.get("vertical_tower", False))
-    held_lead: int | None = None                 # hysteresis: the #1 the camera is currently committed to
+    held_lead: int | None = None
     cand_lead: int | None = None
     cand_since = 0
     tower_ty: float | None = None
-    track.rescues = 0                           # type: ignore[attr-defined]  (diagnostic: last-resort snaps)
+    track.rescues = 0                           # type: ignore[attr-defined]
     for f in range(trace.n_frames):
         rows, flags = trace.frames[f], trace.flags[f]
         everyone = [i for i in range(len(rows)) if flags[i] & T.ALIVE]
         focus = None
         floor_z = zmin
-        act: list[int] = []                      # contestants the camera is framing (their velocity lifts the pan cap)
+        act: list[int] = []
         if top:
-            # v4.0 Part A.3: Lock TOP_DOWN camera center strictly at (0, 0) (zoom + micro-shake only!)
-            tx, ty = 0.0, 0.0
             z0 = trace.zones[f]
             ring_scale = float(z0.get("ring_r", r0)) / max(1.0, r0)
             ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * ring_scale
             tz = base_zoom * min(top_zmax, max(1.0, 1.0 / max(ek, 1e-3)))
+            if 1 <= len(everyone) <= 3:
+                # P1.4: Automated Final-3 dynamic zoom (1.4x-1.6x+) centered on remaining characters' bounding box
+                sx_ = np.array([float(rows[i, 0]) for i in everyone])
+                sy_ = np.array([float(rows[i, 1]) for i in everyone])
+                bx = float(0.5 * (sx_.min() + sx_.max()))
+                by = float(0.5 * (sy_.min() + sy_.max()))
+                lim = 135.0 * max(0.35, ek)
+                tx = max(-lim, min(lim, bx))
+                ty = max(-lim, min(lim, by))
+                f3_floor = min(base_zoom * 2.02, max(1.42, base_zoom * 1.50))
+                tz = min(base_zoom * 2.02, max(tz, f3_floor))
+            else:
+                tx, ty = 0.0, 0.0
         elif vert_tower:
             alive = [i for i in heroes if flags[i] & T.ALIVE] or everyone
             if not alive:
                 tx, ty, tz = (cx if cx is not None else 660.0), (cy if cy is not None else 0.0), max(zmin, 0.86)
+            elif len(everyone) <= 3:
+                sx_ = np.array([float(rows[i, 0]) for i in everyone])
+                sy_ = np.array([float(rows[i, 1]) for i in everyone])
+                spread = float(math.hypot(sx_.max() - sx_.min(), sy_.max() - sy_.min()))
+                tz, _ = final3_zoom_target(spread, duel_min)
+                tx = float(0.5 * (sx_.min() + sx_.max()))
+                ty = float(0.5 * (sy_.min() + sy_.max())) - 20.0
+                act = list(everyone)
+                tx = min(max(tx, x0 + sw / 2 / tz), x1 - sw / 2 / tz)
+                ty = min(max(ty, y0 + 240), y1 - 200)
             else:
                 ys = [float(rows[i, 1]) for i in alive]
-                m = [alive[j] for j in action_cluster(ys, 620.0)]      # front-most (lowest) dense pack
+                m = [alive[j] for j in action_cluster(ys, 620.0)]
                 act = m
                 mx = rows[m, 0]
                 my = rows[m, 1]
-                # v4.3: X locked near the tower centre (+-90 px drift max); Y glides DOWN with the lead pack and
-                # may only creep back up slowly (never snaps up two floors when #1 changes)
                 tx = 660.0 + max(-90.0, min(90.0, float(np.mean(mx)) - 660.0))
-                # ...but never let the lead pack itself leave the frame (a stray hero wide on a floor)
-                half_w = W / 2 / max(zmin, 0.86) - 90.0
+                half_w = sw / 2 / max(zmin, 0.86) - 90.0
                 tx = max(float(mx.max()) - half_w, min(float(mx.min()) + half_w, tx))
                 ty_raw = float(np.mean(my))
                 tower_ty = ty_raw if tower_ty is None else max(ty_raw, tower_ty - 70.0 * dt)
                 ty = tower_ty
                 span_y = float(my.max() - my.min()) + 480.0
-                tz = max(zmin, min(1.02, ((VIEW_BOTTOM - VIEW_TOP) * 0.82) / span_y, 0.86 if len(alive) > 4 else 1.0))
-                tx = min(max(tx, x0 + W / 2 / tz), x1 - W / 2 / tz)
+                tz = max(zmin, min(1.05, ((VIEW_BOTTOM - VIEW_TOP) * 0.82) / span_y, 0.88 if len(alive) > 4 else 1.15))
+                tx = min(max(tx, x0 + sw / 2 / tz), x1 - sw / 2 / tz)
                 ty = min(max(ty, y0 + 280), y1 - 220)
         else:
             alive = [i for i in heroes if flags[i] & T.ALIVE] or everyone
@@ -156,7 +187,6 @@ def track(trace: T.Trace) -> list[Cam]:
             else:
                 xs = [float(rows[i, 0]) for i in alive]
                 raw_lead = alive[int(np.argmax(xs))]
-                # hysteresis: only re-target after the new #1 holds the lead for 0.85 s
                 if held_lead is None or not (flags[held_lead] & T.ALIVE):
                     held_lead, cand_lead = raw_lead, None
                 elif raw_lead != held_lead:
@@ -169,51 +199,62 @@ def track(trace: T.Trace) -> list[Cam]:
                 lead = held_lead
                 lead_x, lead_y = float(rows[lead, 0]), float(rows[lead, 1])
                 near_finish = finish_x is not None and finish_x - lead_x < lock_px
-                if len(alive) <= 3:
-                    sx_ = np.array(xs)
-                    sy_ = np.array([float(rows[i, 1]) for i in alive])
+
+                # P0.2: Weighted centroid of top 3 living characters (55% #1, 30% #2, 15% #3)
+                top3 = sorted(alive, key=lambda i: -float(rows[i, 0]))[:3]
+                w3 = (0.55, 0.30, 0.15)[:len(top3)]
+                w3_sum = sum(w3)
+                top3_x = sum(float(rows[idx, 0]) * wt for idx, wt in zip(top3, w3)) / w3_sum
+                top3_y = sum(float(rows[idx, 1]) * wt for idx, wt in zip(top3, w3)) / w3_sum
+
+                if len(everyone) <= 3:
+                    # P1.4: Automated Final-3 dynamic zoom (1.4x-1.6x) centered on remaining survivors' bounding box
+                    sx_ = np.array([float(rows[i, 0]) for i in everyone])
+                    sy_ = np.array([float(rows[i, 1]) for i in everyone])
                     spread = float(math.hypot(sx_.max() - sx_.min(), (sy_.max() - sy_.min()) * 0.6))
-                    tz, edge_mode = duel_zoom(spread, duel_min)
+                    tz, edge_mode = final3_zoom_target(spread, duel_min)
                     floor_z = duel_min
-                    act = list(alive)
+                    act = list(everyone)
                     if edge_mode:
-                        tx, ty = lead_x - 120, lead_y - 30            # frame the lead/action cluster, big & readable
+                        tx, ty = lead_x - 80, lead_y - 24
                         focus = lead
-                        floor_z = 0.86
+                        floor_z = 1.40
                         act = [lead]
                     else:
-                        tx, ty = float(sx_.mean()), float(sy_.mean()) - 30
+                        tx = float(0.5 * (sx_.min() + sx_.max()))
+                        ty = float(0.5 * (sy_.min() + sy_.max())) - 24
                 elif near_finish:
-                    m = [alive[j] for j in action_cluster(xs, window)]
-                    act = m
-                    tx = 0.65 * lead_x + 0.35 * float(np.mean(rows[m, 0]))
-                    ty = 0.65 * lead_y + 0.35 * float(np.median(rows[m, 1])) - 30
+                    act = top3
+                    tx = 0.72 * lead_x + 0.28 * top3_x
+                    ty = 0.72 * lead_y + 0.28 * top3_y - 28
                     focus = lead
                 else:
                     m = [alive[j] for j in action_cluster(xs, window)]
-                    act = m
+                    act = list(dict.fromkeys(top3 + m))
                     mx = rows[m, 0]
-                    wts = np.ones(len(m))
-                    wts[0] = 1.3
-                    tx = float(np.sum(mx * wts) / np.sum(wts))
-                    ty = float(np.median(rows[m, 1])) - 30
-                    span = float(mx.max() - mx.min()) + 320
-                    tz = (W * 0.86) / span
+                    clust_x = float(np.mean(mx))
+                    clust_y = float(np.median(rows[m, 1]))
+                    # Blend top-3 weighted centroid (70%) with pack cluster (30%) so fast leaders on Flat Track never leave frame
+                    tx = 0.70 * top3_x + 0.30 * clust_x
+                    ty = 0.65 * top3_y + 0.35 * clust_y - 28
+                    t3_span = float(max(rows[i, 0] for i in top3) - min(rows[i, 0] for i in top3))
+                    span = max(t3_span, min(720.0, float(mx.max() - mx.min()))) + 340.0
+                    tz = (sw * 0.86) / span
                 chase = trace.zones[f].get("chase_x")
                 if chase is not None and any(float(rows[i, 0]) < chase + 240 for i in everyone):
                     tzc = max(floor_z, min(zmax, tz))
-                    tx_wall = chase + (W / 2 - 110) / tzc
-                    if tx > tx_wall and lead_x - tx_wall < (W / 2 - 70) / tzc:
+                    tx_wall = chase + (sw / 2 - 110) / tzc
+                    if tx > tx_wall and lead_x - tx_wall < (sw * 0.24) / tzc:
                         tx = tx_wall
                 for kf, kx, ky in hero_kos:
-                    if 0 <= kf - f <= bias_win:
-                        w_ko = 0.6 * (1.0 - (kf - f) / max(1, bias_win))
+                    if 0 <= kf - f <= bias_win and abs(kx - top3_x) < sw * 0.42:
+                        w_ko = 0.45 * (1.0 - (kf - f) / max(1, bias_win))
                         tx = tx * (1.0 - w_ko) + kx * w_ko
                         ty = ty * (1.0 - w_ko) + ky * w_ko
                         focus = None
                         break
                 tz = max(floor_z, min(zmax, tz))
-            tx = min(max(tx, x0 + W / 2 / tz), x1 - W / 2 / tz)
+            tx = min(max(tx, x0 + sw / 2 / tz), x1 - sw / 2 / tz)
             ty = min(max(ty, y0 + 250), y1 - 250)
         strength = 0.0
         for cf, s in chaos:
@@ -225,50 +266,27 @@ def track(trace: T.Trace) -> list[Cam]:
             cx, cy, cz = tx, ty, tz
         px, py = cx, cy
         if top:
-            cx, cy, vx, vy = 0.0, 0.0, 0.0, 0.0
+            cx, vx = _spring(cx, vx, tx, 4.2, dt)
+            cy, vy = _spring(cy, vy, ty, 4.2, dt)
         else:
-            cx, vx = _spring(cx, vx, tx, 4.5, dt)
-            cy, vy = _spring(cy, vy, ty, 3.2, dt)
-        cz, vz = _spring(cz, vz, tz, 7.0 if not top else 3.5, dt)
+            cx, vx = _spring(cx, vx, tx, 5.2, dt)
+            cy, vy = _spring(cy, vy, ty, 3.8, dt)
+        cz, vz = _spring(cz, vz, tz, 6.5 if not top else 4.2, dt)
         if not top:
             cz = max(duel_min, min(zmax, cz))
-        if focus is not None:             # lock mode: keep #1 inside the middle 65% of the frame
+        if focus is not None and not top:
             fx, fy = float(rows[focus, 0]), float(rows[focus, 1])
-            hw = W * 0.35 / cz
-            mid, half = (VIEW_TOP + VIEW_BOTTOM) / 2, (VIEW_BOTTOM - VIEW_TOP) * 0.30
+            hw = sw * 0.24 / cz
+            mid, half = (VIEW_TOP + VIEW_BOTTOM) / 2, (VIEW_BOTTOM - VIEW_TOP) * 0.28
             cx = min(max(cx, fx - hw), fx + hw)
-            cy = min(max(cy, fy + (SCREEN_CY - mid - half) / cz), fy + (SCREEN_CY - mid + half) / cz)
-        cap_k = 1.0
-        if everyone and not top:
-            def on_screen(i: int, ccx: float, ccy: float) -> bool:
-                sx = (rows[i, 0] - ccx) * cz + W / 2
-                sy = (rows[i, 1] - ccy) * cz + SCREEN_CY
-                return 40 < sx < W - 40 and VIEW_TOP + 40 < sy < VIEW_BOTTOM - 40
-            if not any(on_screen(i, cx, cy) for i in everyone):
-                # fast (but still eased) recovery pan toward the FRAMED target first, then heroes, then anyone
-                off_y = (SCREEN_CY - (VIEW_TOP + VIEW_BOTTOM) / 2) / cz
-                alive_h = [i for i in heroes if flags[i] & T.ALIVE]
-                cands = [(tx, ty)] + [(float(rows[j, 0]), float(rows[j, 1]) - off_y)
-                                      for j in sorted(alive_h or everyone, key=lambda i: -rows[i, 0])]
-                cx, cy = next(((qx, qy) for qx, qy in cands if any(on_screen(i, qx, qy) for i in everyone)), cands[-1])
-                cap_k = 3.0
+            cy = min(max(cy, fy + (scy - mid - half) / cz), fy + (scy - mid + half) / cz)
         if not top and px is not None:
-            # v4.3 strict max pan velocity -> zero teleports. The cap is RELATIVE to the framed action (680 / 520 px/s
-            # on top of the pack's own velocity): the camera keeps pace with fast packs but can never whip-pan
-            # between targets faster than that.
             avx = abs(float(np.mean(rows[act, 3]))) if act else 0.0
             avy = abs(float(np.mean(rows[act, 4]))) if act else 0.0
-            mdx, mdy = (max_vx + avx) * cap_k * dt, (max_vy + avy) * cap_k * dt
-            ncx = px + max(-mdx, min(mdx, cx - px))
-            ncy = py + max(-mdy, min(mdy, cy - py))
-            if everyone and cap_k > 1.0 and not any(on_screen(i, ncx, ncy) for i in everyone):
-                ncx, ncy = cx, cy                             # last-resort rescue: never show an empty arena
-                track.rescues += 1                            # type: ignore[attr-defined]
-            if ncx != cx:
-                vx = (ncx - px) / dt
-            if ncy != cy:
-                vy = (ncy - py) / dt
-            cx, cy = ncx, ncy
+            mdx, mdy = (max_vx + avx) * dt, (max_vy + avy) * dt
+            cx = px + max(-mdx, min(mdx, cx - px))
+            cy = py + max(-mdy, min(mdy, cy - py))
+
         shake = (0.0, 0.0)
         for cf in thuds:
             if 0 <= f - cf < 3:
@@ -278,5 +296,36 @@ def track(trace: T.Trace) -> list[Cam]:
             if 0 <= k < 10:
                 amp = (14 if not top else 7) * s * (1 - k / 10)
                 shake = (amp * math.sin(k * 2.7 + cf), amp * math.cos(k * 3.1 + cf))
+
+        # P0.2 Hard Viewport Clamp: guarantee >= 1 living character is inside the middle 50% horizontal frame [0.25*sw, 0.75*sw]
+        if everyone and not top:
+            x_lo_s, x_hi_s = sw * 0.25 + 4.0, sw * 0.75 - 4.0
+            y_lo_s, y_hi_s = VIEW_TOP + 56.0, VIEW_BOTTOM - 56.0
+
+            def in_mid50(i: int, ccx: float, ccy: float) -> bool:
+                sx = (float(rows[i, 0]) - ccx) * cz + sw / 2.0 + shake[0]
+                sy = (float(rows[i, 1]) - ccy) * cz + scy + shake[1]
+                return x_lo_s <= sx <= x_hi_s and y_lo_s <= sy <= y_hi_s
+
+            if not any(in_mid50(i, cx, cy) for i in everyone):
+                alive_h = [i for i in heroes if flags[i] & T.ALIVE] or everyone
+                anc = min(
+                    alive_h,
+                    key=lambda i: abs(float(rows[i, 0]) - cx) + 0.5 * abs(float(rows[i, 1]) - cy),
+                )
+                ax, ay = float(rows[anc, 0]), float(rows[anc, 1])
+                cx_min = ax + (sw / 2.0 + shake[0] - x_hi_s) / cz
+                cx_max = ax + (sw / 2.0 + shake[0] - x_lo_s) / cz
+                cx = min(max(cx, cx_min), cx_max)
+                cy_min = ay + (scy + shake[1] - y_hi_s) / cz
+                cy_max = ay + (scy + shake[1] - y_lo_s) / cz
+                if cy_min <= cy_max:
+                    cy = min(max(cy, cy_min), cy_max)
+                else:
+                    cy = ay
+                vx = (cx - px) / dt if px is not None else 0.0
+                vy = (cy - py) / dt if py is not None else 0.0
+                track.rescues += 1                            # type: ignore[attr-defined]
+
         cams.append(Cam(cx, cy, cz, shake))
     return cams

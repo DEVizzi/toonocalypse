@@ -9,10 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "auto = next due part | part1/part2/part3 = specific part | preview = races so far (never uploads) | demo = simulated 10-race season (CI test) | backfill = verify+write legacy replay record"
+        description: "auto = next due part | part1/part2/part3 = specific part | widescreen_finale = 16:9 Season Finale | preview = races so far | demo = simulated 10-race season | backfill = legacy replay record"
         type: choice
         default: demo
-        options: [auto, part1, part2, part3, preview, demo, backfill]
+        options: [auto, part1, part2, part3, widescreen_finale, preview, demo, backfill]
       season:
         description: "Season number (optional; defaults to the current season)"
         required: false
@@ -42,7 +42,7 @@ concurrency:
 jobs:
   recap:
     runs-on: ubuntu-latest
-    timeout-minutes: 100
+    timeout-minutes: 10
     env:
       SDL_VIDEODRIVER: dummy
       SDL_AUDIODRIVER: dummy

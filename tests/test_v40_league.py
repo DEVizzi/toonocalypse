@@ -101,8 +101,16 @@ class TestV40LeagueAndOverhaul(unittest.TestCase):
             cams = track(tr)
             self.assertGreater(len(cams), 60)
             if arena in ("rotating_disc", "sumo_pool_pit"):
-                for c in cams:
-                    self.assertEqual((c.x, c.y), (0.0, 0.0), f"{arena} camera drifted off (0,0): {(c.x, c.y)}")
+                f3_started = False
+                for fi, c in enumerate(cams):
+                    alive_n = sum(1 for k in range(len(tr.keys)) if tr.flags[fi][k] & 1)
+                    if alive_n <= 3:
+                        f3_started = True
+                    if not f3_started:
+                        self.assertEqual((c.x, c.y), (0.0, 0.0), f"{arena} camera drifted off (0,0): {(c.x, c.y)}")
+                    else:
+                        self.assertLessEqual(abs(c.x), 145.0)
+                        self.assertLessEqual(abs(c.y), 145.0)
 
 
 if __name__ == "__main__":

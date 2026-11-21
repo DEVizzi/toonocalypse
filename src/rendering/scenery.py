@@ -429,20 +429,21 @@ def draw_panel(frame: pygame.Surface, survivors: int, total: int, heroes: list[H
 
 
 def draw_pick_strip(frame: pygame.Surface, heroes: list[Hero], t: float, text_boxes: list,
-                    reigning_champion: str | None = None) -> None:
-    """Cold-open PICK YOUR FIGHTER strip in the top-left bar slot (y=120..224)."""
+                    reigning_champion: str | None = None, hook_text: str = "PICK YOUR FIGHTER!") -> None:
+    """Cold-open single-row hook strip in the top-left bar slot (y=120..224, capped at <=6 named characters)."""
     plate = pygame.Surface(PANEL.size, pygame.SRCALPHA)
     pygame.draw.rect(plate, (20, 22, 36, 225), plate.get_rect(), border_radius=22)
     pygame.draw.rect(plate, (255, 214, 0, 210), plate.get_rect(), 4, border_radius=22)
     frame.blit(plate, PANEL)
-    lab = font(26).render("PICK YOUR FIGHTER!", True, (255, 214, 0))
+    lab = font(26).render(hook_text.upper(), True, (255, 214, 0))
     text_boxes.append(frame.blit(lab, lab.get_rect(midtop=(PANEL.centerx, PANEL.y + 6))))
-    n = len(heroes)
-    step = (PANEL.width - 30) / max(1, n)
-    for i, h in enumerate(heroes):
-        cx = PANEL.x + 15 + step * (i + 0.5)
+    shown = list(heroes)[:6]
+    n = len(shown)
+    step = (PANEL.width - 36) / max(1, n)
+    for i, h in enumerate(shown):
+        cx = PANEL.x + 18 + step * (i + 0.5)
         bob = 3 * math.sin(t * 9 + i)
-        _icon(frame, h, (cx, PANEL.y + 70 + bob), 22, "happy", star=(reigning_champion == h.key))
+        _icon(frame, h, (cx, PANEL.y + 70 + bob), 24, "happy", star=(reigning_champion == h.key))
 
 
 # ---------------------------------------------------------------------------------------------- 8-Theme 2D Architecture
@@ -745,7 +746,9 @@ def draw_floating_platform(frame: pygame.Surface, centre, radius: float, zoom: f
         return
 
     if shape == "octagon_pool":
-        rim_h = max(14.0, 0.13 * radius)
+        if radius < 4.0:
+            return
+        rim_h = max(8.0, 0.13 * radius)
         top_pts = _octagon_pts(cx, cy, radius)
         bot_pts = [(px, py + rim_h) for px, py in top_pts]
         # 3D underside skirt
@@ -755,33 +758,43 @@ def draw_floating_platform(frame: pygame.Surface, centre, radius: float, zoom: f
             quad = [top_pts[k], top_pts[nk], bot_pts[nk], bot_pts[k]]
             pygame.draw.polygon(frame, dark, quad)
             pygame.draw.polygon(frame, BLACK, quad, max(2, int(3 * zoom)))
-        # Main octagonal pool table deck
+        # Render octagonal deck + 4 corner hazard pockets onto an alpha surface clipped strictly to top_pts!
+        pad = int(radius + 24)
+        deck_s = pygame.Surface((2 * pad, 2 * pad), pygame.SRCALPHA)
+        ox, oy = cx - pad, cy - pad
+        loc_pts = [(px - ox, py - oy) for px, py in top_pts]
         deck_col = mix(theme.terrain, (28, 128, 92) if bstyle == "royal" else theme.rock, 0.35)
-        pygame.draw.polygon(frame, deck_col, top_pts)
-        inner_pts = _octagon_pts(cx, cy, radius * 0.90)
-        pygame.draw.polygon(frame, trim_col, inner_pts, max(2, int(4 * zoom)))
-        pygame.draw.circle(frame, trim_col, (int(cx), int(cy)), max(12, int(radius * 0.24)), max(2, int(3 * zoom)))
+        pygame.draw.polygon(deck_s, deck_col, loc_pts)
+        inner_pts = [(px - ox, py - oy) for px, py in _octagon_pts(cx, cy, radius * 0.90)]
+        pygame.draw.polygon(deck_s, trim_col, inner_pts, max(2, int(4 * zoom)))
+        pygame.draw.circle(deck_s, trim_col, (pad, pad), max(6, int(radius * 0.24)), max(2, int(3 * zoom)))
         if bstyle == "obsidian":
-            # Glowing molten forge crosshairs on Volcanic Sumo Pool
             for ang in (0.0, math.pi / 2):
                 pygame.draw.line(
-                    frame,
+                    deck_s,
                     (255, 106, 22),
-                    (cx - math.cos(ang) * radius * 0.78, cy - math.sin(ang) * radius * 0.78),
-                    (cx + math.cos(ang) * radius * 0.78, cy + math.sin(ang) * radius * 0.78),
+                    (pad - math.cos(ang) * radius * 0.78, pad - math.sin(ang) * radius * 0.78),
+                    (pad + math.cos(ang) * radius * 0.78, pad + math.sin(ang) * radius * 0.78),
                     max(2, int(4 * zoom)),
                 )
-        pygame.draw.polygon(frame, BLACK, top_pts, max(4, int(6 * zoom)))
-        # 4 Diagonal Open Corner Void Pockets at (±0.67R, ±0.67R)
+        # P0.3: Scale pocket radius strictly proportionally with active radius AND mask inside octagon boundary!
         pk = radius * 0.67
-        pr = max(14.0, pocket_r)
-        for sx_sgn in (-1, 1):
-            for sy_sgn in (-1, 1):
-                px, py = cx + sx_sgn * pk, cy + sy_sgn * pk
-                pygame.draw.circle(frame, (255, 92, 36) if bstyle == "obsidian" else theme.hazard, (int(px), int(py)), int(pr + 6 * zoom))
-                pygame.draw.circle(frame, BLACK, (int(px), int(py)), int(pr + 2 * zoom))
-                pygame.draw.circle(frame, (10, 8, 22), (int(px), int(py)), int(pr - 2 * zoom))
-                pygame.draw.circle(frame, (28, 22, 48), (int(px), int(py)), int(pr * 0.64), max(2, int(2 * zoom)))
+        pr = max(2.0, min(pocket_r, radius * 0.30))
+        if pr >= 3.0:
+            for sx_sgn in (-1, 1):
+                for sy_sgn in (-1, 1):
+                    px, py = pad + sx_sgn * pk, pad + sy_sgn * pk
+                    pygame.draw.circle(deck_s, (255, 92, 36) if bstyle == "obsidian" else theme.hazard,
+                                       (int(px), int(py)), int(pr + 4 * zoom))
+                    pygame.draw.circle(deck_s, BLACK, (int(px), int(py)), int(pr + 1.5 * zoom))
+                    pygame.draw.circle(deck_s, (10, 8, 22), (int(px), int(py)), max(1, int(pr - 1.5 * zoom)))
+                    if pr * 0.64 >= 3.0:
+                        pygame.draw.circle(deck_s, (28, 22, 48), (int(px), int(py)), int(pr * 0.64), max(1, int(2 * zoom)))
+        mask = pygame.Surface((2 * pad, 2 * pad), pygame.SRCALPHA)
+        pygame.draw.polygon(mask, (255, 255, 255, 255), loc_pts)
+        deck_s.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+        frame.blit(deck_s, (ox, oy))
+        pygame.draw.polygon(frame, BLACK, top_pts, max(4, int(6 * zoom)))
         return
 
     rim_h = max(14.0, 0.14 * radius)

@@ -48,6 +48,7 @@ class RaceLines:
     intro: Line
     verdict: list[Line] = field(default_factory=list)
     lost: Line | None = None
+    mid: Line | None = None
 
 
 def name(key: str | None) -> str:
@@ -314,9 +315,38 @@ class Writer:
             return Line("No footage for this one. Glitch corrupted it. Of course he did.", "deadpan", "FACEPALM", "lost")
         return Line(self._pick("lost", LOST), "deadpan", "FACEPALM", "lost")
 
+    def race_mid(self, r: RaceInfo) -> Line:
+        betrayals = [e for e in r.elims if e.get("hero") and e.get("by_hero") and len(e.get("actors") or []) > 1]
+        if betrayals:
+            e = betrayals[-1]
+            k_nm, v_nm = name(e["actors"][1]), name(e["actors"][0])
+            txt = self._pick("mid.betray", (
+                f"Oh! {k_nm} just launched {v_nm} straight into next week!",
+                f"Cold blooded from {k_nm}! {v_nm} never stood a chance.",
+                f"Look at {k_nm} choosing violence on {v_nm} mid-race!",
+            ))
+            return Line(txt, "hype", "SHOCKED_JAWDROP", "mid")
+        if r.first_hero_out and r.first_hero_out != r.winner:
+            fo = name(r.first_hero_out)
+            txt = self._pick("mid.first", (
+                f"{fo} is already in the pit, and we are barely halfway through!",
+                f"Early exit for {fo}. Absolute disasterclass in progress.",
+                f"Down goes {fo}! Now the survivors are getting desperate.",
+            ))
+            return Line(txt, "normal", "LAUGHING_TEARS", "mid")
+        runner = name(r.hero_ranking[1]) if len(r.hero_ranking) > 1 else name(r.winner)
+        txt = self._pick("mid.pack", (
+            f"Final stretch now, and {runner} is clinging on by pure panic!",
+            f"Bodies flying everywhere! {runner} is fighting for dear life out there!",
+            "Three left in the endgame! Zero grip, zero mercy, maximum panic!",
+        ))
+        return Line(txt, "hype", "SWEATING_INTENSE", "mid")
+
     def race_lines(self, r: RaceInfo, prev: RaceInfo | None, has_footage: bool) -> RaceLines:
         rl = RaceLines(intro=self.race_intro(r), verdict=self.race_verdict(r, prev))
-        if not has_footage:
+        if has_footage:
+            rl.mid = self.race_mid(r)
+        else:
             rl.lost = self.footage_lost(r)
         return rl
 

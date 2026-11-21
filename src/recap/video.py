@@ -35,8 +35,19 @@ from src.rendering import effects  # noqa: E402
 from src.rendering import hud as H  # noqa: E402
 
 W, HH, FPS = 1920, 1080, 30
-PHONE = pygame.Rect(96, 0, 608, 1080)
-RX0, RX1 = 760, 1860
+# Part 5: 58.3% Left Main 4:3 Viewport (1120x840) + Race Scoreboard Strip, 41.7% Right Esports Sidebar (712px)
+VIEWPORT = pygame.Rect(32, 28, 1120, 840)
+RACE_BAR = pygame.Rect(32, 884, 1120, 164)
+COLD_VIEW = pygame.Rect(40, 120, 1120, 840)
+PHONE = VIEWPORT
+SIDE_X, SIDE_W = 1176, 712
+RX0, RX1 = SIDE_X, SIDE_X + SIDE_W
+BOOTH_RECT = pygame.Rect(SIDE_X, 28, SIDE_W, 314)
+TICKER_RECT = pygame.Rect(SIDE_X, 358, SIDE_W, 304)
+STANDINGS_RECT = pygame.Rect(SIDE_X, 678, SIDE_W, 370)
+CHART_TOP_Y = 124
+CHART_ROW_H = 46
+CHART_MARGIN_Y = 24
 NAVY = (15, 23, 42)
 NAVY2 = (30, 41, 74)
 GOLD = (250, 204, 21)
@@ -52,6 +63,40 @@ STAGE_LABELS = {"play_in": "PLAY-IN", "qualifier_1": "QUALIFIER 1", "qualifier_2
                 "grand_final": "GRAND FINAL"}
 CHAOS_LABELS = {"betrayal": "THE BETRAYAL", "elimination": "THE OOPSIE", "crush_hit": "THE PANCAKING",
                 "impact": "THE BONK", "trait": "THE SHOWBOATING"}
+
+
+def compute_chart_row_ys(
+    order: list[str],
+    ys_state: dict[str, float],
+    row_h: int = CHART_ROW_H,
+    margin_y: int = CHART_MARGIN_Y,
+    top_y: int = CHART_TOP_Y,
+    dt_frames: float = 1.0,
+) -> dict[str, float]:
+    """Part 5.3: Enforces strict `row_h + margin_y` vertical pitch across all horizontal Title Race bars so adjacent
+    or swapping bars (e.g. 19 vs 18) can never overlap on any frame."""
+    if not order:
+        return {}
+    stride = float(row_h + margin_y)
+    alpha = 1.0 - (0.66 ** max(1.0, min(60.0, float(dt_frames))))
+    for idx, k in enumerate(order):
+        target = float(top_y) + idx * stride
+        prev = ys_state.get(k, target)
+        ys_state[k] = prev + (target - prev) * alpha
+    rank_idx = {k: i for i, k in enumerate(order)}
+    sk = sorted(order, key=lambda k: (ys_state[k], rank_idx[k]))
+    pos = [0.0] * len(sk)
+    pos[0] = max(float(top_y), ys_state[sk[0]])
+    for i in range(1, len(sk)):
+        pos[i] = max(ys_state[sk[i]], pos[i - 1] + stride)
+    max_bottom = float(top_y) + (len(sk) - 1) * stride
+    if pos[-1] > max_bottom:
+        pos[-1] = max_bottom
+        for i in range(len(sk) - 2, -1, -1):
+            pos[i] = min(pos[i], pos[i + 1] - stride)
+    for i, k in enumerate(sk):
+        ys_state[k] = pos[i]
+    return {k: ys_state[k] for k in order}
 
 
 # ---------------------------------------------------------------------------------------------- text & sprites
@@ -263,7 +308,7 @@ def lower_third(dst: pygame.Surface, text: str, t_in: float) -> None:
 class ClipReader:
     """Sequential RGB frame reader for a worker clip (ffmpeg decode pipe). Holds the last frame past the end."""
 
-    def __init__(self, path: str | None, w: int = 608, h: int = 1080) -> None:
+    def __init__(self, path: str | None, w: int = VIEWPORT.w, h: int = VIEWPORT.h) -> None:
         self.w, self.h, self.idx = w, h, -1
         self.last: pygame.Surface | None = None
         self.proc = None
@@ -309,6 +354,27 @@ class VoiceBank:
             self.use_tts = tts.available()
             if not self.use_tts:
                 log("  [RECAP VOICE] edge-tts/ffmpeg unavailable -> silent timing estimates")
+
+    def prefetch(self, lines: list[Line]) -> None:
+        """Synthesizes unique lines concurrently so 40+ recap lines finish in ~7s instead of ~30s."""
+        if not self.use_tts or not lines:
+            return
+        from concurrent.futures import ThreadPoolExecutor
+        from src.narration import tts
+
+        todo = list(dict.fromkeys((ln.text, ln.style) for ln in lines if (ln.text, ln.style) not in self.cache))
+        if not todo:
+            return
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(lambda kv: (kv, tts.synthesize(kv[0], kv[1])), todo))
+        for kv, res in results:
+            pcm = res[0] if res is not None else None
+            if pcm is not None:
+                self.ok += 1
+                self.cache[kv] = (pcm, pcm.size / SR)
+            else:
+                self.failed += 1
+                self.cache[kv] = (None, 0.35 + len(kv[0].split()) / 3.3)
 
     def get(self, line: Line) -> tuple[np.ndarray | None, float]:
         key = (line.text, line.style)
@@ -392,6 +458,17 @@ class RecapVideo:
             prev = ri
         punch_up_winners([(ri, race_lines[ri.race].verdict[0]) for ri in r.part_races
                           if race_lines[ri.race].verdict and ri.stage != "grand_final"], log=self.log)
+        # Pre-synthesize per-race lines in parallel when TTS is enabled
+        pre_lines: list[Line] = []
+        for rl in race_lines.values():
+            pre_lines.append(rl.intro)
+            if rl.mid:
+                pre_lines.append(rl.mid)
+            if rl.lost:
+                pre_lines.append(rl.lost)
+            pre_lines.extend(rl.verdict)
+        self.bank.prefetch(pre_lines)
+
         if self.cold:
             segs.append(self._seg_cold(self.cold))
         segs.append(self._seg_title())
@@ -422,6 +499,21 @@ class RecapVideo:
                                     wr.standings(), "standings", chapter="Standings"))
         segs.append(self._seg_teaser())
         segs.append(self._seg_end())
+
+        # Part 5.2: Guarantee full 10-race Parts land strictly inside the 8:30-10:00 (510s-600s) mid-roll window
+        if len(r.part_races) >= 10:
+            total = sum(s.duration for s in segs)
+            race_segs = [s for s in segs if s.name.startswith("race_")]
+            if total < 522.0 and race_segs:
+                pad_each = (528.0 - total) / len(race_segs)
+                for s in race_segs:
+                    s.duration = round(s.duration + pad_each, 2)
+            elif total > 588.0 and race_segs:
+                trim_each = (total - 582.0) / len(race_segs)
+                for s in race_segs:
+                    min_voice_end = max((vt + self.bank.dur(ln) + 0.5 for vt, ln in s.voice), default=35.0)
+                    s.duration = max(min_voice_end, round(s.duration - trim_each, 2))
+
         self.segments = segs
         return segs
 
@@ -439,15 +531,17 @@ class RecapVideo:
     def _seg_cold(self, cold: dict) -> Segment:
         lines = self.writer.cold_open(cold["victim"])
         n_clip = int(cold.get("frames") or 0)
+        cw = int(cold.get("width") or COLD_VIEW.w)
+        ch = int(cold.get("height") or COLD_VIEW.h)
         clip_s = n_clip / FPS
         voice, end = self._voice_seq(lines, start=clip_s + 0.55, gap=0.25)
         reader = {"r": None}
-        pos = cold.get("pos") or [304, 540]
+        pos = cold.get("pos") or [cw * 0.5, ch * 0.5]
         victim = cold["victim"]
-        px = (W - PHONE.w) // 2
+        vp = COLD_VIEW
 
         def start():
-            reader["r"] = ClipReader(cold.get("path"))
+            reader["r"] = ClipReader(cold.get("path"), w=cw, h=ch)
 
         def stop():
             if reader["r"]:
@@ -458,35 +552,39 @@ class RecapVideo:
             surf = reader["r"].frame(i) if reader["r"] else None
             frozen = t >= clip_s
             if surf is not None:
-                img = surf
+                img = surf if surf.get_size() == vp.size else pygame.transform.smoothscale(surf, vp.size)
+                px_rel = float(pos[0]) * vp.w / max(1, cw)
+                py_rel = float(pos[1]) * vp.h / max(1, ch)
                 if frozen:
                     k = ease((t - clip_s) / 0.35)
-                    gray = pygame.transform.grayscale(surf)
-                    img = surf.copy()
+                    gray = pygame.transform.grayscale(img)
+                    img = img.copy()
                     gray.set_alpha(int(255 * k))
                     img.blit(gray, (0, 0))
-                    z = 1.0 + 0.10 * k
-                    zw, zh = int(PHONE.w * z), int(PHONE.h * z)
+                    z = 1.0 + 0.12 * k
+                    zw, zh = int(vp.w * z), int(vp.h * z)
                     big = pygame.transform.smoothscale(img, (zw, zh))
-                    ox, oy = (zw - PHONE.w) * pos[0] / PHONE.w, (zh - PHONE.h) * pos[1] / PHONE.h
-                    img = big.subsurface(pygame.Rect(int(ox), int(oy), PHONE.w, PHONE.h)).copy()
-                fr.blit(img, (px, 0))
-                pygame.draw.rect(fr, BLACK, (px - 8, -4, PHONE.w + 16, HH + 8), 8)
-                pygame.draw.rect(fr, GOLD, (px - 3, -4, PHONE.w + 6, HH + 8), 3)
+                    ox = max(0, min(zw - vp.w, int((zw - vp.w) * px_rel / vp.w)))
+                    oy = max(0, min(zh - vp.h, int((zh - vp.h) * py_rel / vp.h)))
+                    img = big.subsurface(pygame.Rect(ox, oy, vp.w, vp.h)).copy()
+                fr.blit(img, vp.topleft)
+                pygame.draw.rect(fr, BLACK, vp.inflate(16, 16), 8, border_radius=18)
+                pygame.draw.rect(fr, GOLD, vp.inflate(6, 6), 4, border_radius=14)
                 if frozen:
                     k = ease((t - clip_s) / 0.3)
-                    cx, cy = px + pos[0], pos[1]
-                    pygame.draw.circle(fr, (235, 40, 50), (int(cx), int(cy)), int(70 + 30 * (1 - k)), 8)
-                    pygame.draw.line(fr, (235, 40, 50), (px + PHONE.w + 30, 330), (cx + 60, cy - 40), 8)
+                    cx, cy = vp.x + px_rel, vp.y + py_rel
+                    pygame.draw.circle(fr, (235, 40, 50), (int(cx), int(cy)), int(68 + 28 * (1 - k)), 8)
+                    pygame.draw.line(fr, (235, 40, 50), (vp.right + 28, 340), (int(cx + 52), int(cy - 32)), 8)
             if frozen:
                 k = ease((t - clip_s - 0.1) / 0.3)
                 if k > 0:
-                    blit_c(fr, txt("*RECORD SCRATCH*", 46, fill=(255, 255, 255), width=4), (px / 2, 200))
-                    s = txt(f"YEP. THAT'S {name(victim).upper()}.", 84, fill=GOLD, width=7)
-                    s = fit(s, W - (px + PHONE.w) - 60)
-                    fr.blit(s, s.get_rect(midleft=(px + PHONE.w + 40 - int((1 - k) * 60), 300)))
-                    blit_c(fr, ball(victim, 200, "dizzy"), ((px + PHONE.w + W) / 2, 600))
-                    blit_c(fr, ball(victim, 200, "dizzy"), (px / 2, 600))
+                    rx_c = (vp.right + W) // 2
+                    blit_c(fr, chip("*RECORD SCRATCH*", (220, 38, 38), 34), (rx_c, 190))
+                    s1 = fit(txt("YEP. THAT'S", 56, fill=WHITE, width=5), W - vp.right - 70)
+                    s2 = fit(txt(f"{name(victim).upper()}.", 88, fill=GOLD, width=7), W - vp.right - 70)
+                    blit_c(fr, s1, (rx_c + int((1 - k) * 40), 295))
+                    blit_c(fr, s2, (rx_c + int((1 - k) * 40), 382))
+                    blit_c(fr, ball(victim, 230, "dizzy"), (rx_c, 640))
 
         return Segment("cold_open", end + 0.5, draw, voice=voice,
                        sfx=[(clip_s + 0.02, "record_scratch", -3.0)], chapter="Intro", on_start=start, on_end=stop)
@@ -567,84 +665,255 @@ class RecapVideo:
         return Segment(nm, max(3.0, end + 0.4), draw, voice=voice, sfx=[(0.05, "riser", -8.0), (0.4, "ding", -8.0)],
                        chapter=chapter)
 
-    # ------------------------------------------------------------------ races
+    # ------------------------------------------------------------------ races (Part 5: 58% 4:3 Viewport + 42% Esports Sidebar)
     def _race_header(self, ri: RaceInfo) -> pygame.Surface:
         from src.publish.metadata import arena_display_name
 
-        s = pygame.Surface((RX1 - RX0, 190), pygame.SRCALPHA)
-        panel(s, pygame.Rect(6, 6, s.get_width() - 12, 178), radius=26)
+        s = pygame.Surface(RACE_BAR.size, pygame.SRCALPHA)
+        panel(s, pygame.Rect(4, 4, s.get_width() - 8, s.get_height() - 8), radius=24)
         stage = STAGE_LABELS.get(ri.stage)
-        s.blit(txt("RACE", 34, fill=(203, 213, 225), width=3), (36, 24))
-        s.blit(txt(f"{ri.race}", 110, fill=GOLD, width=7), (30, 52))
-        s.blit(txt("/30", 40, fill=(203, 213, 225), width=3), (36 + txt(f"{ri.race}", 110, width=7).get_width(), 118))
-        x0 = 250
-        s.blit(fit(txt(arena_display_name(ri.arena).upper(), 58, fill=WHITE, width=5), s.get_width() - x0 - 30), (x0, 26))
+        s.blit(txt("RACE", 26, fill=(203, 213, 225), width=3), (28, 18))
+        r_num = txt(f"{ri.race}", 84, fill=GOLD, width=6)
+        s.blit(r_num, (24, 42))
+        s.blit(txt("/30", 32, fill=(203, 213, 225), width=3), (28 + r_num.get_width(), 90))
+        x0 = 218
+        s.blit(fit(txt(arena_display_name(ri.arena).upper(), 46, fill=WHITE, width=4), s.get_width() - x0 - 28), (x0, 16))
         x = x0
-        chips_ = [chip(stage, (220, 38, 38), 28)] if stage else []
-        chips_.append(chip(GOAL_LABELS.get(ri.goal, ri.goal.replace("_", " ").upper()), (37, 99, 235), 26))
+        chips_ = [chip(stage, (220, 38, 38), 22)] if stage else []
+        chips_.append(chip(GOAL_LABELS.get(ri.goal, ri.goal.replace("_", " ").upper()), (37, 99, 235), 22))
         for hz in ri.hazards[:2]:
-            chips_.append(chip(hz.replace("_", " ").upper(), (71, 85, 105), 24))
+            chips_.append(chip(hz.replace("_", " ").upper(), (71, 85, 105), 20))
         if ri.twist:
-            chips_.append(chip("TWIST: " + ri.twist.replace("_", " ").upper(), (147, 51, 234), 24))
+            chips_.append(chip("TWIST: " + ri.twist.replace("_", " ").upper(), (147, 51, 234), 20))
         for c in chips_:
             if x + c.get_width() > s.get_width() - 24:
                 break
-            s.blit(c, (x, 112))
-            x += c.get_width() + 10
+            s.blit(c, (x, 70))
+            x += c.get_width() + 8
         return s
 
+    def _draw_race_progress_bar(self, fr: pygame.Surface, header: pygame.Surface, t: float, dur: float,
+                                clip_s: float, seg_tag: str) -> None:
+        fr.blit(header, RACE_BAR.topleft)
+        bar_bg = pygame.Rect(RACE_BAR.x + 218, RACE_BAR.y + 124, RACE_BAR.w - 390, 18)
+        pygame.draw.rect(fr, BLACK, bar_bg.inflate(4, 4), border_radius=11)
+        pygame.draw.rect(fr, (30, 41, 59), bar_bg, border_radius=9)
+        denom = max(1.0, clip_s if clip_s > 0 else dur)
+        prog = max(0.0, min(1.0, t / denom))
+        fw = max(14, int(bar_bg.w * prog))
+        fill_col = (250, 204, 21) if seg_tag != "replay" else (244, 63, 94)
+        pygame.draw.rect(fr, fill_col, (bar_bg.x, bar_bg.y, fw, bar_bg.h), border_radius=9)
+        pygame.draw.circle(fr, WHITE, (bar_bg.x + fw, bar_bg.centery), 10)
+        pygame.draw.circle(fr, BLACK, (bar_bg.x + fw, bar_bg.centery), 10, 3)
+        ts_lbl = plain(f"{min(int(t), int(dur)):02d}s / {int(dur):02d}s", 22, (203, 213, 225), FREDOKA)
+        fr.blit(ts_lbl, ts_lbl.get_rect(midright=(RACE_BAR.right - 26, bar_bg.centery)))
+
+    def _draw_part_tracker(self, fr: pygame.Surface, ri: RaceInfo, rect: pygame.Rect) -> None:
+        r = self.recap
+        panel(fr, rect, fill=NAVY, border=(148, 163, 184), radius=24, bw=3)
+        blit_c(fr, fit(txt(f"S{r.season} • {self._part_label()}", 28, fill=GOLD, width=3), rect.w - 28),
+               (rect.centerx, rect.y + 34))
+        n = max(1, r.end_race - r.start_race + 1)
+        cols = min(5, n)
+        rows_n = int(math.ceil(n / cols))
+        gx0 = rect.x + 42
+        gw = rect.w - 84
+        for i in range(n):
+            race = r.start_race + i
+            c_idx, r_idx = i % cols, i // cols
+            cx = gx0 + (gw * c_idx / max(1, cols - 1)) if cols > 1 else rect.centerx
+            cy = rect.y + 108 + r_idx * (88 if rows_n <= 2 else 60)
+            done = race < ri.race
+            cur = race == ri.race
+            col = GOLD if cur else ((34, 197, 94) if done else (71, 85, 105))
+            rad = 24 if cur else 19
+            pygame.draw.circle(fr, BLACK, (int(cx), int(cy)), rad + 3)
+            pygame.draw.circle(fr, col, (int(cx), int(cy)), rad)
+            blit_c(fr, txt(str(race), 21 if cur else 18, fill=INK if cur else WHITE, outline=WHITE if cur else BLACK, width=2),
+                   (cx, cy + 1))
+        done_n = max(0, ri.race - r.start_race + 1)
+        sub = plain(f"MATCH {done_n} OF {n}", 22, (203, 213, 225), FREDOKA)
+        blit_c(fr, sub, (rect.centerx, rect.bottom - 26))
+
+    def _format_feed_items(self, clip: dict, ri: RaceInfo) -> list[tuple[float, str, tuple[int, int, int]]]:
+        """Builds timestamped esports ticker items synced to clip timeline seconds."""
+        timeline = (clip.get("clip") or {}).get("timeline") or []
+        evs = sorted(clip.get("events") or [], key=lambda e: float(e.get("t") or 0.0))
+        if not timeline or not evs:
+            return []
+        items: list[tuple[float, str, tuple[int, int, int]]] = []
+        used_ev: set[int] = set()
+        for fi, (gt, seg) in enumerate(timeline):
+            if seg == "replay":
+                break
+            lt = fi / FPS
+            for idx_e, e in enumerate(evs):
+                if idx_e in used_ev:
+                    continue
+                et = float(e.get("t") or 0.0)
+                if abs(gt - et) <= 0.22:
+                    k = e.get("kind")
+                    d = e.get("data") or {}
+                    acts = e.get("actors") or []
+                    msg = None
+                    col = (226, 232, 240)
+                    if k == "elimination" and d.get("hero") and acts:
+                        v_nm = name(acts[0]).upper()
+                        if d.get("by_hero") and len(acts) > 1:
+                            msg = f"BETRAYAL: {name(acts[1]).upper()} KO'D {v_nm}!"
+                            col = (248, 113, 113)
+                        else:
+                            msg = f"ELIMINATED: {v_nm} IS OUT!"
+                            col = (251, 146, 60)
+                    elif k == "escalation" and d.get("banner"):
+                        msg = f"ALERT: {str(d.get('banner')).upper()}"
+                        col = GOLD
+                    elif k == "twist":
+                        msg = f"TWIST: {str(d.get('banner') or ri.twist or 'CHAOS').upper()}"
+                        col = (192, 132, 252)
+                    elif k == "crush_hit" and acts and acts[0] in HERO_BY_KEY:
+                        msg = f"SMASHED: {name(acts[0]).upper()} PANCAKED!"
+                        col = (251, 191, 36)
+                    if msg:
+                        used_ev.add(idx_e)
+                        if not items or lt - items[-1][0] >= 0.65 or items[-1][1] != msg:
+                            items.append((lt, msg, col))
+        return items
+
+    def _draw_commentary_ticker(self, fr: pygame.Surface, rect: pygame.Rect, ctx: Ctx,
+                                feed: list[tuple[float, str, tuple[int, int, int]]],
+                                t: float, seg_tag: str, ri: RaceInfo) -> None:
+        panel(fr, rect, fill=NAVY, border=(56, 189, 248), radius=24, bw=3)
+        tag_map = {
+            "opening": ("GATE DROP", (37, 99, 235)),
+            "chaos": ("CHAOS CAM", (217, 119, 6)),
+            "final": ("FINAL STRETCH", (220, 38, 38)),
+            "replay": ("SLOW-MO REPLAY", (190, 30, 60)),
+        }
+        lbl_s, lbl_c = tag_map.get(seg_tag, ("LIVE FEED", (15, 118, 110)))
+        fr.blit(txt("PLAY-BY-PLAY TICKER", 26, fill=(125, 211, 252), width=3), (rect.x + 22, rect.y + 16))
+        c_chip = chip(lbl_s, lbl_c, 20)
+        fr.blit(c_chip, c_chip.get_rect(topright=(rect.right - 20, rect.y + 14)))
+
+        y_feed = rect.y + 62
+        max_items = 4
+        if ctx.line is not None and ctx.line.text:
+            sp_box = pygame.Rect(rect.x + 18, rect.y + 58, rect.w - 36, 124)
+            pygame.draw.rect(fr, BLACK, sp_box.inflate(6, 6), border_radius=20)
+            pygame.draw.rect(fr, WHITE, sp_box, border_radius=18)
+            rows = wrap(ctx.line.text, 29, sp_box.w - 34, COMIC)[:3]
+            lh = 33
+            ty = sp_box.centery - (len(rows) * lh) // 2 + 2
+            for row in rows:
+                rs = plain(row, 29, INK, COMIC)
+                fr.blit(rs, rs.get_rect(midtop=(sp_box.centerx, ty)))
+                ty += lh
+            y_feed = sp_box.bottom + 14
+            max_items = 2
+
+        recent = [it for it in feed if it[0] <= t][-max_items:]
+        if not recent:
+            goal_s = GOAL_LABELS.get(ri.goal, ri.goal.replace("_", " ").upper())
+            recent = [(0.0, f"GOAL: {goal_s}", (203, 213, 225))]
+            if ri.twist:
+                recent.append((0.0, f"ACTIVE TWIST: {ri.twist.replace('_', ' ').upper()}", (192, 132, 252)))
+        for idx_i, (et, msg, col) in enumerate(reversed(recent)):
+            row_r = pygame.Rect(rect.x + 18, y_feed + idx_i * 48, rect.w - 36, 42)
+            if row_r.bottom > rect.bottom - 10:
+                break
+            pygame.draw.rect(fr, (24, 35, 62), row_r, border_radius=12)
+            pygame.draw.circle(fr, col, (row_r.x + 18, row_r.centery), 6)
+            s_m = fit(txt(msg, 22, fill=col, width=2), row_r.w - 44)
+            fr.blit(s_m, s_m.get_rect(midleft=(row_r.x + 34, row_r.centery + 1)))
+
+    def _draw_live_standings(self, fr: pygame.Surface, ri: RaceInfo, rect: pygame.Rect) -> None:
+        panel(fr, rect, fill=NAVY, border=GOLD, radius=24, bw=3)
+        blit_c(fr, txt("LIVE LEAGUE STANDINGS", 28, fill=GOLD, width=3), (rect.centerx, rect.y + 30))
+        order = ri.standings_before[:5]
+        for i, (k, p) in enumerate(order):
+            ry = rect.y + 66 + i * 58
+            row_bg = pygame.Rect(rect.x + 18, ry, rect.w - 36, 50)
+            pygame.draw.rect(fr, NAVY2 if i == 0 else (22, 32, 58), row_bg, border_radius=14)
+            rk_col = MEDALS[i] if i < 3 else (203, 213, 225)
+            fr.blit(txt(f"#{i + 1}", 28, fill=rk_col, width=3), (row_bg.x + 16, row_bg.y + 10))
+            blit_c(fr, ball(k, 42, "happy"), (row_bg.x + 96, row_bg.centery))
+            fr.blit(fit(txt(name(k).upper(), 28, fill=WHITE, width=3), 250), (row_bg.x + 132, row_bg.y + 10))
+            st_v = ri.stats_before.get(k) or {}
+            wk = plain(f"{int(st_v.get('wins', 0))}W {int(st_v.get('kos', 0))}KO", 22, (148, 163, 184), FREDOKA)
+            fr.blit(wk, wk.get_rect(midright=(row_bg.right - 126, row_bg.centery)))
+            ps = txt(f"{p} PTS", 28, fill=GOLD, width=3)
+            fr.blit(ps, ps.get_rect(midright=(row_bg.right - 18, row_bg.centery + 1)))
+
     def _results_card(self, ri: RaceInfo, k: float) -> pygame.Surface:
-        s = pygame.Surface((RX1 - RX0, 260), pygame.SRCALPHA)
-        panel(s, pygame.Rect(6, 6, s.get_width() - 12, 248), radius=26)
+        s = pygame.Surface(STANDINGS_RECT.size, pygame.SRCALPHA)
+        panel(s, pygame.Rect(4, 4, s.get_width() - 8, s.get_height() - 8), radius=24)
         playoff = ri.stage != "league"
         podium = ri.hero_ranking[:3]
         for i, key in enumerate(podium):
             kk = ease((k - i * 0.12) / 0.35)
             if kk <= 0:
                 continue
-            cx = 120 + i * 230
-            cy = 108 + int((1 - kk) * 40)
-            pygame.draw.circle(s, MEDALS[i], (cx, cy), 74)
-            pygame.draw.circle(s, BLACK, (cx, cy), 74, 5)
-            blit_c(s, ball(key, 104, "celebrating" if i == 0 else "happy"), (cx, cy - 4))
-            blit_c(s, txt(["1ST", "2ND", "3RD"][i], 30, fill=MEDALS[i], width=3), (cx, cy - 92))
-            blit_c(s, fit(txt(name(key).upper(), 30, fill=WHITE, width=3), 210), (cx, cy + 96))
+            cx = 124 + i * 232
+            cy = 114 + int((1 - kk) * 34)
+            pygame.draw.circle(s, MEDALS[i], (cx, cy), 60)
+            pygame.draw.circle(s, BLACK, (cx, cy), 60, 4)
+            blit_c(s, ball(key, 86, "celebrating" if i == 0 else "happy"), (cx, cy - 3))
+            blit_c(s, txt(["1ST", "2ND", "3RD"][i], 26, fill=MEDALS[i], width=3), (cx, cy - 76))
+            blit_c(s, fit(txt(name(key).upper(), 26, fill=WHITE, width=3), 205), (cx, cy + 80))
             pts = ri.points.get(key, 0) - (2 if key == ri.ko_bonus else 0)
             if not playoff and pts > 0:
-                blit_c(s, chip(f"+{pts}", (22, 163, 74), 26), (cx + 66, cy - 58))
-        x = 760
-        if ri.ko_bonus and not playoff:
-            blit_c(s, chip(f"+2 KO: {name(ri.ko_bonus).upper()}", (234, 88, 12), 26), (x + 130, 50))
+                blit_c(s, chip(f"+{pts}", (22, 163, 74), 22), (cx + 54, cy - 48))
+
+        pygame.draw.line(s, (71, 85, 105), (28, 228), (s.get_width() - 28, 228), 2)
         if playoff:
-            pill = (ri.outcome.winner_points_pill or "").upper()
-            blit_c(s, fit(chip(pill, (220, 38, 38), 28), 320), (x + 130, 60))
+            pill = (ri.outcome.winner_points_pill or "ADVANCES!").upper()
+            blit_c(s, fit(chip(pill, (220, 38, 38), 28), s.get_width() - 60), (s.get_width() // 2, 296))
         else:
             lead = ri.leader_after
             lp = int(ri.stats_after[lead]["points"])
-            blit_c(s, txt("TABLE LEADER", 26, fill=(203, 213, 225), width=3), (x + 130, 112))
-            blit_c(s, ball(lead, 64, "happy"), (x + 50, 170))
-            s.blit(fit(txt(f"{name(lead).upper()} {lp}", 34, fill=GOLD, width=3), 220), (x + 90, 150))
+            s.blit(txt("TABLE LEADER", 24, fill=(203, 213, 225), width=3), (32, 246))
+            blit_c(s, ball(lead, 54, "happy"), (64, 312))
+            s.blit(fit(txt(f"{name(lead).upper()} • {lp} PTS", 32, fill=GOLD, width=3), 330), (104, 294))
+            rx_b = s.get_width() - 160
+            if ri.ko_bonus:
+                blit_c(s, fit(chip(f"+2 KO: {name(ri.ko_bonus).upper()}", (234, 88, 12), 22), 280), (rx_b, 268))
             if ri.lead_changed:
-                blit_c(s, chip("NEW LEADER!", (220, 38, 38), 24), (x + 130, 228))
+                blit_c(s, chip("NEW LEADER!", (220, 38, 38), 22), (rx_b, 322))
         return s
 
     def _seg_race(self, ri: RaceInfo, rl) -> Segment:
         clip = self.clips.get(ri.race) or {}
         has = bool(clip.get("ok"))
         cinfo = clip.get("clip") or {}
+        cw = int(cinfo.get("width") or VIEWPORT.w)
+        ch = int(cinfo.get("height") or VIEWPORT.h)
         n_clip = int(cinfo.get("frames") or 0) if has else 0
         timeline = cinfo.get("timeline") or []
         decisive_i = int(cinfo.get("decisive_index") or n_clip)
         clip_s = n_clip / FPS
-        lines = [rl.intro] + ([rl.lost] if rl.lost else [])
-        voice, t_after = self._voice_seq(lines, start=0.3, gap=0.25)
+
+        intro_lines = [rl.intro] + ([rl.lost] if rl.lost else [])
+        voice, t_after = self._voice_seq(intro_lines, start=0.30, gap=0.25)
         decisive_t = decisive_i / FPS if has else max(2.2, t_after)
-        vt = max(decisive_t + 0.1, t_after + 0.15)
+
+        # Mid-race play-by-play callout around ~46% of the extended highlight clip
+        end_mid = t_after
+        if has and getattr(rl, "mid", None) is not None and decisive_t >= t_after + 5.5:
+            mid_start = max(t_after + 1.8, min(decisive_t - 5.0, clip_s * 0.45))
+            v_mid, end_mid = self._voice_seq([rl.mid], start=mid_start, gap=0.2)
+            voice += v_mid
+
+        vt = max(decisive_t + 0.15, end_mid + 0.35)
         v2, end_v = self._voice_seq(rl.verdict, start=vt, gap=0.25)
         voice += v2
         results_t = max(decisive_t, vt - 0.2)
-        dur = max((clip_s + 2.4) if has else 0.0, end_v + 0.8, 7.0)
+        if has:
+            dur = min(41.5, max(clip_s + 4.0, end_v + 1.0, 36.5))
+        else:
+            dur = max(end_v + 0.8, 7.5)
+
         header = self._race_header(ri)
+        feed = self._format_feed_items(clip, ri) if has else []
         reader = {"r": None}
         boundaries = []
         for i in range(1, len(timeline)):
@@ -660,10 +929,9 @@ class RecapVideo:
         sfx_ += [(results_t, "fanfare", -5.0), (results_t + 0.15, "cheer", -9.0)]
         if not has:
             sfx_.append((0.2, "zap", -10.0))
-        tuno_c = (RX0 + 270, 230 + 250)
 
         def start():
-            reader["r"] = ClipReader(cinfo.get("path")) if has else None
+            reader["r"] = ClipReader(cinfo.get("path"), w=cw, h=ch) if has else None
 
         def stop():
             if reader["r"]:
@@ -672,93 +940,72 @@ class RecapVideo:
         noise = [self._noise_frame(i) for i in range(4)] if not has else []
 
         def draw(fr: pygame.Surface, t: float, ctx: Ctx) -> None:
+            seg = "play"
             if has:
-                surf = reader["r"].frame(min(int(t * FPS), n_clip - 1)) if reader["r"] else None
+                surf = reader["r"].frame(min(int(t * FPS), max(0, n_clip - 1))) if reader["r"] else None
                 if surf is not None:
-                    fr.blit(surf, PHONE.topleft)
+                    img = surf if surf.get_size() == VIEWPORT.size else pygame.transform.smoothscale(surf, VIEWPORT.size)
+                    fr.blit(img, VIEWPORT.topleft)
                 seg = timeline[min(int(t * FPS), len(timeline) - 1)][1] if timeline else "final"
-                if t < 1.3 and timeline and timeline[0][1] == "chaos":
-                    blit_c(fr, chip(chaos_lbl, (220, 38, 38), 34), (PHONE.centerx, 300))
+                if seg == "chaos" and (int(t * 2) % 2 == 0 or t < 2.0):
+                    blit_c(fr, chip(chaos_lbl, (220, 38, 38), 28), (VIEWPORT.x + 170, VIEWPORT.y + 42))
                 for b in boundaries:
                     if 0 <= t - b < 0.12:
-                        fl = pygame.Surface(PHONE.size, pygame.SRCALPHA)
-                        fl.fill((255, 255, 255, int(200 * (1 - (t - b) / 0.12))))
-                        fr.blit(fl, PHONE.topleft)
+                        fl = pygame.Surface(VIEWPORT.size, pygame.SRCALPHA)
+                        fl.fill((255, 255, 255, int(190 * (1 - (t - b) / 0.12))))
+                        fr.blit(fl, VIEWPORT.topleft)
                     if 0 <= t - b < 1.2:
-                        blit_c(fr, chip("THE FINISH", (37, 99, 235), 34), (PHONE.centerx, 300))
+                        blit_c(fr, chip("FINAL SHOWDOWN", (37, 99, 235), 30), (VIEWPORT.x + 200, VIEWPORT.y + 42))
             else:
-                fr.blit(noise[int(t * 12) % len(noise)], PHONE.topleft)
-                dim = pygame.Surface(PHONE.size, pygame.SRCALPHA)
-                dim.fill((0, 0, 0, 120))
-                fr.blit(dim, PHONE.topleft)
-                blit_c(fr, txt("FOOTAGE LOST", 74, fill=(255, 80, 80), width=6), (PHONE.centerx, 300))
+                fr.blit(noise[int(t * 12) % len(noise)], VIEWPORT.topleft)
+                dim = pygame.Surface(VIEWPORT.size, pygame.SRCALPHA)
+                dim.fill((0, 0, 0, 125))
+                fr.blit(dim, VIEWPORT.topleft)
+                blit_c(fr, txt("FOOTAGE LOST", 78, fill=(255, 80, 80), width=6), (VIEWPORT.centerx, VIEWPORT.y + 210))
                 sub = "CORRUPTED BY GLITCH" if ri.winner == "glitch" else "THE TAPE GOT EATEN"
-                blit_c(fr, txt(sub, 40, fill=WHITE, width=4), (PHONE.centerx, 380))
+                blit_c(fr, txt(sub, 42, fill=WHITE, width=4), (VIEWPORT.centerx, VIEWPORT.y + 292))
                 bob = math.sin(t * 3) * 10
-                blit_c(fr, ball(ri.winner, 240, "celebrating"), (PHONE.centerx, 640 + bob))
-                H._crown_badge(fr, PHONE.centerx, 500 + bob, 120)
-            pygame.draw.rect(fr, BLACK, PHONE.inflate(16, 8), 8)
-            pygame.draw.rect(fr, GOLD, PHONE.inflate(6, 8), 3)
-            fr.blit(header, (RX0, 24))
-            booth = pygame.Rect(RX0, 236, 540, 500)
-            mood = ctx.line.mood if ctx.line else ("TROPHY_CHEER" if t >= results_t else "HYPED_TALKING")
-            if has and ctx.line is None and t < results_t and timeline:
-                seg = timeline[min(int(t * FPS), len(timeline) - 1)][1]
-                mood = "SWEATING_INTENSE" if seg == "final" and (results_t - t) < 3 else mood
-            tuno_booth(fr, booth, mood, t, ctx.rms, 2.2)
-            if ctx.line is not None:
-                bubble(fr, pygame.Rect(RX0 + 570, 250, RX1 - RX0 - 570, 300), ctx.line.text,
-                       tail_to=(RX0 + 520, 470), size=38)
-            else:
-                self._prerace_strip(fr, ri, pygame.Rect(RX0 + 570, 250, RX1 - RX0 - 570, 300))
-            if t >= results_t:
-                fr.blit(self._results_card(ri, t - results_t), (RX0, 780 + int((1 - ease((t - results_t) / 0.3)) * 120)))
-            else:
-                self._progress_dots(fr, ri)
+                blit_c(fr, ball(ri.winner, 240, "celebrating"), (VIEWPORT.centerx, VIEWPORT.y + 545 + bob))
+                H._crown_badge(fr, VIEWPORT.centerx, VIEWPORT.y + 405 + bob, 120)
 
-        ch = f"Race {ri.race}: {STAGE_LABELS.get(ri.stage, '').title() or self._arena_name(ri.arena)}"
-        return Segment(f"race_{ri.race}", dur, draw, voice=voice, sfx=sfx_, chapter=ch, caption_mode="none",
+            pygame.draw.rect(fr, BLACK, VIEWPORT.inflate(14, 14), 8, border_radius=18)
+            pygame.draw.rect(fr, GOLD, VIEWPORT.inflate(4, 4), 4, border_radius=14)
+            self._draw_race_progress_bar(fr, header, t, dur, clip_s, seg)
+
+            # Right Esports Sidebar (41.7% width): Top Booth + Tracker | Middle Ticker | Bottom Standings/Podium
+            booth_sub = pygame.Rect(BOOTH_RECT.x, BOOTH_RECT.y, 360, BOOTH_RECT.h)
+            tracker_sub = pygame.Rect(BOOTH_RECT.x + 372, BOOTH_RECT.y, BOOTH_RECT.w - 372, BOOTH_RECT.h)
+            mood = ctx.line.mood if ctx.line else ("TROPHY_CHEER" if t >= results_t else "HYPED_TALKING")
+            if has and ctx.line is None and t < results_t:
+                if seg == "final" and (results_t - t) < 4.5:
+                    mood = "SWEATING_INTENSE"
+                elif seg == "chaos":
+                    mood = "SHOCKED_JAWDROP"
+            tuno_booth(fr, booth_sub, mood, t, ctx.rms, 1.48)
+            self._draw_part_tracker(fr, ri, tracker_sub)
+
+            self._draw_commentary_ticker(fr, TICKER_RECT, ctx, feed, t, seg, ri)
+
+            if t >= results_t:
+                slide = int((1 - ease((t - results_t) / 0.30)) * 80)
+                fr.blit(self._results_card(ri, t - results_t), (STANDINGS_RECT.x, STANDINGS_RECT.y + slide))
+            else:
+                self._draw_live_standings(fr, ri, STANDINGS_RECT)
+
+        ch_lbl = f"Race {ri.race}: {STAGE_LABELS.get(ri.stage, '').title() or self._arena_name(ri.arena)}"
+        return Segment(f"race_{ri.race}", dur, draw, voice=voice, sfx=sfx_, chapter=ch_lbl, caption_mode="none",
                        on_start=start, on_end=stop)
 
     def _arena_name(self, a: str) -> str:
         from src.publish.metadata import arena_display_name
         return arena_display_name(a)
 
-    def _prerace_strip(self, fr: pygame.Surface, ri: RaceInfo, rect: pygame.Rect) -> None:
-        panel(fr, rect, fill=NAVY, border=(255, 255, 255), radius=24, bw=3)
-        blit_c(fr, txt("BEFORE THE RACE", 30, fill=(203, 213, 225), width=3), (rect.centerx, rect.y + 36))
-        order = ri.standings_before[:3]
-        for i, (k, p) in enumerate(order):
-            y = rect.y + 92 + i * 66
-            fr.blit(txt(f"#{i + 1}", 34, fill=MEDALS[i], width=3), (rect.x + 26, y - 18))
-            blit_c(fr, ball(k, 50, "happy"), (rect.x + 120, y))
-            fr.blit(fit(txt(name(k).upper(), 32, width=3), 200), (rect.x + 158, y - 18))
-            ps = txt(f"{p}", 34, fill=GOLD, width=3)
-            fr.blit(ps, ps.get_rect(midright=(rect.right - 26, y)))
-
-    def _progress_dots(self, fr: pygame.Surface, ri: RaceInfo) -> None:
-        r = self.recap
-        n = r.end_race - r.start_race + 1
-        rect = pygame.Rect(RX0, 800, RX1 - RX0, 200)
-        panel(fr, rect, fill=NAVY, border=(255, 255, 255), radius=24, bw=3)
-        blit_c(fr, txt(f"SEASON {r.season} • {self._part_label()}", 34, fill=(203, 213, 225), width=3), (rect.centerx, rect.y + 44))
-        gap = (rect.w - 120) / max(1, n - 1)
-        for i in range(n):
-            race = r.start_race + i
-            cx = rect.x + 60 + i * gap
-            done = race < ri.race
-            cur = race == ri.race
-            col = GOLD if cur else ((34, 197, 94) if done else (71, 85, 105))
-            pygame.draw.circle(fr, BLACK, (int(cx), rect.y + 128), 30 if cur else 22)
-            pygame.draw.circle(fr, col, (int(cx), rect.y + 128), 26 if cur else 18)
-            blit_c(fr, txt(str(race), 26 if cur else 20, fill=WHITE, width=3), (cx, rect.y + 129))
-
     def _noise_frame(self, i: int) -> pygame.Surface:
-        """Chunky VHS static (76x135 grey noise upscaled with nearest-neighbour)."""
+        """Chunky VHS static (112x84 grey noise upscaled to 4:3 VIEWPORT with nearest-neighbour)."""
         rng = np.random.default_rng(1000 + i)
-        small = rng.integers(20, 235, size=(76, 135), dtype=np.uint8)      # (width, height)
+        small = rng.integers(20, 235, size=(112, 84), dtype=np.uint8)
         s = pygame.surfarray.make_surface(np.stack([small] * 3, axis=-1))
-        return pygame.transform.scale(s, PHONE.size)
+        return pygame.transform.scale(s, VIEWPORT.size)
 
     def _race_sfx(self, clip: dict, timeline: list, decisive_i: int) -> list[tuple[float, str, float]]:
         out: list[tuple[float, str, float]] = []
@@ -792,7 +1039,7 @@ class RecapVideo:
         out.append((decisive_i / FPS, "rewind", -8.0))
         out.sort()
         kept, last = [], {}
-        for t, nm, g in out:                      # de-clutter: same sound at most every 0.25 s
+        for t, nm, g in out:
             if t - last.get(nm, -9) >= 0.25:
                 kept.append((t, nm, g))
                 last[nm] = t
@@ -829,7 +1076,7 @@ class RecapVideo:
                 fr.blit(ps, ps.get_rect(midright=(x0 + 840, y + 52)))
             self._corner(fr, t, ctx)
 
-        return Segment(nm, max(4.5, end + 0.8), draw, voice=voice, sfx=[(0.1, "ding", -9.0)], chapter=chapter)
+        return Segment(nm, max(5.2, end + 1.0), draw, voice=voice, sfx=[(0.1, "ding", -9.0)], chapter=chapter)
 
     def _corner(self, fr: pygame.Surface, t: float, ctx: Ctx) -> None:
         tuno_booth(fr, pygame.Rect(1440, 724, 420, 290), ctx.line.mood if ctx.line else "HYPED_TALKING", t, ctx.rms, 1.4)
@@ -880,7 +1127,7 @@ class RecapVideo:
             if a.positive and t < 2.0:
                 effects.draw_confetti(fr, t, 11, pygame.Rect(0, 0, 1240, HH), n=70)
 
-        return Segment(f"award_{a.key}", max(4.2, end + 0.7), draw, voice=voice, sfx=sfx_, caption_mode="none")
+        return Segment(f"award_{a.key}", max(4.8, end + 0.8), draw, voice=voice, sfx=sfx_, caption_mode="none")
 
     def _seg_champion(self) -> Segment:
         lines = self.writer.champion()
@@ -911,37 +1158,44 @@ class RecapVideo:
         line = self.writer.title_race()
         races = self.recap.races
         steps = [{h.key: 0 for h in HEROES}] + [{k: int(v["points"]) for k, v in r.stats_after.items()} for r in races]
-        per = min(0.6, 9.0 / max(1, len(steps) - 1))
+        per = min(1.15, max(0.55, 12.0 / max(1, len(steps) - 1)))
         voice, end = self._voice_seq([line], start=0.3)
-        dur = max(end + 0.6, 1.0 + per * (len(steps) - 1) + 2.4)
+        dur = max(end + 0.6, 1.0 + per * (len(steps) - 1) + 2.6)
         top = max(1, max(max(s.values()) for s in steps))
         ys: dict[str, float] = {}
+        state_t = {"last": None}
 
         def draw(fr: pygame.Surface, t: float, ctx: Ctx) -> None:
+            dt_f = 1.0 if state_t["last"] is None else max(1.0, (t - state_t["last"]) * FPS)
+            state_t["last"] = t
             x = min(len(steps) - 1.0, max(0.0, (t - 0.8) / per))
             i0 = int(x)
             fk = ease(x - i0)
             a, b = steps[i0], steps[min(i0 + 1, len(steps) - 1)]
             cur = {k: a[k] + (b[k] - a[k]) * fk for k in a}
             order = sorted(cur, key=lambda k: (-cur[k], k))
+            row_ys = compute_chart_row_ys(order, ys, row_h=CHART_ROW_H, margin_y=CHART_MARGIN_Y, top_y=CHART_TOP_Y, dt_frames=dt_f)
             race_no = min(len(steps) - 1, i0 + (1 if fk > 0.5 else 0))
-            blit_c(fr, txt("THE TITLE RACE", 80, fill=GOLD, width=6), (620, 70))
-            rs = txt(f"AFTER RACE {race_no}", 64, fill=WHITE, width=5)
-            fr.blit(rs, rs.get_rect(topright=(1840, 34)))
-            maxw = 940
+            blit_c(fr, txt("THE TITLE RACE", 74, fill=GOLD, width=6), (600, 62))
+            rs = txt(f"AFTER RACE {race_no}", 56, fill=WHITE, width=5)
+            fr.blit(rs, rs.get_rect(topright=(1840, 32)))
+            maxw = 880
             for idx, k in enumerate(order):
-                target = 140 + idx * 80
-                ys[k] = ys.get(k, target) + (target - ys.get(k, target)) * 0.3
-                y = ys[k]
+                y = int(round(row_ys[k]))
                 hero = HERO_BY_KEY[k]
-                bw_ = max(12, int(maxw * cur[k] / top))
-                fr.blit(fit(txt(hero.name.upper(), 40, width=4), 250), (60, y + 14))
+                bw_ = max(16, int(maxw * cur[k] / top))
+                rk_s = txt(f"#{idx + 1}", 28, fill=MEDALS[idx] if idx < 3 else (148, 163, 184), width=3)
+                fr.blit(rk_s, rk_s.get_rect(midleft=(52, y + CHART_ROW_H // 2)))
+                nm_s = fit(txt(hero.name.upper(), 34, width=3), 196)
+                fr.blit(nm_s, nm_s.get_rect(midleft=(108, y + CHART_ROW_H // 2)))
                 col = tuple(int(hero.colour.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
-                bar = pygame.Rect(330, y + 10, bw_, 60)
-                pygame.draw.rect(fr, BLACK, bar.inflate(6, 6), border_radius=14)
-                pygame.draw.rect(fr, col if k != "glitch" else (60, 60, 70), bar, border_radius=12)
-                blit_c(fr, ball(k, 64, "happy"), (330 + bw_ + 40, y + 40))
-                fr.blit(txt(str(int(round(cur[k]))), 44, fill=GOLD, width=4), (330 + bw_ + 84, y + 14))
+                bar = pygame.Rect(316, y, bw_, CHART_ROW_H)
+                pygame.draw.rect(fr, BLACK, bar.inflate(6, 6), border_radius=12)
+                pygame.draw.rect(fr, col if k != "glitch" else (60, 60, 70), bar, border_radius=10)
+                cy_b = y + CHART_ROW_H // 2
+                blit_c(fr, ball(k, 48, "happy"), (316 + bw_ + 32, cy_b))
+                pts_s = txt(str(int(round(cur[k]))), 36, fill=GOLD, width=3)
+                fr.blit(pts_s, pts_s.get_rect(midleft=(316 + bw_ + 64, cy_b + 1)))
             self._corner(fr, t, ctx)
 
         return Segment("chart", dur, draw, voice=voice, sfx=[(0.8, "riser", -10.0)], chapter="The Title Race")
@@ -1065,7 +1319,7 @@ class RecapVideo:
             n_frames = min(n_frames, max_frames)
         cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{HH}",
                "-r", str(FPS), "-i", "-", "-i", str(wav), "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
-               "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
+               "-c:v", "libx264", "-preset", "superfast", "-crf", "21", "-pix_fmt", "yuv420p",
                "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-shortest", "-movflags", "+faststart", str(out_mp4)]
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
         assert proc.stdin is not None

@@ -18,8 +18,8 @@ STATE_DIR = ROOT / "state"
 SEASON_LEN = 30
 PARTS = 3
 PART_SIZE = SEASON_LEN // PARTS
-RECAP_KINDS = ("part1", "part2", "part3", "preview")
-_KEY_RE = re.compile(r"^s([1-9][0-9]{0,3})_(part[123]|preview)$")
+RECAP_KINDS = ("part1", "part2", "part3", "widescreen_finale", "preview")
+_KEY_RE = re.compile(r"^s([1-9][0-9]{0,3})_(part[123]|widescreen_finale|preview)$")
 
 
 def part_range(part: int) -> tuple[int, int]:

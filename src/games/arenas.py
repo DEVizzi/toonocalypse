@@ -316,13 +316,19 @@ class NarrowBridge(Course):
         self.sim.hooks_frame.append(self._tick)
 
     def _tick(self, t: float):
+        ot = bool(getattr(self.sim, "overtime", False))
+        min_x = min((c.pos[0] for c in self.sim.alive()), default=-1e9) if ot else -1e9
         for p in self.planks:
-            if not p["break"] or p["shape"] is None:
+            if p["shape"] is None:
+                continue
+            if ot and p["hit"] is None and p["x1"] <= min_x + 55:
+                p["hit"] = t - 0.38
+            if not p["break"] and not ot:
                 continue
             if p["hit"] is None and any(c.alive and p["x0"] <= c.pos[0] <= p["x1"] and abs(c.pos[1] - self.ground_y_at(c.pos[0])) < 60
                                         for c in self.sim.contestants):
                 p["hit"] = t
-            if p["hit"] is not None and t - p["hit"] > 0.6:
+            if p["hit"] is not None and t - p["hit"] > (0.24 if ot else 0.6):
                 self.sim.remove_static(p["shape"])
                 self.pits.append((p["x0"], p["x1"]))
                 p["shape"] = None
@@ -460,7 +466,7 @@ class RotatingDisc(TopArena):
     def build(self):
         r = self.sim.rng
         self.R = self.p.setdefault("radius", round(r.uniform(390, 450)))
-        self.omega = self.p.setdefault("omega", round(r.uniform(0.55, 0.8), 2)) * r.choice([-1, 1])
+        self.omega = self.p.setdefault("omega", round(r.uniform(0.90, 1.18), 2)) * r.choice([-1, 1])
         self.spawn_r = self.R * 0.68
         self.sim.walkable = lambda x, y: x * x + y * y < self.R * self.R
         body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
@@ -502,7 +508,7 @@ class RotatingDisc(TopArena):
         dc = self.sim.cfg["disc"]
         p = self.push_progress()
         k_edge = self.sim.edge_k
-        w = (self.omega if self.sim.t >= 1.0 else self.omega * 0.3) * self.sim.speed_mult * (1.0 + float(dc["spin_ramp"]) * p)
+        w = self.omega * self.sim.speed_mult * (1.0 + float(dc["spin_ramp"]) * p)
         self.disc.angular_velocity = w
         tw = getattr(self.sim, "twist", None)
         k_all = k_edge * (getattr(tw, "k", 1.0) if tw is not None and tw.key == "shrinking_arena" else 1.0)
@@ -534,9 +540,9 @@ class RotatingDisc(TopArena):
                 c.body.velocity = c.body.velocity * 0.82
                 c.body.apply_force_at_world_point((-x * 14.0 * m, -y * 14.0 * m), c.body.position)
                 continue
-            if self.sim.t > 7.0:
-                # tilt-slosh breaks up dead-centre huddles
-                sf = (180.0 + 320.0 * p) * self.sim.speed_mult * m
+            if self.sim.t > 2.6:
+                # tilt-slosh breaks up huddles early so first blood triggers <= 4 s
+                sf = (210.0 + 320.0 * p) * self.sim.speed_mult * m
                 c.body.apply_force_at_world_point((math.cos(slosh_a) * sf, math.sin(slosh_a) * sf), c.body.position)
             if p > 0.0:
                 # v3.3 final push: centrifugal outward drift grows with radius and over the final seconds
@@ -809,9 +815,13 @@ class CrumblingBridge(Course):
             hp.body.angular_velocity = 0.76 * math.cos(t * w * self.sim.hazard_mult + ph) * w * self.sim.hazard_mult
 
         states = []
+        ot = bool(getattr(self.sim, "overtime", False))
+        min_x = min((c.pos[0] for c in self.sim.alive()), default=-1e9) if ot else -1e9
         for tl in self.tiles:
             p = tl["prop"]
-            if tl["hit"] is None and t >= 0.4:
+            if tl["hit"] is None and ot and tl["x1"] <= min_x + 65:
+                tl["hit"] = t - 0.35
+            elif tl["hit"] is None and t >= 0.4:
                 for c in self.sim.alive():
                     x, y = c.pos
                     if tl["x0"] - 12 <= x <= tl["x1"] + 12 and abs(y - (tl["cy"] - 13)) < 46:
@@ -824,7 +834,7 @@ class CrumblingBridge(Course):
             near = [c for c in self.sim.alive() if abs(c.pos[1] - (tl["cy"] - 13)) < 140]
             loaded = any(tl["x0"] - 4 <= c.pos[0] <= tl["x1"] + 4 for c in near)
             approaching = any(tl["x0"] - 260 <= c.pos[0] < tl["x0"] for c in near)
-            if not tl["dropped"] and (age < 0.45 or ((loaded or approaching) and age < 2.4)):
+            if not tl["dropped"] and (age < (0.20 if ot else 0.45) or (not ot and (loaded or approaching) and age < 2.4)):
                 # CRACKING: >= 0.45 s of 3 px vibration + jagged cracks, then the slab detaches the moment it is
                 # unloaded (hard cap 1.0 s) -> real holes open right behind the pack
                 jx = math.sin(t * 74.0 + tl["cx"]) * 3.0
@@ -1305,7 +1315,7 @@ class SumoPoolPit(TopArena):
     def shrink_target(self, t: float) -> float:
         dc = self.sim.cfg["disc"]
         kmin = 48.0 / self.R
-        p = min(1.0, max(0.0, (t - 5.2) / (float(dc["shrink_end_s"]) - 5.2)))
+        p = min(1.0, max(0.0, (t - 3.0) / (float(dc["shrink_end_s"]) - 3.0)))
         return 1.0 - (1.0 - kmin) * (p ** 1.24)
 
     def push_progress(self) -> float:
@@ -1370,8 +1380,8 @@ class SumoPoolPit(TopArena):
                 c.body.velocity = c.body.velocity * 0.82
                 c.body.apply_force_at_world_point((-x * 14.0 * m, -y * 14.0 * m), c.body.position)
                 continue
-            if t > 8.2:
-                sf = (165.0 + 330.0 * p) * self.sim.speed_mult * m
+            if t > 2.8:
+                sf = (195.0 + 330.0 * p) * self.sim.speed_mult * m
                 c.body.apply_force_at_world_point((math.cos(slosh_a) * sf, math.sin(slosh_a) * sf), c.body.position)
             if p > 0.0:
                 d = math.hypot(x, y)

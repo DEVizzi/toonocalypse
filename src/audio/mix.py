@@ -19,7 +19,7 @@ from src.audio.sfx import SR
 from src.config import FPS, settings
 
 MAX_REACTION_LAG_S = 0.50
-CARD_MIN_S = 2.00
+CARD_MIN_S = 2.60
 CARD_TAIL_S = 0.65          # v4.2: card frames = ceil((outro_end + 0.65) * 30), NO hard cap
 DEAD_AIR_MAX_S = 3.00
 

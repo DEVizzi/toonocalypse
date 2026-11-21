@@ -20,6 +20,8 @@ from src.games.base import (
     SIDE,
     TOP,
     TWISTS,
+    WIDESCREEN,
+    WIDESCREEN_FINALE_ROUNDS,
     Recipe,
     fits,
     twist_fits,
@@ -27,6 +29,37 @@ from src.games.base import (
 from src.games.themes import THEMES
 
 MAX_ATTEMPTS = 500
+
+
+def generate_widescreen_finale_rounds(season: int, seed: int, season_theme: str | None = None) -> list[Recipe]:
+    """Part 6: Generates the 3 stage Recipes for the 16:9-native Season Finale mega-event (Race 30)."""
+    rng = random.Random(seed)
+    theme = season_theme or THEMES[(max(1, season) - 1) % len(THEMES)].key
+    out: list[Recipe] = []
+    for idx, spec in enumerate(WIDESCREEN_FINALE_ROUNDS):
+        arenas = spec["arenas"]
+        arena = arenas[(max(1, season) + idx - 1) % len(arenas)]
+        r_seed = seed * 10 + idx + 1
+        rec, _ = generate([], 30 + idx, r_seed, arena=arena, goal=spec["goal"], season_theme=theme)
+        rec.finale = True
+        rec.episode_kind = WIDESCREEN
+        rec.flash_forward = False
+        rec.params = {
+            **rec.params,
+            "widescreen": True,
+            "round": spec["round"],
+            "round_title": spec["title"],
+            "heroes_in": spec["heroes_in"],
+            "dummies_in": spec["dummies_in"],
+            "heroes_advance": spec["heroes_advance"],
+            "course_scale_override": 2.2 if rec.mode == SIDE else 1.0,
+        }
+        if arena in ("rotating_disc", "sumo_pool_pit") and rec.twist is None:
+            rec.twist = "shrinking_arena"
+        elif rec.mode == SIDE and idx == 2 and rec.twist is None:
+            rec.twist = rng.choice(["speed_boost_zones", "heavy_gravity"])
+        out.append(rec)
+    return out
 
 
 @dataclass
@@ -147,6 +180,29 @@ def _sample(rng: random.Random, mode: str, weights: dict | None, seed: int, seas
 def generate(history: list[dict], day: int, seed: int, weights: dict | None = None, mode: str | None = None,
              arena: str | None = None, goal: str | None = None, season_theme: str | None = None) -> tuple[Recipe, list[int]]:
     """Returns (recipe, relaxed_rules)."""
+    if mode == WIDESCREEN or arena == WIDESCREEN:
+        rounds = generate_widescreen_finale_rounds(max(1, (day - 1) // 30 + 1), seed, season_theme=season_theme)
+        theme = rounds[0].theme
+        rec = Recipe(
+            seed=seed,
+            mode=WIDESCREEN,
+            arena=WIDESCREEN,
+            goal=goal or "three_round_championship",
+            hazards=sorted({h for r in rounds for h in r.hazards}),
+            twist="shrinking_arena",
+            theme=theme,
+            params={
+                "aspect": "16:9",
+                "resolution": [1920, 1080],
+                "participant_count": 20,
+                "rounds": [r.to_dict() for r in rounds],
+            },
+            two_stage=False,
+            flash_forward=False,
+            episode_kind=WIDESCREEN,
+            finale=True,
+        )
+        return rec, []
     rng = random.Random(seed)
     mix = settings()["mode_mix"]
     explicit_mode = mode is not None or arena is not None

@@ -80,11 +80,15 @@ def run_worker(root: Path, job: dict[str, Any], log=print) -> dict[str, Any]:
         return {"ok": False, "verified": False, "reason": "clip worker wrote no sidecar"}
 
 
+CLIP_W, CLIP_H = 1120, 840
+
+
 def render_race_clip(record: dict, label: str, stage: str, out_dir: Path, tag: str,
-                     freeze: dict | None = None, log=print) -> dict[str, Any]:
+                     freeze: dict | None = None, width: int = CLIP_W, height: int = CLIP_H,
+                     log=print) -> dict[str, Any]:
     """Pinned tree first, then the current tree. Returns the worker sidecar (+ `source`)."""
     job = {"record": record, "label": label, "stage": stage, "out_dir": str(out_dir), "tag": tag,
-           "width": 608, "height": 1080, "freeze": freeze}
+           "width": int(width), "height": int(height), "freeze": freeze}
     tried = []
     pinned = ensure_tree(record.get("code_sha"), log=log)
     for src_name, root in (("pinned", pinned), ("current", ROOT)):

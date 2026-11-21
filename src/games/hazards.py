@@ -208,10 +208,15 @@ class FallingFloorTiles(Hazard):
                 tl["gone_at"] is not None and math.hypot(x - tl["c"][0], y - tl["c"][1]) < tl["r"] for tl in self.tiles)
 
     def frame(self, t):
-        if t < (2.0 if self.sim.mode == SIDE else 5.0):   # tiles arm once the crowd has left the spawn ring
+        if t < (1.2 if self.sim.mode == SIDE else 2.2):   # tiles arm quickly for <= 4s action
             return
+        ot = bool(getattr(self.sim, "overtime", False))
+        min_x = min((c.pos[0] for c in self.sim.alive()), default=-1e9) if (ot and self.sim.mode == SIDE) else -1e9
         for tl in self.tiles:
             if tl["hit"] is None:
+                if ot and self.sim.mode == SIDE and tl["x1"] <= min_x + 45:
+                    tl["hit"] = t
+                    continue
                 for c in self.sim.alive():
                     x, y = c.pos
                     if self.sim.mode == SIDE:
@@ -221,11 +226,11 @@ class FallingFloorTiles(Hazard):
                     if on:
                         tl["hit"] = t
                         break
-            elif tl["gone_at"] is None and t - tl["hit"] > (0.6 if self.sim.mode == SIDE else 1.1) / self.sim.hazard_mult:
+            elif tl["gone_at"] is None and t - tl["hit"] > ((0.22 if ot else 0.55) if self.sim.mode == SIDE else 0.9) / self.sim.hazard_mult:
                 tl["gone_at"] = t
                 if tl["prop"] is not None:
                     tl["prop"].body.position = (tl["prop"].body.position.x, tl["prop"].body.position.y + 4000)
-            elif tl["gone_at"] is not None and t - tl["gone_at"] > 3.0:
+            elif not ot and tl["gone_at"] is not None and t - tl["gone_at"] > 3.0:
                 tl["hit"], tl["gone_at"] = None, None
                 if tl["prop"] is not None:
                     tl["prop"].body.position = (tl["prop"].body.position.x, tl["y"])
@@ -255,20 +260,22 @@ class RollingBoulders(Hazard):
     key = "rolling_boulders"
 
     def build(self):
-        self.next = 4.0
+        self.next = 2.0
         self.live: list[pymunk.Body] = []
 
     def frame(self, t):
+        ot_k = float(getattr(self.sim, "overtime_projectile_mult", 1.0))
         if t >= self.next:
-            self.next = t + self.r.uniform(2.8, 4.2) / self.sim.hazard_mult
+            self.next = t + self.r.uniform(2.2, 3.4) / (self.sim.hazard_mult * ot_k)
             ahead = self.sim.cam_x + self.sim.view_w * 0.9
             gy = self.sim.arena.ground_y_at(ahead)
             body = pymunk.Body(30, pymunk.moment_for_circle(30, 0, 46))
             body.position = (ahead, gy - 260)
-            body.velocity = (-260 * self.sim.hazard_mult, 0)
+            spd = min(1320.0, 260.0 * self.sim.hazard_mult * ot_k)
+            body.velocity = (-spd, 0)
             shape = pymunk.Circle(body, 46)
             p = self.sim.add_prop(body, [shape], "boulder", hazard=True)
-            shape.friction, shape.elasticity = 0.9, 0.2
+            shape.friction, shape.elasticity = 0.9, 0.35 if ot_k > 1.0 else 0.2
             self.live.append(p)
         for p in list(self.live):
             if p.body.position.y > self.sim.kill_y + 200 or p.body.position.x < self.sim.cam_x - 2500:
@@ -288,7 +295,7 @@ class WindGusts(Hazard):
 
     def frame(self, t):
         ph = t % self.period
-        self.active = t > 4.0 and 1.0 < ph < 3.0
+        self.active = t > 2.4 and 1.0 < ph < 3.0
         if self.active and ph < 1.04:
             self.sim.event("wind", [], None)
 
@@ -323,7 +330,7 @@ class LavaFloor(Hazard):
 
     def frame(self, t):
         rate = 6.0 * (self.sim.hazard_mult ** 2)
-        if t > 6:
+        if t > 4.0:
             self.y -= rate / 30
         for c in self.sim.alive():
             if c.pos[1] + c.radius > self.y:
@@ -366,26 +373,29 @@ class CannonBalls(Hazard):
     key = "cannon_balls"
 
     def build(self):
-        self.next = 3.0
+        self.next = 1.6
         self.balls: list[pymunk.Body] = []
 
     def frame(self, t):
+        ot_k = float(getattr(self.sim, "overtime_projectile_mult", 1.0))
         if t >= self.next:
-            self.next = t + self.r.uniform(1.6, 2.6) / self.sim.hazard_mult
+            self.next = t + self.r.uniform(1.25, 2.15) / (self.sim.hazard_mult * ot_k)
             body = pymunk.Body(6, pymunk.moment_for_circle(6, 0, 20))
             if self.sim.mode == SIDE:
                 x = self.sim.cam_x + self.sim.view_w * 0.75
                 gy = self.sim.arena.ground_y_at(x)
                 body.position = (x, gy - self.r.uniform(40, 120))
-                body.velocity = (-620 * self.sim.hazard_mult, -60)
+                spd = min(1380.0, 620.0 * self.sim.hazard_mult * ot_k)
+                body.velocity = (-spd, -60)
             else:
                 a = self.r.uniform(0, 6.28)
                 body.position = (math.cos(a) * 560, math.sin(a) * 560)
-                body.velocity = (-math.cos(a) * 520 * self.sim.hazard_mult, -math.sin(a) * 520 * self.sim.hazard_mult)
+                spd = min(1320.0, 520.0 * self.sim.hazard_mult * ot_k)
+                body.velocity = (-math.cos(a) * spd, -math.sin(a) * spd)
                 self.sim.event("cannon", [], (math.cos(a) * 520, math.sin(a) * 520))
             shape = pymunk.Circle(body, 20)
             p = self.sim.add_prop(body, [shape], "cannonball", hazard=True)
-            shape.elasticity = 0.6
+            shape.elasticity = 0.85 if ot_k > 1.0 else 0.6
             self.balls.append(p)
             if self.sim.mode != SIDE:
                 body.velocity_func = lambda b, g, d, dt: pymunk.Body.update_velocity(b, (0, 0), 1.0, dt)

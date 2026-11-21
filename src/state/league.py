@@ -143,14 +143,14 @@ def stage_for_race(race_number: int) -> str:
 def header_label(season_number: int, race_number: int, arena_label: str) -> str:
     st = stage_for_race(race_number)
     if st == "play_in":
-        return f"S{season_number} • PLAY-IN • {arena_label}"
+        return f"S{season_number} • EP. {race_number} • PLAY-IN"
     if st == "qualifier_1":
-        return f"S{season_number} • QUALIFIER 1"
+        return f"S{season_number} • EP. {race_number} • QUALIFIER 1"
     if st == "qualifier_2":
-        return f"S{season_number} • QUALIFIER 2"
+        return f"S{season_number} • EP. {race_number} • QUALIFIER 2"
     if st == "grand_final":
-        return f"S{season_number} • GRAND FINAL"
-    return f"S{season_number} R{race_number}/30 • {arena_label}"
+        return f"S{season_number} • EP. {race_number} • GRAND FINAL"
+    return f"S{season_number} • EP. {race_number} • {arena_label}"
 
 
 def card_ribbon_label(season_number: int, race_number: int) -> str:

@@ -55,14 +55,17 @@ class Episode:
 
 
 def plan_shots(ep: Episode, teaser_f: int | None = None) -> list[Shot]:
-    """v4.2: live starting-gate spotlight (the sim's real preroll frames, played continuously from frame 0) ->
-    gameplay from gate release -> 0.3x winner replay -> dynamic winner card. `teaser_f` is ignored (no jump cut)."""
+    """v5.0: instant-action cold open (<= 1.2-1.5 s) -> gameplay -> immediate 1.5 s 0.3x slow-motion finish + confetti
+    on the exact finish-line crossing frame (zero post-finish wall bouncing!) -> Winner Card (2.5-3.0 s)."""
     tr = ep.trace
     pre = tr.meta.get("preroll_frames", 0)
     end_t = tr.meta.get("resolved_at") or (tr.n_frames - pre) / FPS
-    # v4.3: hold the live action REACTION_BEAT_S past the decisive moment (winner visibly across the arch / final
-    # loser fully gone with HUD at ALIVE 1) before cutting to the replay -> confetti/card never fire early.
-    end_f = min(tr.n_frames - 1, pre + int(round((end_t + REACTION_BEAT_S) * FPS)))
+    finish_won = bool(tr.meta.get("finish_won")) or any(e.kind == "finish" for e in tr.events)
+    if finish_won:
+        # P0.1: Cut to 0.3x slow-mo + confetti on the EXACT finish-line crossing frame (zero dead-air bouncing!)
+        end_f = min(tr.n_frames - 1, pre + int(round(end_t * FPS)))
+    else:
+        end_f = min(tr.n_frames - 1, pre + int(round((end_t + 0.25) * FPS)))
     winner = tr.meta.get("winner")
     shots: list[Shot] = []
     for f in range(pre):
@@ -72,12 +75,17 @@ def plan_shots(ep: Episode, teaser_f: int | None = None) -> list[Shot]:
                                                                        and e.data.get("impulse", 0) > 1600)}
     for f in range(pre, end_f + 1):
         shots.append(Shot(f, "play", (f - pre) / FPS))
-        if f in hitstops:
+        if f in hitstops and f < end_f:
             shots += [Shot(f, "play", (f - pre) / FPS)] * 2
-    src0 = end_f - TIMELINE.replay_source_s * FPS
     n_rep = int(round(TIMELINE.replay_s * FPS))
+    if finish_won:
+        src0 = max(float(pre), end_f - TIMELINE.replay_source_s * 0.78 * FPS)
+        src1 = min(float(tr.n_frames - 1), end_f + TIMELINE.replay_source_s * 0.22 * FPS)
+    else:
+        src0 = max(float(pre), end_f - TIMELINE.replay_source_s * FPS)
+        src1 = float(end_f)
     for i in range(n_rep):
-        shots.append(Shot(src0 + (end_f - src0) * i / max(1, n_rep), "replay", i / FPS, TIMELINE.replay_zoom, winner))
+        shots.append(Shot(src0 + (src1 - src0) * i / max(1, n_rep), "replay", i / FPS, TIMELINE.replay_zoom, winner))
     n_card = int(round(TIMELINE.winner_card_s * FPS))
     for i in range(n_card):
         shots.append(Shot(end_f, "card", i / FPS))
@@ -90,6 +98,13 @@ class Renderer:
         self.ep = ep
         self.tr = ep.trace
         self.meta = self.tr.meta
+        if not self.ep.ep_label:
+            from src.state import league
+            lctx = self.ep.league_ctx or {}
+            s_no = int(lctx.get("season_number") or getattr(self.ep.outcome, "season_number", 0) or 1)
+            e_no = int(lctx.get("episode_number") or getattr(self.ep.outcome, "race_number", 0) or 1)
+            arena_lbl = str(self.meta.get("recipe", {}).get("arena", "race")).replace("_", " ").upper()
+            self.ep.ep_label = league.header_label(s_no, e_no, arena_lbl)
         self.theme: Theme = THEME_BY_KEY[self.meta["recipe"]["theme"]]
         self.finale: bool = bool(self.meta["recipe"].get("finale"))
         self.cams = track(self.tr)
@@ -104,6 +119,11 @@ class Renderer:
         self.pre = self.meta.get("preroll_frames", 0)
         self.rng = random.Random(self.meta.get("seed", 0))
         self.escalations = [e for e in self.tr.events if e.kind in ("escalation", "twist", "stage_final", "reverse")]
+        self.lever_times = sorted(
+            e.t for e in self.escalations
+            if e.kind in ("twist", "reverse")
+            or any(k in str(e.data.get("banner", "")).upper() for k in ("SPEED UP", "SHRINKING", "REVERSED", "OVERTIME"))
+        )
         self.elims = sorted((e for e in self.tr.events if e.kind == "elimination"), key=lambda e: e.t)
         self.glitches = sorted((e for e in self.tr.events if e.kind == "glitch"), key=lambda e: e.t)
         self.glitch_blinks = sorted((e for e in self.tr.events if e.kind == "glitch_blink"), key=lambda e: e.t)
@@ -112,6 +132,9 @@ class Renderer:
         self.end_f = min(self.tr.n_frames - 1, self.pre + int(round(end_t * FPS)))
         self.end_t = end_t
         self.late_leads = [e.t for e in self.tr.events if e.kind == "lead_change" and e.t >= end_t - 3.0]
+        self.is_photo_finish = self._detect_photo_finish()
+        self._monotonic_alive = self._build_monotonic_alive()
+        self._running_min_alive = len(self.tr.keys)
         self.banners = self._schedule_banners()
         self.face = self._face_angles()
         self.teaser_f = self._teaser_frame()
@@ -135,6 +158,49 @@ class Renderer:
         self.speech: list = []                  # narration lines: borderless 2-4 word pop captions
         self.voice_rms: list[float] | None = None  # per-frame 33ms isolated voice RMS for MC Tuno lip-sync
         self.out_index: dict = {}               # output frame index -> output time (for captions)
+
+    def _build_monotonic_alive(self) -> list[int]:
+        """P0.5: Persistent `eliminated_ids: set[str]` per match. Once eliminated, a character NEVER returns;
+        live count is strictly `total_racers - len(eliminated_ids)` (monotonically non-increasing)."""
+        eliminated_ids: set[str] = set()
+        total = len(self.tr.keys)
+        counts: list[int] = []
+        elim_by_t = [(e.t, e.actors[0]) for e in self.elims if e.actors]
+        ei = 0
+        for fi in range(self.tr.n_frames):
+            play_t = (fi - self.pre) / FPS
+            while ei < len(elim_by_t) and elim_by_t[ei][0] <= play_t + 1e-4:
+                eliminated_ids.add(elim_by_t[ei][1])
+                ei += 1
+            flags = self.tr.flags[fi]
+            for idx, k in enumerate(self.tr.keys):
+                if not (flags[idx] & T.ALIVE):
+                    eliminated_ids.add(k)
+            counts.append(max(0, total - len(eliminated_ids)))
+        return counts
+
+    def _alive_at(self, fi: int, segment: str) -> int:
+        c = self._monotonic_alive[min(max(0, fi), len(self._monotonic_alive) - 1)]
+        if segment == "cold":
+            self._running_min_alive = len(self.tr.keys)
+            return len(self.tr.keys)
+        if segment == "play":
+            self._running_min_alive = min(self._running_min_alive, c)
+            return self._running_min_alive
+        # During slow-mo replay / card, never tick upward above the lowest count already reached!
+        return self._running_min_alive
+
+    def _detect_photo_finish(self) -> bool:
+        fx = self.meta.get("finish_x")
+        rows, flags = self.tr.frames[self.end_f], self.tr.flags[self.end_f]
+        alive_h = [i for i in range(len(self.tr.keys)) if (flags[i] & T.ALIVE) and self.tr.keys[i] in HERO_BY_KEY]
+        if fx is not None and len(alive_h) >= 2:
+            xs = sorted((float(rows[i, 0]) for i in alive_h), reverse=True)
+            if xs[0] - xs[1] <= 75.0:
+                return True
+        if any(t >= self.end_t - 1.2 for t in self.late_leads):
+            return True
+        return False
 
     # ------------------------------------------------------------------ precomputed presentation state
     def _schedule_banners(self) -> list[tuple[float, str]]:
@@ -859,11 +925,42 @@ class Renderer:
                 pygame.draw.lines(fr, col_c, False, chev, max(2, int(3.5 * z)))
         ox_, oy_ = scx - cx, scy - cy
         if clip_r is not None:
-            dsx, dsy = cam.to_screen(0, 0)
-            mask = pygame.Surface(fr.get_size(), pygame.SRCALPHA)
-            pygame.draw.circle(mask, (255, 255, 255, 255), (dsx - ox_, dsy - oy_), max(1, clip_r - 3))
-            fr.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+            self._apply_platform_mask(fr, ox_, oy_, cam, zone)
         self.frame.blit(fr, (ox_, oy_))
+
+    def _apply_platform_mask(self, surf: pygame.Surface, ox: float, oy: float, cam: Cam, zone: dict) -> None:
+        """P0.3: Clips any TOP_DOWN floor hazard/patch surface strictly inside the active shrinking platform mask."""
+        z = cam.zoom
+        dsx, dsy = cam.to_screen(0, 0)
+        cx_l, cy_l = dsx - ox, dsy - oy
+        mask = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        k = self._k(zone)
+        drawn = False
+        for s in self.meta["statics"]:
+            st = s["type"]
+            if st in ("disc", "ring"):
+                rad = (zone.get("ring_r", s["r"]) if st == "ring" else s["r"]) * k * z - 3.0
+                if rad > 2.0:
+                    pygame.draw.circle(mask, (255, 255, 255, 255), (cx_l, cy_l), rad)
+                drawn = True
+                break
+            if st == "octagon_pool":
+                rad = s["r"] * k * z - 3.0
+                if rad > 4.0:
+                    pts = scenery._octagon_pts(cx_l, cy_l, rad)
+                    pygame.draw.polygon(mask, (255, 255, 255, 255), pts)
+                drawn = True
+                break
+            if st == "square":
+                h_px = s["half"] * k * z - 3.0
+                if h_px > 4.0:
+                    pygame.draw.rect(mask, (255, 255, 255, 255),
+                                     pygame.Rect(int(cx_l - h_px), int(cy_l - h_px), int(2 * h_px), int(2 * h_px)),
+                                     border_radius=14)
+                drawn = True
+                break
+        if drawn:
+            surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
 
     def _zones(self, cam: Cam, zone: dict, t: float) -> None:
         fr, z = self.frame, cam.zoom
@@ -894,6 +991,8 @@ class Renderer:
             zf = pygame.Surface((int(rz * 2 + 24), int(rz * 2 + 24)), pygame.SRCALPHA)
             zc = zf.get_width() // 2
             pygame.draw.circle(zf, (255, 214, 0, 46), (zc, zc), int(rz))
+            if self.tr.mode == "TOP_DOWN":
+                self._apply_platform_mask(zf, c[0] - zc, c[1] - zc, cam, zone)
             self.frame.blit(zf, (int(c[0] - zc), int(c[1] - zc)))
             pygame.draw.circle(fr, BLACK, c, rz + 3, max(4, int(10 * z)))
             pygame.draw.circle(fr, (255, 214, 0), c, rz, max(3, int(6 * z)))
@@ -925,7 +1024,13 @@ class Renderer:
             pygame.draw.polygon(fr, (255, 205, 40), pts)
             pygame.draw.polygon(fr, BLACK, pts, 3)
         for p in zone.get("pads", []):
-            c = cam.to_screen(*p)
+            if self.tr.mode == "TOP_DOWN":
+                k_p = self._k(zone)
+                if math.hypot(p[0], p[1]) > self._platform_r(zone) - 24:
+                    continue
+                c = cam.to_screen(p[0] * k_p, p[1] * k_p)
+            else:
+                c = cam.to_screen(*p)
             pygame.draw.ellipse(fr, (160, 80, 255), (c[0] - 34 * z, c[1] - 10 * z, 68 * z, 20 * z))
             pygame.draw.ellipse(fr, BLACK, (c[0] - 34 * z, c[1] - 10 * z, 68 * z, 20 * z), 3)
         if zone.get("wind") is not None:
@@ -939,9 +1044,19 @@ class Renderer:
                 continue
             k = self._k(zone)
             cx, cy, r = cx * k, cy * k, r * k
+            plat_r = self._platform_r(zone)
+            if math.hypot(cx, cy) - r > plat_r - 4:
+                continue
             c = cam.to_screen(cx, cy)
+            rz_ = max(4, int(r * z))
+            ts = pygame.Surface((rz_ * 2 + 24, rz_ * 2 + 24), pygame.SRCALPHA)
+            tc = rz_ + 12
             col = (255, 80, 80) if st == 1 else WHITE_
-            pygame.draw.circle(self.frame, col, (c[0] + (math.sin(t * 60) * 3 if st == 1 else 0), c[1]), r * z, 5)
+            jx = int(math.sin(t * 60) * 3) if st == 1 else 0
+            pygame.draw.circle(ts, (14, 12, 26, 175 if st == 1 else 95), (tc + jx, tc), rz_)
+            pygame.draw.circle(ts, col, (tc + jx, tc), rz_, 5)
+            self._apply_platform_mask(ts, c[0] - tc, c[1] - tc, cam, zone)
+            self.frame.blit(ts, (int(c[0] - tc), int(c[1] - tc)))
 
     def _draw_seesaw(self, cam: Cam, x: float, y: float, ang: float, verts: list) -> None:
         """Chunky wood-and-iron seesaw plank with bolted end-caps and a riveted cast-iron center gear hub."""
@@ -1601,28 +1716,54 @@ class Renderer:
                 recent |= actors
         window = 1.0 <= play_t <= 2.5
         pts = list(screen.values())
+        # P2.3 Nameplate Anti-Overlap: detect dense pile-up (inter-character distance < 140px) -> restrict to top 3
+        dense_pileup = False
+        if len(pts) >= 4:
+            close_pairs = sum(
+                1 for a_i in range(len(pts)) for b_i in range(a_i + 1, len(pts))
+                if math.hypot(pts[a_i][0] - pts[b_i][0], pts[a_i][1] - pts[b_i][1]) < 140.0
+            )
+            dense_pileup = close_pairs >= 3
+        ordered_pills = sorted(pills, key=lambda item: ranks.get(item[0].key, 99))
+        if dense_pileup:
+            ordered_pills = ordered_pills[:3]
         boxes = []
-        for h, x, y, fan in pills:
-            if not (window or alive_n <= 3 or h.key in recent):
+        for h, x, y, fan in ordered_pills:
+            rk = ranks.get(h.key, 99)
+            if not (window or alive_n <= 3 or h.key in recent or rk <= 3):
                 continue
             sx, sy = screen[h.key]
-            if sum(1 for px, py in pts if math.hypot(px - sx, py - sy) < 115) >= 3:
+            if not dense_pileup and sum(1 for px, py in pts if math.hypot(px - sx, py - sy) < 115) >= 4 and rk > 3:
                 continue
             s = renderer.name_pill(h, crown=fan, size=22)
-            boxes.append([s, x - s.get_width() / 2, y - s.get_height()])
-        for _ in range(3):
+            boxes.append([s, float(x - s.get_width() / 2), float(y - s.get_height()), rk])
+        y_min = float(LAYOUT["viewport"][0] + 12)
+        y_max = float(LAYOUT["captions"]["y"][0] - 44)
+        for _ in range(8):
+            for a in range(len(boxes)):
+                boxes[a][1] = max(24.0, min(boxes[a][1], float(W - boxes[a][0].get_width() - 24)))
+                boxes[a][2] = max(y_min, min(boxes[a][2], y_max))
+            moved = False
             for a in range(len(boxes)):
                 for b in range(a + 1, len(boxes)):
-                    ra = pygame.Rect(boxes[a][1], boxes[a][2], boxes[a][0].get_width(), boxes[a][0].get_height())
-                    rb = pygame.Rect(boxes[b][1], boxes[b][2], boxes[b][0].get_width(), boxes[b][0].get_height())
+                    ra = pygame.Rect(int(boxes[a][1]), int(boxes[a][2]), boxes[a][0].get_width(), boxes[a][0].get_height()).inflate(8, 6)
+                    rb = pygame.Rect(int(boxes[b][1]), int(boxes[b][2]), boxes[b][0].get_width(), boxes[b][0].get_height()).inflate(8, 6)
                     if ra.colliderect(rb):
-                        dy = (ra.bottom - rb.top) / 2 + 1 if ra.centery <= rb.centery else -((rb.bottom - ra.top) / 2 + 1)
+                        dy = (ra.bottom - rb.top) / 2.0 + 2.0 if ra.centery <= rb.centery else -((rb.bottom - ra.top) / 2.0 + 2.0)
                         boxes[a][2] -= dy
                         boxes[b][2] += dy
-        for s, x, y in boxes:
-            x = max(24, min(x, W - s.get_width() - 24))
-            y = max(LAYOUT["viewport"][0] + 10, min(y, LAYOUT["captions"]["y"][0] - 40))
-            self.frame.blit(s, (x, y))
+                        moved = True
+            if not moved:
+                break
+        drawn_rects: list[pygame.Rect] = []
+        for s, x, y, _rk in boxes:
+            x = max(24.0, min(x, float(W - s.get_width() - 24)))
+            y = max(y_min, min(y, y_max))
+            cand = pygame.Rect(int(x), int(y), s.get_width(), s.get_height())
+            if any(cand.inflate(4, 2).colliderect(prev) for prev in drawn_rects):
+                continue
+            self.frame.blit(s, cand.topleft)
+            drawn_rects.append(cand)
 
     def _bomb(self, x, y, t, timer: float | None = None):
         pulse = 2 if (timer is not None and timer < 1.5 and int(t * 14) % 2 == 0) else 0
@@ -1636,9 +1777,9 @@ class Renderer:
             ft = hud.outlined(f"{timer:.1f}s", 22, fill=col_t, width=3)
             self.frame.blit(ft, ft.get_rect(center=(int(x), int(y - 62))))
 
-    def draw_juice(self, cam: Cam, play_t: float, t_anim: float, popups: bool = True) -> None:
-        """v3.4: ghosts/sparks for KOs on camera (left_behind incinerations are drawn in foreground over the fire wall);
-        comic starbursts from the pre-scheduled, on-screen, non-stacking popup list."""
+    def draw_juice(self, cam: Cam, play_t: float, t_anim: float, popups: bool = False) -> None:
+        """World-space elimination ghosts, sparks, dust & corner clunks.
+        P0.4: Comic callouts (`BETRAYAL!`, `BONK!`, `YEET!`, `OOF!`) now render in `draw_popups()` ABOVE the HUD layer."""
         for e in self.tr.events:
             age = play_t - e.t
             if age < 0 or age > 0.95 or e.pos is None:
@@ -1669,8 +1810,11 @@ class Renderer:
                 effects.draw_corner_clunk(self.frame, (sx, sy), age, seed)
             elif e.kind == "glitch" and age < 0.32 and visible:
                 effects.draw_pixel_sparks(self.frame, (sx, sy), age, seed, lead=(e.data.get("effect") == "lead"))
-        if not popups:
-            return
+        if popups:
+            self.draw_popups(cam, play_t)
+
+    def draw_popups(self, cam: Cam, play_t: float) -> None:
+        """P0.4: High-Z comic starburst pass rendered strictly ABOVE the HUD layer & clamped clear of HUD bounds."""
         for t0, word, pos, seed in self.popups:
             age = play_t - t0
             if 0 <= age < effects.POPUP_S and cam.on_screen(pos[0], pos[1], pad=10):
@@ -1867,16 +2011,28 @@ class Renderer:
         return {self.tr.keys[i]: r + 1 for r, i in enumerate(alive_heroes)}
 
     def tuno_state(self, play_t: float, segment: str) -> tuple[str, str]:
-        """MC Tuno's 6 reaction poses (voice + RMS lip-sync + expressive face carry reactions)."""
+        """P2.4 Event-Driven King Animations in the castle window:
+        - `LEVER_PULL`: 0.5 s before (through +0.35 s after) REVERSED CONTROLS!, SPEED UP!, SHRINKING ARENA!, or twists.
+        - `LAUGHING_TEARS`: multi-eliminations (>= 3 eliminations within 1.0 s).
+        - `SHOCKED_JAWDROP`: BETRAYAL! events or photo finishes."""
         if segment == "cold":
             return "HYPED_TALKING", ""
-        if segment in ("card", "replay"):
+        if segment == "card":
             return "TROPHY_CHEER", ""
-        recent = [e for e in self.elims if 0 <= play_t - e.t < 1.15]
+        if segment == "replay":
+            return ("SHOCKED_JAWDROP" if self.is_photo_finish else "TROPHY_CHEER"), ""
+        # 1. lever_pull: 0.5 s before REVERSED CONTROLS!, SPEED UP!, SHRINKING ARENA! (holds briefly through pull)
+        if any(-0.50 <= play_t - lt <= 0.35 for lt in self.lever_times):
+            return "LEVER_PULL", ""
+        # 2. laughing: >= 3 eliminations within 1.0 s
+        recent = [e for e in self.elims if 0.0 <= play_t - e.t < 1.15]
         for e in recent:
-            if sum(1 for o in self.elims if e.t - 1.1 <= o.t <= e.t) >= 2:
+            if sum(1 for o in self.elims if e.t - 1.0 <= o.t <= e.t) >= 3:
                 return "LAUGHING_TEARS", ""
+        # 3. shocked: BETRAYAL! events or photo finishes
         if any(e.data.get("hero") and e.data.get("by_hero") for e in recent):
+            return "SHOCKED_JAWDROP", ""
+        if self.is_photo_finish and play_t >= self.end_t - 1.2:
             return "SHOCKED_JAWDROP", ""
         if recent and not recent[-1].data.get("by_hero") and recent[-1].data.get("cause") in ("fell", "lava"):
             return "FACEPALM", ""
@@ -1906,26 +2062,97 @@ class Renderer:
             return ("bolt", "1.3X SPEED", (250, 204, 21))
         return None
 
+    def _draw_cold_hook_banner(self, seg_t: float) -> None:
+        """P1.1: Crisp <= 1.5s instant-action viewer hook overlay ('PICK YOUR FIGHTER!' or 'WHO SURVIVES?')."""
+        goal = str(self.meta.get("recipe", {}).get("goal") or "reach_finish")
+        text = "WHO SURVIVES?" if (self.tr.mode == "TOP_DOWN" or goal in ("last_one_standing", "survive_timer", "hot_potato_bomb")) else "PICK YOUR FIGHTER!"
+        k_in = min(1.0, seg_t / 0.14)
+        k_out = 1.0 if seg_t < TIMELINE.cold_open_s - 0.22 else max(0.0, (TIMELINE.cold_open_s - seg_t) / 0.22)
+        alpha = int(255 * min(k_in, k_out))
+        if alpha <= 12:
+            return
+        scale = 1.22 - 0.22 * k_in
+        base = hud.fit_width(hud.outlined(text, 74, fill=(255, 224, 48), width=7), 860)
+        s = hud.fit_width(pygame.transform.rotozoom(base, -2, scale), 920)
+        if alpha < 255:
+            s = s.copy()
+            s.set_alpha(alpha)
+        hud.blit_text(self.frame, s, center=(W // 2, 418))
+
+    def _resolve_cam(self, shot: Shot, fi: int, tf: float) -> Cam:
+        cam = self.cams[fi]
+        cap = self.cams[min(self.pre, len(self.cams) - 1)].zoom * 2.6
+        if self.tr.mode == "TOP_DOWN":
+            z_top = min(cam.zoom * (1.08 if shot.segment == "replay" else shot.zoom_mult), cap)
+            return Cam(cam.x, cam.y, z_top, cam.shake)
+        if shot.zoom_mult != 1.0 and shot.focus:
+            i = self.tr.index(shot.focus)
+            rows, _, _ = self.tr.sample(tf / FPS)
+            return Cam(float(rows[i, 0]), float(rows[i, 1]), min(cam.zoom * shot.zoom_mult, cap))
+        if shot.zoom_mult != 1.0:
+            return Cam(cam.x, cam.y, min(cam.zoom * shot.zoom_mult, cap), cam.shake)
+        return cam
+
+    def render_world_crop(self, shot: Shot, index: int, out_w: int = 1120, out_h: int = 840) -> pygame.Surface:
+        """Part 5: Renders a clean HUD-free 4:3 (1120x840) widescreen action crop centered on the camera's focal band
+        so characters and physics fill 58% of the 1920x1080 Tuno Report screen with zero aspect distortion."""
+        hud.TEXT_BOXES.clear()
+        tf = shot.tf
+        fi = int(min(self.tr.n_frames - 1, max(0, round(tf))))
+        cam = self._resolve_cam(shot, fi, tf)
+        t_anim = index / FPS
+        play_t = (fi - self.pre) / FPS
+        eff_play_t = play_t if shot.segment not in ("cold", "replay", "chaos_slomo") else (tf - self.pre) / FPS
+        ranks = self._ranks(fi)
+        slow = shot.segment in ("cold", "replay", "chaos_slomo") or abs(tf - round(tf)) > 1e-3
+        active_seg = shot.segment in ("play", "replay", "chaos_slomo")
+
+        self.frame.set_clip(None)
+        self.draw_world(cam, fi, t_anim, 0.0 if shot.segment == "cold" else play_t)
+        self.frame.set_clip(pygame.Rect(0, 0, W, H))
+        self.draw_contestants(cam, tf if slow else fi, t_anim, ranks=ranks, show_tags=active_seg)
+        if shot.segment == "replay":
+            effects.draw_confetti(self.frame, shot.seg_t, 5, pygame.Rect(0, 420, W, 1080))
+        if shot.segment in ("play", "replay", "chaos_slomo", "cold"):
+            self.draw_juice(cam, eff_play_t, t_anim, popups=False)
+        if active_seg:
+            self._draw_glitch_blinks(cam, fi, eff_play_t)
+        if self.tr.mode == "SIDE_VIEW":
+            self._abyss(cam, fi, t_anim)
+            if shot.segment != "card":
+                self._draw_killer_fire(cam, fi, eff_play_t, t_anim)
+        if active_seg:
+            self.draw_popups(cam, eff_play_t)
+        self.frame.set_clip(None)
+
+        # Exact 4:3 crop (1080x810) centered at the camera's SCREEN_CY (950) -> scaled cleanly to out_w x out_h (1120x840)
+        crop_h = int(round(W * out_h / max(1, out_w)))
+        cy_screen = int(round(sum(LAYOUT["action_bias"]) / 2))
+        y0 = max(0, min(H - crop_h, cy_screen - crop_h // 2))
+        sub = self.frame.subsurface(pygame.Rect(0, y0, W, crop_h))
+        out = pygame.transform.smoothscale(sub, (out_w, out_h)) if (W, crop_h) != (out_w, out_h) else sub.copy()
+        if shot.segment in ("replay", "chaos_slomo"):
+            lbl_s = "INSTANT REPLAY" if shot.segment == "replay" else "CHAOS CAM • 0.4X"
+            bg_c = (190, 30, 60) if shot.segment == "replay" else (217, 119, 6)
+            txt = hud.outlined(lbl_s, 28, fill=(255, 236, 120), width=4)
+            box = pygame.Rect(0, 0, txt.get_width() + 62, 46)
+            box.topright = (out_w - 22, 20)
+            pygame.draw.rect(out, BLACK, box.move(0, 3), border_radius=23)
+            pygame.draw.rect(out, bg_c, box, border_radius=23)
+            pygame.draw.rect(out, BLACK, box, 3, border_radius=23)
+            if int(t_anim * 4) % 2 == 0:
+                pygame.draw.circle(out, WHITE_, (box.left + 22, box.centery), 8)
+            out.blit(txt, txt.get_rect(midleft=(box.left + 40, box.centery)))
+        return out
+
     def render_shot(self, shot: Shot, index: int) -> pygame.Surface:
         hud.TEXT_BOXES.clear()
         tf = shot.tf
         fi = int(min(self.tr.n_frames - 1, max(0, round(tf))))
-        cam = self.cams[fi]
+        cam = self._resolve_cam(shot, fi, tf)
         t_anim = index / FPS
-        cap = self.cams[min(self.pre, len(self.cams) - 1)].zoom * 2.6
-        if self.tr.mode == "TOP_DOWN":
-            # Part A.3: Strictly lock TOP_DOWN camera center at (0, 0) through the ENTIRE match and replay!
-            z_top = min(cam.zoom * (1.08 if shot.segment == "replay" else shot.zoom_mult), cap)
-            cam = Cam(0.0, 0.0, z_top, cam.shake)
-        elif shot.zoom_mult != 1.0 and shot.focus:
-            i = self.tr.index(shot.focus)
-            rows, _, _ = self.tr.sample(tf / FPS)
-            cam = Cam(float(rows[i, 0]), float(rows[i, 1]), min(cam.zoom * shot.zoom_mult, cap))
-        elif shot.zoom_mult != 1.0:
-            cam = Cam(cam.x, cam.y, min(cam.zoom * shot.zoom_mult, cap), cam.shake)
         play_t = (fi - self.pre) / FPS
         eff_play_t = play_t if shot.segment not in ("cold", "replay") else (tf - self.pre) / FPS
-        # Part A.3: Sync ALIVE counter & ranks to exact visual frame `fi` during replay (never prematurely show end_f!)
         hud_fi = self.end_f if shot.segment == "card" else fi
         ranks = self._ranks(hud_fi)
         slow = shot.segment in ("cold", "replay")
@@ -1934,15 +2161,13 @@ class Renderer:
         self.frame.set_clip(self.world_rect)
         self.draw_contestants(cam, tf if slow else fi, t_anim, ranks=ranks,
                               show_tags=shot.segment in ("play", "replay"))
-        # v4.3: "visually alive" = ALIVE or still mid-fall (exactly what the HUD shows) -> never celebrate early
-        self._cur_alive = int(sum(1 for f in self.tr.flags[fi] if (f & T.ALIVE) or (f & T.FALLING)))
-        crossed = self.finish_t is not None and eff_play_t >= self.finish_t
-        if shot.segment == "replay" and (self._cur_alive <= 1 or crossed):
-            effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)   # never while the duel is undecided
+        # P0.1: Trigger confetti particle burst immediately throughout the 1.5s 0.3x slow-motion finish sequence!
+        if shot.segment == "replay":
+            effects.draw_confetti(self.frame, shot.seg_t, 5, self.world_rect)
         if shot.segment == "cold" and not self.finale:
             self._draw_spotlights(cam, fi, shot.seg_t)
         if shot.segment in ("play", "replay", "cold"):
-            self.draw_juice(cam, eff_play_t, t_anim, popups=shot.segment != "cold")
+            self.draw_juice(cam, eff_play_t, t_anim, popups=False)
         if shot.segment in ("play", "replay"):
             self._draw_glitch_blinks(cam, fi, eff_play_t)
         if self.tr.mode == "SIDE_VIEW":
@@ -1956,6 +2181,9 @@ class Renderer:
         self.frame.set_clip(None)
         rms = self.voice_rms[index] if (self.voice_rms is not None and index < len(self.voice_rms)) else None
         self._overlays(shot, play_t, t_anim, hud_fi, ranks, index / FPS, voice_rms=rms)
+        # P0.4: Comic callouts render on a strictly higher z-layer ABOVE the HUD (and never over Winner Card)
+        if shot.segment in ("play", "replay"):
+            self.draw_popups(cam, eff_play_t)
         self._draw_brand_overlay(shot)
         return self.frame
 
@@ -2073,8 +2301,12 @@ class Renderer:
         bstyle = getattr(self.theme, "block_style", "royal")
         ky = self.tr.zones[fi].get("lava_y", self.meta.get("kill_y", 500.0))
         y0 = int(cam.to_screen(0, ky)[1])
-        y0 = max(1540, int(self._lowest_slab_y + 28), min(1760, y0))
-        y0 = min(1760, y0)
+        if H >= 1500:
+            y0 = max(1540, int(self._lowest_slab_y + 28), min(1760, y0))
+            y0 = min(1760, y0)
+        else:
+            y0 = max(H - 220, int(self._lowest_slab_y + 24), min(H - 86, y0))
+            y0 = min(H - 86, y0)
 
         pygame.draw.rect(fr, BLACK, (0, y0 - 8, W, H - y0 + 8))
         pygame.draw.rect(fr, (54, 52, 74), (0, y0 - 6, W, 12))
@@ -2244,7 +2476,7 @@ class Renderer:
                   out_t: float = 0.0, voice_rms: float | None = None) -> None:
         fr = self.frame
         flags = self.tr.flags[fi]
-        alive = int(sum(1 for f in flags if (f & T.ALIVE) or (self.tr.mode == "TOP_DOWN" and (f & T.FALLING))))
+        alive = self._alive_at(fi, shot.segment)
         total = len(self.tr.keys)
         status = {}
         for h in self.heroes:
@@ -2267,8 +2499,11 @@ class Renderer:
                                pulse=pulse, t=t_anim, eff_slots=eff_slots, reigning_champion=reigning)
         if shot.segment in ("cold", "play") and not (shot.segment == "cold" and self.finale):
             self._draw_goal_hud(fi, t_anim)
-        if shot.segment == "cold" and self.finale:
-            self._draw_vs_clash(shot.seg_t)
+        if shot.segment == "cold":
+            if self.finale:
+                self._draw_vs_clash(shot.seg_t)
+            else:
+                self._draw_cold_hook_banner(shot.seg_t)
 
         scenery.draw_header(fr, self.castle, self.ep.ep_label, t_st, t_anim, hud.TEXT_BOXES,
                             talking=self._talking(out_t), voice_rms=voice_rms, twist_badge=twist_badge)
@@ -2283,6 +2518,12 @@ class Renderer:
             hero = HERO_BY_KEY.get(w) if w else None
             name = hero.name if hero else (f"Number {self.extras[w].number}" if w in self.extras else "Nobody")
             col = renderer.hex_rgb(hero.colour) if hero else (200, 180, 140)
+            f_teaser: bool | None = None
+            if self.ep.outcome is None and self.ep.league_ctx:
+                scfg = settings().get("season") or {}
+                r_no = int(self.ep.league_ctx.get("race_number") or self.ep.league_ctx.get("episode_number") or 0)
+                if scfg.get("finale_cross_promo_enabled", True) and r_no:
+                    f_teaser = r_no in set(scfg.get("finale_cross_promo_races") or [28, 29, 30])
             hud.draw_winner_card(
                 fr,
                 hero,
@@ -2293,6 +2534,7 @@ class Renderer:
                 shot.seg_t,
                 bot=self.extras.get(w) if w else None,
                 outcome=self.ep.outcome,
+                finale_teaser=f_teaser,
             )
         elif self.speech:
             from src.rendering import captions

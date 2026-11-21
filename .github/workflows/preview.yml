@@ -14,7 +14,7 @@ permissions:
 jobs:
   preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     env:
       SDL_VIDEODRIVER: dummy
       SDL_AUDIODRIVER: dummy

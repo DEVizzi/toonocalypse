@@ -11,9 +11,9 @@ from functools import lru_cache
 
 import pygame
 
-from src.config import W, font_path
+from src.config import LAYOUT, W, font_path
 
-ZONE_TOP, ZONE_BOTTOM = 1480, 1620
+ZONE_TOP, ZONE_BOTTOM = LAYOUT["captions"]["y"]
 MAX_W = 960
 BLACK = (12, 12, 16)
 WHITE = (255, 255, 255)

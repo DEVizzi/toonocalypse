@@ -24,6 +24,7 @@ CRIMSON = (235, 48, 76)
 
 STATES = (
     "HYPED_TALKING",
+    "LEVER_PULL",
     "SHOCKED_JAWDROP",
     "LAUGHING_TEARS",
     "FACEPALM",
@@ -33,7 +34,8 @@ STATES = (
 
 _ALIASES = {
     "idle": "HYPED_TALKING",
-    "lever": "HYPED_TALKING",
+    "lever": "LEVER_PULL",
+    "lever_pull": "LEVER_PULL",
     "shocked": "SHOCKED_JAWDROP",
     "laughing": "LAUGHING_TEARS",
     "evil": "SWEATING_INTENSE",
@@ -337,6 +339,16 @@ def draw_tuno(s: pygame.Surface, cx: float, base_y: float, state: str, t: float,
             pygame.draw.rect(s, SKIN_SHADE, (int(ex - er), int(fy - er), int(er * 2), int(er * 0.9)))
             pygame.draw.line(s, BLACK, (ex - er - 2, fy - r * 0.01), (ex + er + 2, fy + r * 0.02), lw)
         _sweat_drop(s, bx - r * 0.50, fy - r * 0.16, r * 0.09)
+    elif st == "LEVER_PULL":
+        # Mischievous slanted royal-schemer brows + gleaming focused eyes
+        for side in (-1, 1):
+            ex = bx + side * r * 0.27
+            er = r * 0.17
+            pygame.draw.circle(s, BLACK, (ex, fy), er + lw - 1)
+            pygame.draw.circle(s, WHITE, (ex, fy), er)
+            pygame.draw.circle(s, BLACK, (ex + side * r * 0.05, fy + r * 0.02), max(2, int(r * 0.075)))
+            pygame.draw.circle(s, GOLD, (ex + side * r * 0.03, fy - r * 0.02), max(1, int(r * 0.035)))
+            pygame.draw.line(s, BLACK, (ex - side * r * 0.22, fy - r * 0.28), (ex + side * r * 0.17, fy - r * 0.10), lw + 1)
     else:  # HYPED_TALKING
         look_x = math.sin(t * 2.2) * r * 0.03
         for side in (-1, 1):
@@ -383,6 +395,31 @@ def draw_tuno(s: pygame.Surface, cx: float, base_y: float, state: str, t: float,
     elif st == "SWEATING_INTENSE":
         _glove_hand(s, bx - r * 0.92, desk_y - r * 0.02, hr, lw)
         _glove_hand(s, bx + r * 0.92, desk_y - r * 0.02, hr, lw)
+    elif st == "LEVER_PULL":
+        # Left hand braces on desk; right hand yanks a golden/crimson castle hazard lever!
+        _glove_hand(s, bx - r * 0.92, desk_y - r * 0.06, hr, lw)
+        piv_x, piv_y = bx + r * 1.34, desk_y - r * 0.04
+        pull_u = 0.5 + 0.5 * math.sin(t * 9.5)
+        ang_l = -math.pi / 2 + (-0.42 + 0.96 * pull_u)
+        shaft_len = r * 1.18
+        tip_x = piv_x + math.cos(ang_l) * shaft_len
+        tip_y = piv_y + math.sin(ang_l) * shaft_len
+        # Lever base housing
+        housing = pygame.Rect(int(piv_x - r * 0.28), int(piv_y - r * 0.16), int(r * 0.56), int(r * 0.22))
+        pygame.draw.rect(s, BLACK, housing.inflate(4, 4), border_radius=5)
+        pygame.draw.rect(s, GOLD, housing, border_radius=4)
+        # Lever shaft + crimson ball knob + gripping glove hand
+        pygame.draw.line(s, BLACK, (piv_x, piv_y), (tip_x, tip_y), lw + 5)
+        pygame.draw.line(s, (210, 218, 232), (piv_x, piv_y), (tip_x, tip_y), max(2, lw + 1))
+        knob_r = max(5, int(r * 0.22))
+        pygame.draw.circle(s, BLACK, (int(tip_x), int(tip_y)), knob_r + lw)
+        pygame.draw.circle(s, CRIMSON, (int(tip_x), int(tip_y)), knob_r)
+        pygame.draw.circle(s, (255, 190, 200), (int(tip_x - knob_r * 0.28), int(tip_y - knob_r * 0.28)), max(2, knob_r // 3))
+        gx = piv_x + math.cos(ang_l) * (shaft_len * 0.68)
+        gy = piv_y + math.sin(ang_l) * (shaft_len * 0.68)
+        _glove_hand(s, gx, gy, hr * 0.92, lw)
+        if pull_u > 0.68:
+            _star(s, tip_x + r * 0.20, tip_y - r * 0.18, r * 0.13, GOLD)
     elif st == "TROPHY_CHEER":
         _glove_hand(s, bx - r * 0.98, desk_y - r * 0.36 - talk_jab, hr, lw)
         tx_cup, ty_cup = bx + r * 1.30, head_y + r * 0.44 - talk_jab * 0.6

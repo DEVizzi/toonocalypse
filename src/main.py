@@ -101,9 +101,11 @@ def flash_event(tr: Trace) -> Event | None:
 
 
 def comment_prompt(heroes: list, winner: str | None, rng: random.Random) -> str:
+    w_hero = HERO_BY_KEY.get(winner) if winner else None
     pool = [h for h in heroes if h.key != winner] or list(HEROES)
-    a, b = rng.sample(pool, 2) if len(pool) >= 2 else (pool[0], pool[0])
-    return f"{a.name} or {b.name} tomorrow? Drop your pick!"
+    rival = rng.choice(pool)
+    first = w_hero.name if w_hero is not None else (pool[1].name if len(pool) > 1 else rival.name)
+    return f"{first} or {rival.name} tomorrow? Comment your pick 👇"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -121,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--race", type=int, default=None, help="override race number 1..30 (synthesizes mock table in --dry-run)")
     ap.add_argument("--arena", default=None)
     ap.add_argument("--goal", default=None)
-    ap.add_argument("--mode", choices=["SIDE_VIEW", "TOP_DOWN"], default=None)
+    ap.add_argument("--mode", choices=["SIDE_VIEW", "TOP_DOWN", "widescreen_finale"], default=None)
     ap.add_argument("--kind", choices=["spotlight", "rumble"], default="spotlight")
     ap.add_argument("--hazards", default=None, help="comma-separated hazard override (test renders)")
     ap.add_argument("--twist", default=None, help="twist override, or 'none'")
@@ -139,6 +141,13 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
 
     seed = a.seed if a.seed is not None else int(time.time()) % 100000
+    if a.mode == "widescreen_finale" or a.arena == "widescreen_finale":
+        from src.rendering.widescreen_finale import render_widescreen_finale
+        s_num = max(1, int(a.season or 1))
+        out_p = Path(a.out) if a.out != "output/episode.mp4" else Path(f"output/widescreen_finale_s{s_num}.mp4")
+        st_dir = (out_p.parent / "finale_stills") if (a.stills or a.brand_stills) else None
+        render_widescreen_finale(season=s_num, seed=seed, out_mp4=out_p, use_tts=not a.no_audio, stills_dir=st_dir)
+        return 0
     rng = random.Random(seed)
     history = _load("episode_history.json", {"entries": []})
     entries = list(history.get("entries", []) if isinstance(history, dict) else history)
