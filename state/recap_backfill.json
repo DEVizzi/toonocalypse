@@ -1,0 +1,248 @@
+{
+  "records": {
+    "s1_r1": {
+      "v": 1,
+      "code_sha": "693848826a44cf5ca7a4ba95811b7be13c7df8ea",
+      "seed": 22959,
+      "sim_seed": 22959006,
+      "recipe": {
+        "seed": 22959,
+        "mode": "SIDE_VIEW",
+        "arena": "crusher_gauntlet",
+        "goal": "reach_finish",
+        "hazards": [
+          "falling_floor_tiles",
+          "slippery_ice"
+        ],
+        "twist": null,
+        "theme": "royal_classic",
+        "params": {
+          "layout_seed": 916841132,
+          "gauntlet_bays": 11
+        },
+        "two_stage": false,
+        "flash_forward": true,
+        "episode_kind": "spotlight",
+        "finale": false
+      },
+      "heroes": [
+        "bonk",
+        "pip",
+        "boing",
+        "sly",
+        "grumble",
+        "dash",
+        "magneto",
+        "floater",
+        "juggernaut",
+        "glitch"
+      ],
+      "extras": [
+        {
+          "number": 1,
+          "colour": "#D5D9DE",
+          "radius": 20,
+          "mass": 0.95,
+          "max_speed": 215.28296065794441,
+          "friction": 0.45,
+          "elasticity": 0.6,
+          "behaviour": [
+            0.10080770888431985,
+            0.1387307928185015,
+            0.11110639368348693,
+            0.009733770560456588
+          ],
+          "cult": false,
+          "golden": false
+        },
+        {
+          "number": 2,
+          "colour": "#D5D9DE",
+          "radius": 20,
+          "mass": 0.95,
+          "max_speed": 216.90021558471247,
+          "friction": 0.45,
+          "elasticity": 0.6,
+          "behaviour": [
+            0.10336717716649203,
+            0.02390904983706953,
+            0.31951282401071257,
+            0.012684410445852534
+          ],
+          "cult": false,
+          "golden": false
+        },
+        {
+          "number": 3,
+          "colour": "#D5D9DE",
+          "radius": 20,
+          "mass": 0.95,
+          "max_speed": 236.7369034872793,
+          "friction": 0.45,
+          "elasticity": 0.6,
+          "behaviour": [
+            0.24686555030050605,
+            0.19922853907128166,
+            0.10330126559498948,
+            0.2969518324573135
+          ],
+          "cult": false,
+          "golden": false
+        },
+        {
+          "number": 4,
+          "colour": "#D5D9DE",
+          "radius": 20,
+          "mass": 0.95,
+          "max_speed": 243.8328007835105,
+          "friction": 0.45,
+          "elasticity": 0.6,
+          "behaviour": [
+            0.1842009219625677,
+            0.23448697582606626,
+            0.34626857065348016,
+            0.059355116080440584
+          ],
+          "cult": false,
+          "golden": false
+        }
+      ],
+      "ranking": [
+        "glitch",
+        "bonk",
+        "floater",
+        "grumble",
+        "magneto",
+        "sly",
+        "extra3",
+        "dash",
+        "juggernaut",
+        "pip",
+        "boing",
+        "extra1",
+        "extra4",
+        "extra2"
+      ],
+      "winner": "glitch",
+      "resolved_at": 18.367,
+      "elims": [
+        {
+          "t": 7.567,
+          "actors": [
+            "extra2"
+          ],
+          "cause": "crushed",
+          "hero": false,
+          "by_hero": false
+        },
+        {
+          "t": 8.667,
+          "actors": [
+            "extra4"
+          ],
+          "cause": "crushed",
+          "hero": false,
+          "by_hero": false
+        },
+        {
+          "t": 10.0,
+          "actors": [
+            "extra1",
+            "pip"
+          ],
+          "cause": "crushed",
+          "hero": false,
+          "by_hero": true
+        },
+        {
+          "t": 13.1,
+          "actors": [
+            "pip",
+            "juggernaut"
+          ],
+          "cause": "left_behind",
+          "hero": true,
+          "by_hero": true
+        },
+        {
+          "t": 13.1,
+          "actors": [
+            "boing",
+            "juggernaut"
+          ],
+          "cause": "left_behind",
+          "hero": true,
+          "by_hero": true
+        },
+        {
+          "t": 13.233,
+          "actors": [
+            "juggernaut",
+            "boing"
+          ],
+          "cause": "left_behind",
+          "hero": true,
+          "by_hero": true
+        },
+        {
+          "t": 16.433,
+          "actors": [
+            "dash",
+            "extra3"
+          ],
+          "cause": "left_behind",
+          "hero": true,
+          "by_hero": false
+        },
+        {
+          "t": 16.533,
+          "actors": [
+            "extra3",
+            "sly"
+          ],
+          "cause": "left_behind",
+          "hero": false,
+          "by_hero": true
+        },
+        {
+          "t": 16.633,
+          "actors": [
+            "magneto"
+          ],
+          "cause": "left_behind",
+          "hero": true,
+          "by_hero": false
+        },
+        {
+          "t": 16.633,
+          "actors": [
+            "sly",
+            "extra3"
+          ],
+          "cause": "left_behind",
+          "hero": true,
+          "by_hero": false
+        },
+        {
+          "t": 16.967,
+          "actors": [
+            "grumble"
+          ],
+          "cause": "left_behind",
+          "hero": true,
+          "by_hero": false
+        },
+        {
+          "t": 17.333,
+          "actors": [
+            "floater"
+          ],
+          "cause": "left_behind",
+          "hero": true,
+          "by_hero": false
+        }
+      ]
+    }
+  },
+  "note": "Replay records for races published before entry.recap existed. Written only by `python -m src.recap.backfill --write` after fingerprint + winner + table verification."
+}

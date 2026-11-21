@@ -269,7 +269,8 @@ class ClipReader:
         self.proc = None
         if path and Path(path).is_file():
             self.proc = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-i", str(path), "-f", "rawvideo",
-                                          "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
+                                          "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE,
+                                         stderr=subprocess.DEVNULL)
 
     def frame(self, i: int) -> pygame.Surface | None:
         while self.proc is not None and self.idx < i:
@@ -602,12 +603,12 @@ class RecapVideo:
             if kk <= 0:
                 continue
             cx = 120 + i * 230
-            cy = 120 + int((1 - kk) * 40)
+            cy = 108 + int((1 - kk) * 40)
             pygame.draw.circle(s, MEDALS[i], (cx, cy), 74)
             pygame.draw.circle(s, BLACK, (cx, cy), 74, 5)
             blit_c(s, ball(key, 104, "celebrating" if i == 0 else "happy"), (cx, cy - 4))
             blit_c(s, txt(["1ST", "2ND", "3RD"][i], 30, fill=MEDALS[i], width=3), (cx, cy - 92))
-            blit_c(s, fit(txt(name(key).upper(), 30, fill=WHITE, width=3), 210), (cx, cy + 92))
+            blit_c(s, fit(txt(name(key).upper(), 30, fill=WHITE, width=3), 210), (cx, cy + 96))
             pts = ri.points.get(key, 0) - (2 if key == ri.ko_bonus else 0)
             if not playoff and pts > 0:
                 blit_c(s, chip(f"+{pts}", (22, 163, 74), 26), (cx + 66, cy - 58))
@@ -685,8 +686,6 @@ class RecapVideo:
                         fr.blit(fl, PHONE.topleft)
                     if 0 <= t - b < 1.2:
                         blit_c(fr, chip("THE FINISH", (37, 99, 235), 34), (PHONE.centerx, 300))
-                if seg == "replay" and t < clip_s:
-                    blit_c(fr, chip("INSTANT REPLAY", (147, 51, 234), 30), (PHONE.centerx, 1000))
             else:
                 fr.blit(noise[int(t * 12) % len(noise)], PHONE.topleft)
                 dim = pygame.Surface(PHONE.size, pygame.SRCALPHA)

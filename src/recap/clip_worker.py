@@ -188,7 +188,7 @@ def run(root: Path, job: dict) -> dict:
             cap = r.cams[min(pre, len(r.cams) - 1)].zoom * 2.6
             for k, f in enumerate(frames):
                 side_view = trace.mode == "SIDE_VIEW"
-                shot = Shot(f, "replay", k / FPS, 1.3, fz["victim"]) if side_view else Shot(f, "play", (f - pre) / FPS)
+                shot = Shot(f, "play", (f - pre) / FPS, 1.3, fz["victim"]) if side_view else Shot(f, "play", (f - pre) / FPS)
                 surf = r.render_shot(shot, len(plan) + k)
                 enc2.write(surf, pygame)
                 base = r.cams[f]
