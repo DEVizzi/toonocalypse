@@ -1,0 +1,50 @@
+name: Tuno Report branch test (temporary)
+
+on:
+  push:
+    branches: ["feat/tuno-report"]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: ffmpeg
+        run: |
+          if which ffmpeg && which ffprobe; then exit 0; fi
+          sudo apt-get -o Acquire::ForceIPv4=true update -q && sudo apt-get -o Acquire::ForceIPv4=true install -y -q --no-install-recommends ffmpeg
+      - run: pip install -r requirements.txt
+      - name: Full test suite
+        run: python -m pytest -q
+      - name: Backfill S1 R1 (verify on Linux; written to the runner only)
+        run: python -m src.recap.backfill --season 1 --race 1 --seed 22959 --code-sha 693848826a44cf5ca7a4ba95811b7be13c7df8ea --write
+      - name: Real-state preview (S1 so far, time machine @ race commit)
+        run: python -m src.recap.run --mode preview --season 1 --dry-run --stills --no-tts --max-frames 900
+      - name: Demo season Part 1 (full render, real TTS + gates)
+        run: python -m src.recap.run --mode demo --dry-run --stills
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tuno-report-branch-test
+          path: |
+            state/recap_backfill.json
+            output/recap*/tuno_report_*.mp4
+            output/recap*/tuno_report_*.json
+            output/recap*/tuno_report_*_thumb.jpg
+            output/recap*/stills/*.png
+            output/recap*/clips/*.json
+          retention-days: 2
+          if-no-files-found: ignore

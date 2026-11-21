@@ -358,6 +358,13 @@ def main(argv: list[str] | None = None) -> int:
             "line_ids": list(line_ids),
             "cliches": list(cliches),
         })
+        try:
+            # The Tuno Report (src/recap): compact replay record -> exact tables + bit-exact re-sim later
+            from src.recap.record import build_record
+
+            entry["recap"] = build_record(seed, recipe, heroes, extras, trace)
+        except Exception as exc:  # noqa: BLE001 - recap data is a bonus; it must never block the daily episode
+            print(f"[RECAP RECORD WARN] {type(exc).__name__}: {str(exc)[:160]}")
 
         if a.stage_only:
             # Transactional Step A: store pending_state in summary .json without modifying state/*.json on disk

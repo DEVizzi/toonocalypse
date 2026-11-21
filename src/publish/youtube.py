@@ -22,6 +22,7 @@ UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
 VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
 CHANNELS_URL = "https://www.googleapis.com/youtube/v3/channels"
 COMMENT_THREADS_URL = "https://www.googleapis.com/youtube/v3/commentThreads"
+THUMBNAIL_URL = "https://www.googleapis.com/upload/youtube/v3/thumbnails/set"
 MAX_BYTES = 256 * 1024 * 1024
 PRIVACY = ("public", "unlisted", "private")
 DEFAULT_CATEGORY_ID = "20"     # Gaming
@@ -201,4 +202,22 @@ def delete_video(video_id: str) -> bool:
     return resp.status_code in (200, 204, 404)
 
 
-__all__ = ["OAuthError", "delete_video", "post_comment", "update_video_metadata", "upload_short"]
+def set_thumbnail(video_id: str, image: Path) -> bool:
+    """Uploads a custom thumbnail (`thumbnails.set`, JPEG/PNG <= 2 MB). Needs a verified channel; callers treat a
+    failure as best-effort (the video is already live)."""
+    vid = _valid_vid(video_id)
+    size = image.stat().st_size
+    if not (0 < size <= 2 * 1024 * 1024):
+        raise RuntimeError("thumbnail size out of bounds")
+    ctype = "image/png" if image.suffix.lower() == ".png" else "image/jpeg"
+    req = _requests()
+    token, _, _ = access_token()
+    with image.open("rb") as fh:
+        resp = req.post(THUMBNAIL_URL, params={"videoId": vid, "uploadType": "media"}, data=fh, timeout=60,
+                        headers={"Authorization": f"Bearer {token}", "Content-Type": ctype})
+    if resp.status_code != 200:
+        raise RuntimeError(f"thumbnails.set failed: HTTP {resp.status_code} ({_api_reason(resp)})")
+    return True
+
+
+__all__ = ["OAuthError", "delete_video", "post_comment", "set_thumbnail", "update_video_metadata", "upload_short"]
