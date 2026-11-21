@@ -55,6 +55,112 @@ def _spring(x: float, v: float, target: float, omega: float, dt: float) -> tuple
     return target + (d + temp) * e, (v - omega * temp) * e
 
 
+def track_window(trace: T.Trace, view_w: float = 1080.0, view_h: float = 810.0) -> list[Cam]:
+    """Part 5 recap camera: frames the action for a `view_w x view_h` (4:3) window centred on SCREEN_CY.
+
+    Unlike `track` (tuned for the tall 9:16 Shorts viewport), this fits BOTH axes of the widescreen window:
+    - SIDE_VIEW: densest cluster of living heroes (front-runners win ties) + any hero knockout happening within
+      the next 0.5 s / last 0.6 s, fitted with padding; zoom 0.60x-1.55x (tight on the final 3).
+    - TOP_DOWN: whole platform fitted to the 4:3 window, zooming in as the arena shrinks / on the final 3.
+    Guarantees at least one living hero inside the window on every frame (when any is alive)."""
+    meta = trace.meta
+    rs = settings()["render"]
+    top = trace.mode == "TOP_DOWN"
+    x0, y0, x1, y1 = meta["bounds"]
+    hero_idx = {trace.index(k) for k in meta["heroes"] if k in trace.keys}
+    pre = meta.get("preroll_frames", 0)
+    kos = [(pre + int(e.t * FPS), float(e.pos[0]), float(e.pos[1])) for e in trace.events
+           if e.kind == "elimination" and e.data.get("hero") and e.pos is not None]
+    ko_pre, ko_post = int(0.5 * FPS), int(0.6 * FPS)
+    dt = 1.0 / FPS
+    pad = 140.0
+    zmin, zmax_live, zmax_f3 = 0.56, 1.22, 1.55
+    win_w, win_h = view_w / 0.62, view_h / 0.62          # cluster window in world px
+    top_zmax = float(rs.get("top_zoom_max", 2.0))
+    if top:
+        span = max(x1 - x0, (y1 - y0) * view_w / view_h)
+        base = min(1.15, view_w / max(1.0, span)) * float(rs.get("top_zoom", 1.0))
+        r0 = next((float(s["r"]) for s in meta.get("statics", []) if s.get("type") == "ring"),
+                  float(trace.zones[0].get("ring_r", 1.0)))
+    cams: list[Cam] = []
+    cx = cy = None
+    cz = 1.0
+    vx = vy = vz = 0.0
+    last_t = (0.0, 0.0)
+    for f in range(trace.n_frames):
+        rows, flags = trace.frames[f], trace.flags[f]
+        alive = [i for i in range(len(rows)) if flags[i] & T.ALIVE]
+        alive_h = [i for i in alive if i in hero_idx] or alive
+        ko_pts = [(kx, ky) for kf, kx, ky in kos if -ko_pre <= f - kf <= ko_post]
+        if top:
+            z0 = trace.zones[f]
+            ring_scale = float(z0.get("ring_r", r0)) / max(1.0, r0)
+            ek = z0.get("edge_k", 1.0) * z0.get("shrink", 1.0) * ring_scale
+            tz = base * min(top_zmax, max(1.0, 1.0 / max(ek, 1e-3)))
+            tx = ty = 0.0
+            if 1 <= len(alive) <= 3:
+                xs = [float(rows[i, 0]) for i in alive]
+                ys = [float(rows[i, 1]) for i in alive]
+                lim = 135.0 * max(0.35, ek)
+                tx = max(-lim, min(lim, 0.5 * (min(xs) + max(xs))))
+                ty = max(-lim, min(lim, 0.5 * (min(ys) + max(ys))))
+                tz = min(base * 2.0, max(tz, base * 1.35))
+        elif not alive_h:
+            tx, ty = last_t
+            tz = cz
+        else:
+            hp = np.array([[float(rows[i, 0]), float(rows[i, 1])] for i in alive_h])
+            order_x = np.argsort(np.argsort(hp[:, 0])) / max(1, len(hp) - 1)   # 0 = last, 1 = front
+            best_j, best_s = 0, -1.0
+            for j in range(len(hp)):
+                m = (np.abs(hp[:, 0] - hp[j, 0]) <= win_w / 2) & (np.abs(hp[:, 1] - hp[j, 1]) <= win_h / 2)
+                s = float(m.sum()) + 0.35 * float(order_x[j])
+                if s > best_s:
+                    best_j, best_s = j, s
+            c = hp[best_j]
+            m = (np.abs(hp[:, 0] - c[0]) <= win_w / 2) & (np.abs(hp[:, 1] - c[1]) <= win_h / 2)
+            pts = [tuple(p) for p in hp[m]]
+            for kx, ky in ko_pts:
+                if abs(kx - c[0]) <= win_w * 0.7 and abs(ky - c[1]) <= win_h * 0.7:
+                    pts.append((kx, ky))
+            px_ = [p[0] for p in pts]
+            py_ = [p[1] for p in pts]
+            bw = max(px_) - min(px_) + 2 * pad
+            bh = max(py_) - min(py_) + 2 * pad
+            cap = zmax_f3 if len(alive) <= 3 else zmax_live
+            tz = max(zmin, min(cap, view_w / bw, view_h / bh))
+            tx = 0.5 * (min(px_) + max(px_))
+            ty = 0.5 * (min(py_) + max(py_))
+            hw = view_w / 2 / tz
+            if x1 - x0 > 2 * hw:
+                tx = min(max(tx, x0 + hw), x1 - hw)
+        last_t = (tx, ty)
+        if cx is None:
+            cx, cy, cz = tx, ty, tz
+        cx, vx = _spring(cx, vx, tx, 3.4 if not top else 4.0, dt)
+        cy, vy = _spring(cy, vy, ty, 3.0 if not top else 4.0, dt)
+        cz, vz = _spring(cz, vz, tz, 2.6, dt)
+        # Hard guarantee: >= 1 living hero inside the window (with a 48 px margin)
+        if alive_h and not top:
+            hw_s, hh_s = view_w / 2 - 48.0, view_h / 2 - 48.0
+            inside = any(abs((float(rows[i, 0]) - cx) * cz) <= hw_s and abs((float(rows[i, 1]) - cy) * cz) <= hh_s
+                         for i in alive_h)
+            if not inside:
+                anc = min(alive_h, key=lambda i: abs(float(rows[i, 0]) - cx) + abs(float(rows[i, 1]) - cy))
+                ax, ay = float(rows[anc, 0]), float(rows[anc, 1])
+                cx = min(max(cx, ax - hw_s / cz), ax + hw_s / cz)
+                cy = min(max(cy, ay - hh_s / cz), ay + hh_s / cz)
+                vx = vy = 0.0
+        shake = (0.0, 0.0)
+        for kf, _, _ in kos:
+            k = f - kf
+            if 0 <= k < 8:
+                amp = 7.0 * (1 - k / 8)
+                shake = (amp * math.sin(k * 2.7 + kf), amp * math.cos(k * 3.1 + kf))
+        cams.append(Cam(cx, cy, cz, shake))
+    return cams
+
+
 def top_base_zoom(meta: dict) -> float:
     x0, y0, x1, y1 = meta["bounds"]
     span = max(x1 - x0, (y1 - y0) * W / (VIEW_BOTTOM - VIEW_TOP))

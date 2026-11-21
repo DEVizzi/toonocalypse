@@ -22,8 +22,8 @@ from pathlib import Path
 
 FPS = 30
 DEFAULT_W, DEFAULT_H = 1080, 810
-MIN_CLIP_FRAMES = int(31.5 * FPS)
-MAX_CLIP_FRAMES = int(35.0 * FPS)
+MIN_CLIP_FRAMES = int(37.0 * FPS)
+MAX_CLIP_FRAMES = int(41.0 * FPS)
 REACTION_S = 0.20
 
 
@@ -80,7 +80,28 @@ def _frames_for(pre: int, t0: float, t1: float, n_frames: int) -> list[int]:
     return list(range(a, b + 1))
 
 
-def _render_crop(r, shot, idx: int, w: int, h: int, Shot, pygame):
+def _load_window_tracker():
+    """Returns (track_window, SCREEN_CY). Prefers the replay tree's own camera; otherwise loads the CURRENT tree's
+    camera module (its imports resolve against the replay tree) so archived races also get the 4:3 recap framing."""
+    try:
+        from src.physics import camera as cam_mod
+        if hasattr(cam_mod, "track_window"):
+            return cam_mod.track_window, float(cam_mod.SCREEN_CY)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        import importlib.util
+        here = Path(__file__).resolve().parents[2] / "src" / "physics" / "camera.py"
+        spec = importlib.util.spec_from_file_location("recap_window_camera", here)
+        mod = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(mod)
+        return mod.track_window, float(mod.SCREEN_CY)
+    except Exception:  # noqa: BLE001 - fall back to the tree's own Shorts camera
+        return None, 950.0
+
+
+def _render_crop(r, shot, idx: int, w: int, h: int, Shot, pygame, scy: float = 950.0):
     """Renders a clean 4:3 widescreen world crop on current trees, or crops the 4:3 focal band on legacy pinned trees."""
     if hasattr(r, "render_world_crop"):
         return r.render_world_crop(shot, idx, w, h)
@@ -89,7 +110,7 @@ def _render_crop(r, shot, idx: int, w: int, h: int, Shot, pygame):
     full = r.render_shot(legacy_shot, idx)
     fw, fh = full.get_size()
     crop_h = min(fh, int(round(fw * h / max(1, w))))
-    y0 = max(0, min(fh - crop_h, 950 - crop_h // 2))
+    y0 = max(0, min(fh - crop_h, int(round(scy)) - crop_h // 2))
     sub = full.subsurface(pygame.Rect(0, y0, fw, crop_h))
     return pygame.transform.smoothscale(sub, (w, h)) if (fw, crop_h) != (w, h) else sub.copy()
 
@@ -99,9 +120,8 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot) -> tuple[list[tup
     Gate drop -> Full/Extended race with zoomed 0.4x Chaos Cam slomo beats -> Final-3 breathing zoom -> 0.3x Finish Replay."""
     n = trace.n_frames
     side_view = trace.mode == "SIDE_VIEW"
-    winner = trace.meta.get("winner")
     end_f = min(n - 1, pre + int(round((end_t + REACTION_S) * FPS)))
-    chaos_list = _pick_chaos_events(trace, end_t, max_picks=2)
+    chaos_list = _pick_chaos_events(trace, end_t, max_picks=3)
 
     plan: list[tuple[object, str, float]] = []
     # 1. Opening starting-gate beat (0.8s)
@@ -110,15 +130,14 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot) -> tuple[list[tup
         plan.append((Shot(float(f), "cold", (f - gate_f0) / FPS), "opening", (f - pre) / FPS))
 
     def _add_chaos_slomo(ev) -> None:
-        actor = str(ev.actors[0]) if getattr(ev, "actors", None) else None
-        focus = actor if (side_view and actor in trace.keys) else None
+        focus = None          # the 4:3 recap camera already frames the knockout + attacker
         cf = min(end_f, max(pre, pre + int(round(ev.t * FPS))))
         s0 = max(float(pre), cf - 0.55 * FPS)
         s1 = min(float(end_f), cf + 0.25 * FPS)
         n_sl = int(round(2.0 * FPS))
         for k in range(n_sl):
             tf = s0 + (s1 - s0) * k / max(1, n_sl)
-            plan.append((Shot(tf, "chaos_slomo", k / FPS, 1.26, focus), "chaos", (tf - pre) / FPS))
+            plan.append((Shot(tf, "chaos_slomo", k / FPS, 1.15, focus), "chaos", (tf - pre) / FPS))
 
     def _append_range(t_start: float, t_stop: float, seg_name: str, slow_tail_s: float = 0.0, tail_rate: float = 0.72) -> None:
         f_start = max(pre, min(end_f, pre + int(round(t_start * FPS))))
@@ -142,7 +161,7 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot) -> tuple[list[tup
     if end_t <= 26.0:
         # Play full race continuously + let Final-3 endgame breathe!
         est_play = end_t + 0.8 + 2.0 * len(chaos_list) + 3.8
-        need_extra_s = max(0.0, 32.5 - est_play)
+        need_extra_s = max(0.0, 37.5 - est_play)
         # Pace the final 6-9s smoothly (0.58x-0.78x) to let Final-3 collisions & expressions shine
         tail_window = min(max(4.5, end_t * 0.45), 9.0)
         # Each second at rate r takes (1/r) seconds -> extra = tail_window * (1/r - 1)
@@ -166,7 +185,7 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot) -> tuple[list[tup
     n_rep = int(round(rep_s * FPS))
     for i in range(n_rep):
         tf = src0 + (float(end_f) - src0) * i / max(1, n_rep)
-        plan.append((Shot(tf, "replay", i / FPS, 1.42, winner), "replay", (tf - pre) / FPS))
+        plan.append((Shot(tf, "replay", i / FPS, 1.18, None), "replay", (tf - pre) / FPS))
 
     # 4. If a flash knockout finished ultra-early (<13s), add a crisp Photo-Finish Wide Angle replay so clip >= 31.5s
     if len(plan) < MIN_CLIP_FRAMES:
@@ -257,6 +276,13 @@ def run(root: Path, job: dict) -> dict:
     ep = pipeline.Episode(trace, str(job.get("label") or ""), season_line="", prompt="", flash_event=None,
                           outcome=None, league_ctx={"stage": job.get("stage", "league")})
     r = pipeline.Renderer(ep)
+    tracker, scy = _load_window_tracker()
+    if tracker is not None:
+        try:   # dedicated 4:3 recap camera (falls back to the tree's 9:16 Shorts camera on any error)
+            r.cams = tracker(trace, 1080.0, 1080.0 * h / max(1, w))
+            side["camera"] = "track_window"
+        except Exception as exc:  # noqa: BLE001
+            side["camera"] = f"shorts ({type(exc).__name__})"
     pre = r.pre
     end_t = float(trace.meta.get("resolved_at") or (trace.n_frames - pre) / FPS)
     n = trace.n_frames
@@ -268,7 +294,7 @@ def run(root: Path, job: dict) -> dict:
     enc = _Encoder(out_dir / f"{tag}_clip.mp4", w, h)
     timeline = []
     for idx, (shot, seg, gt) in enumerate(plan):
-        enc.write(_render_crop(r, shot, idx, w, h, Shot, pygame), pygame)
+        enc.write(_render_crop(r, shot, idx, w, h, Shot, pygame, scy), pygame)
         timeline.append([round(gt, 3), seg])
     enc.close()
     side["clip"] = {"path": str(out_dir / f"{tag}_clip.mp4"), "frames": enc.n, "width": w, "height": h,
@@ -292,11 +318,11 @@ def run(root: Path, job: dict) -> dict:
             last_pos = [round(w * 0.5, 1), round(h * 0.5, 1)]
             cap = r.cams[min(pre, len(r.cams) - 1)].zoom * 2.6
             crop_h_src = int(round(1080 * h / max(1, w)))
-            y0_src = max(0, min(1920 - crop_h_src, 950 - crop_h_src // 2))
+            y0_src = max(0, min(1920 - crop_h_src, int(round(scy)) - crop_h_src // 2))
             for k, f in enumerate(frames):
                 side_view = trace.mode == "SIDE_VIEW"
                 shot = Shot(float(f), "play", (f - pre) / FPS, 1.3, fz["victim"]) if side_view else Shot(float(f), "play", (f - pre) / FPS)
-                surf = _render_crop(r, shot, len(plan) + k, w, h, Shot, pygame)
+                surf = _render_crop(r, shot, len(plan) + k, w, h, Shot, pygame, scy)
                 enc2.write(surf, pygame)
                 base = r.cams[f]
                 rows = trace.frames[f]

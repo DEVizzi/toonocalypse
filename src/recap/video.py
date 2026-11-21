@@ -470,7 +470,13 @@ class RecapVideo:
             prev = ri
         punch_up_winners([(ri, race_lines[ri.race].verdict[0]) for ri in r.part_races
                           if race_lines[ri.race].verdict and ri.stage != "grand_final"], log=self.log)
-        # Pre-synthesize per-race lines in parallel when TTS is enabled
+        # Live play-by-play candidates synced to each clip (knockouts, twists, final stretch) + spoiler-free fillers
+        self._beats: dict[int, tuple[list[tuple[float, Line, int]], list[Line]]] = {}
+        for ri in r.part_races:
+            clip = self.clips.get(ri.race) or {}
+            if clip.get("ok"):
+                self._beats[ri.race] = (self._race_beat_candidates(ri, clip), wr.fillers(ri) + wr.post_lines(ri))
+        # Pre-synthesize every candidate line in parallel when TTS is enabled
         pre_lines: list[Line] = []
         for rl in race_lines.values():
             pre_lines.append(rl.intro)
@@ -479,6 +485,9 @@ class RecapVideo:
             if rl.lost:
                 pre_lines.append(rl.lost)
             pre_lines.extend(rl.verdict)
+        for cands, fills in self._beats.values():
+            pre_lines.extend(ln for _, ln, _ in cands)
+            pre_lines.extend(fills)
         self.bank.prefetch(pre_lines)
 
         if self.cold:
@@ -508,7 +517,7 @@ class RecapVideo:
             segs.append(self._seg_champion())
         segs.append(self._seg_chart())
         segs.append(self._seg_table(r.final_stats, "FINAL TABLE" if r.end_race >= 30 else f"THE TABLE • AFTER RACE {r.end_race}",
-                                    wr.standings(), "standings", chapter="Standings"))
+                                    wr.standings(), "standings", chapter="Standings", extra=wr.standings_tail()))
         segs.append(self._seg_teaser())
         segs.append(self._seg_end())
 
@@ -516,10 +525,12 @@ class RecapVideo:
         if len(r.part_races) >= 10:
             total = sum(s.duration for s in segs)
             race_segs = [s for s in segs if s.name.startswith("race_")]
-            if total < 522.0 and race_segs:
-                pad_each = (528.0 - total) / len(race_segs)
+            if total < 510.0 and race_segs:
+                # last resort only: never add more than 1 s of hold per race (no long silent tails)
+                pad_each = min(1.0, (512.0 - total) / len(race_segs))
                 for s in race_segs:
                     s.duration = round(s.duration + pad_each, 2)
+                self.log(f"  [RECAP] runtime {total:.1f}s < 510s target -> padded {pad_each:.2f}s/race")
             elif total > 588.0 and race_segs:
                 trim_each = (total - 582.0) / len(race_segs)
                 for s in race_segs:
@@ -893,6 +904,84 @@ class RecapVideo:
                 blit_c(s, chip("NEW LEADER!", (220, 38, 38), 22), (rx_b, 322))
         return s
 
+    MAX_QUIET_S = 5.0
+
+    def _race_beat_candidates(self, ri: RaceInfo, clip: dict) -> list[tuple[float, Line, int]]:
+        """(clip_time, line, priority) for every hero KO / twist / overtime / final stretch visible in the clip."""
+        cinfo = clip.get("clip") or {}
+        timeline = cinfo.get("timeline") or []
+        if not timeline:
+            return []
+        decisive = int(cinfo.get("decisive_index") or len(timeline)) / FPS
+
+        def clip_t(gt: float) -> float | None:
+            for i, (g, seg) in enumerate(timeline):
+                if seg == "replay":
+                    return None
+                if g >= gt - 1e-3:
+                    return i / FPS
+            return None
+
+        wr = self.writer
+        out: list[tuple[float, Line, int]] = []
+        for e in sorted(clip.get("events") or [], key=lambda e: float(e.get("t") or 0.0)):
+            k, d, acts = e.get("kind"), e.get("data") or {}, e.get("actors") or []
+            lt = clip_t(float(e.get("t") or 0.0))
+            if lt is None or lt >= decisive - 0.8:
+                continue
+            if k == "elimination" and d.get("hero") and acts and acts[0] in HERO_BY_KEY:
+                killer = acts[1] if d.get("by_hero") and len(acts) > 1 else None
+                out.append((lt, wr.ko_call(acts[0], killer), 3 if killer else 2))
+            elif k in ("twist", "escalation", "reverse"):
+                ln = wr.event_call(str(d.get("banner") or ("REVERSED" if k == "reverse" else "")), bool(d.get("overtime")))
+                if ln is not None:
+                    out.append((lt, ln, 1))
+        fs = next((i / FPS for i, (_, s) in enumerate(timeline) if s == "final"), None)
+        if fs is not None and fs < decisive - 3.0:
+            out.append((fs, wr.final_call(), 1))
+        return out
+
+    def _schedule_live(self, ri: RaceInfo, rl, t_start: float, t_stop: float) -> list[tuple[float, Line]]:
+        """Places live calls as close as possible to their moment (never overlapping, max 2 s late), then fills any
+        quiet stretch longer than MAX_QUIET_S with spoiler-free colour lines."""
+        cands, fills = self._beats.get(ri.race, ([], []))
+        cands = sorted(cands, key=lambda c: c[0])
+        placed: list[tuple[float, float, Line]] = []
+        cur = t_start
+        for idx, (lt, ln, prio) in enumerate(cands):
+            nxt = cands[idx + 1] if idx + 1 < len(cands) else None
+            if nxt is not None and nxt[0] - lt < 1.2 and nxt[2] > prio:
+                continue                      # a bigger moment is about to happen
+            d = self.bank.dur(ln)
+            st = max(lt + 0.1, cur + 0.25)
+            if st - lt > 2.0 or st + d > t_stop - 0.25:
+                continue
+            placed.append((st, st + d, ln))
+            cur = st + d
+        queue = [ln for ln in fills if ln.kind != "post"]
+        if rl.mid is not None and not any(ln.kind == "ko" for _, _, ln in placed):
+            queue.insert(0, rl.mid)
+        changed = True
+        while queue and changed:
+            changed = False
+            spans = sorted(placed, key=lambda p: p[0])
+            edges = [t_start - 0.25] + [x for p in spans for x in (p[0], p[1])] + [t_stop]
+            for a, b in zip(edges[0::2], edges[1::2]):      # (gap_start, gap_end) pairs
+                if b - a <= self.MAX_QUIET_S:
+                    continue
+                for qi, ln in enumerate(queue):
+                    d = self.bank.dur(ln)
+                    if d + 0.8 > b - a:
+                        continue
+                    st = a + min(1.4, (b - a - d) / 2)
+                    placed.append((st, st + d, ln))
+                    queue.pop(qi)
+                    changed = True
+                    break
+                if changed:
+                    break
+        return [(st, ln) for st, _, ln in sorted(placed, key=lambda p: p[0])]
+
     def _seg_race(self, ri: RaceInfo, rl) -> Segment:
         clip = self.clips.get(ri.race) or {}
         has = bool(clip.get("ok"))
@@ -908,19 +997,25 @@ class RecapVideo:
         voice, t_after = self._voice_seq(intro_lines, start=0.30, gap=0.25)
         decisive_t = decisive_i / FPS if has else max(2.2, t_after)
 
-        # Mid-race play-by-play callout around ~46% of the extended highlight clip
-        end_mid = t_after
-        if has and getattr(rl, "mid", None) is not None and decisive_t >= t_after + 5.5:
-            mid_start = max(t_after + 1.8, min(decisive_t - 5.0, clip_s * 0.45))
-            v_mid, end_mid = self._voice_seq([rl.mid], start=mid_start, gap=0.2)
-            voice += v_mid
-
-        vt = max(decisive_t + 0.15, end_mid + 0.35)
+        vt = max(decisive_t + 0.15, t_after + 0.35)
+        if has:
+            voice += self._schedule_live(ri, rl, t_after, vt)
         v2, end_v = self._voice_seq(rl.verdict, start=vt, gap=0.25)
         voice += v2
         results_t = max(decisive_t, vt - 0.2)
         if has:
-            dur = min(41.5, max(clip_s + 4.0, end_v + 1.0, 36.5))
+            dur = min(44.0, max(clip_s + 2.4, end_v + 0.7))
+            # post-result replay: fill the tail with facts so it never goes quiet
+            post = [ln for ln in (self._beats.get(ri.race, ([], []))[1]) if ln.kind == "post"]
+            t_cur = end_v
+            for ln in post:
+                if dur - t_cur <= 3.0:
+                    break
+                d = self.bank.dur(ln)
+                if t_cur + 0.5 + d > dur - 0.3:
+                    break
+                voice.append((t_cur + 0.5, ln))
+                t_cur += 0.5 + d
         else:
             dur = max(end_v + 0.8, 7.5)
 
@@ -1112,11 +1207,12 @@ class RecapVideo:
         return kept
 
     # ------------------------------------------------------------------ table / awards / champion / chart
-    def _seg_table(self, stats: dict, title: str, line: Line, nm: str, chapter: str | None = None) -> Segment:
+    def _seg_table(self, stats: dict, title: str, line: Line, nm: str, chapter: str | None = None,
+                   extra: Line | None = None) -> Segment:
         from src.state import league
 
         order = league.sorted_standings(stats)
-        voice, end = self._voice_seq([line], start=0.3)
+        voice, end = self._voice_seq([line] + ([extra] if extra else []), start=0.3, gap=0.35)
         reigning = self.recap.reigning_champion
 
         def draw(fr: pygame.Surface, t: float, ctx: Ctx) -> None:
@@ -1222,11 +1318,19 @@ class RecapVideo:
 
     def _seg_chart(self) -> Segment:
         line = self.writer.title_race()
+        close_line = self.writer.chart_close()
         races = self.recap.races
         steps = [{h.key: 0 for h in HEROES}] + [{k: int(v["points"]) for k, v in r.stats_after.items()} for r in races]
         per = min(1.15, max(0.55, 12.0 / max(1, len(steps) - 1)))
+        anim_end = 1.0 + per * (len(steps) - 1)
         voice, end = self._voice_seq([line], start=0.3)
-        dur = max(end + 0.6, 1.0 + per * (len(steps) - 1) + 2.6)
+        mid_line = self.writer.chart_mid()
+        if mid_line is not None and anim_end - end > 7.0:
+            v_mid, end = self._voice_seq([mid_line], start=end + (anim_end - end - self.bank.dur(mid_line)) / 2 - 1.0)
+            voice += v_mid
+        v_close, end = self._voice_seq([close_line], start=max(end + 0.4, anim_end - 0.8))
+        voice += v_close
+        dur = max(end + 0.6, anim_end + 2.0)
         top = max(1, max(max(s.values()) for s in steps))
         ys: dict[str, float] = {}
         state_t = {"last": None}
@@ -1305,7 +1409,7 @@ class RecapVideo:
 
     def _seg_end(self) -> Segment:
         line = self.writer.outro()
-        voice, _ = self._voice_seq([line], start=0.4)
+        voice, _ = self._voice_seq([line, self.writer.end_extra()], start=0.4, gap=1.2)
 
         def draw(fr: pygame.Surface, t: float, ctx: Ctx) -> None:
             blit_c(fr, txt("THANKS FOR WATCHING!", 96, fill=GOLD, width=7), (W / 2, 100))
@@ -1336,11 +1440,14 @@ class RecapVideo:
         fx = np.zeros(n, np.float32)
         spoken: list[tuple[float, float, Line]] = []
         sfx_cache: dict[str, np.ndarray] = {}
+        self.voice_missing = 0
         for seg, s0 in zip(self.segments, starts):
             for lt, ln in seg.voice:
                 pcm, d = self.bank.get(ln)
                 t0 = s0 + lt
                 spoken.append((t0, t0 + d, ln))
+                if pcm is None and self.bank.use_tts:
+                    self.voice_missing += 1
                 if pcm is not None:
                     i0 = int(t0 * SR)
                     m = float(np.max(np.abs(pcm))) or 1.0
@@ -1452,7 +1559,8 @@ class RecapVideo:
         if chapters:
             chapters[0] = (0.0, chapters[0][1])
         return {"duration": total, "frames": n_frames, "chapters": chapters,
-                "voice_ok": self.bank.ok, "voice_failed": self.bank.failed,
+                "voice_ok": len(spoken_sorted) - getattr(self, "voice_missing", 0) if self.bank.use_tts else 0,
+                "voice_failed": getattr(self, "voice_missing", 0),
                 "lines": [ln.text for _, _, ln in spoken_sorted]}
 
     def _brand(self, fr: pygame.Surface) -> None:

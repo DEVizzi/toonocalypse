@@ -350,6 +350,101 @@ class Writer:
             rl.lost = self.footage_lost(r)
         return rl
 
+    # ------------------------------------------------------------------ live play-by-play (synced to footage)
+    def ko_call(self, victim: str, killer: str | None) -> Line:
+        V = name(victim)
+        if killer and killer in HERO_BY_KEY and killer != victim:
+            K = name(killer)
+            txt = self._pick("ko.by", (f"Betrayal! {K} bins {V}!", f"{K} sends {V} flying!",
+                                       f"{V} is gone, courtesy of {K}!", f"{K} with zero remorse! Bye, {V}!",
+                                       f"Oh, {K}! That's cold! {V} is out!"))
+            return Line(txt, "hype", "SHOCKED_JAWDROP", "ko")
+        txt = self._pick("ko.solo", (f"{V} is out!", f"Down goes {V}!", f"Bye bye, {V}!",
+                                     f"{V} has left the building!", f"And {V} falls off the planet!",
+                                     f"{V}, no! Gone!"))
+        return Line(txt, "hype", "LAUGHING_TEARS", "ko")
+
+    def event_call(self, banner: str, overtime: bool = False) -> Line | None:
+        b = (banner or "").upper()
+        if overtime or "OVERTIME" in b:
+            txt = self._pick("ev.ot", ("Overtime! Total chaos now!", "Overtime! The castle wants blood!",
+                                       "Overtime, and it's getting silly!"))
+        elif "SHRINK" in b:
+            txt = self._pick("ev.shrink", ("The arena is shrinking! Nowhere to hide!", "It's shrinking! Squeeze time!"))
+        elif "SPEED" in b:
+            txt = self._pick("ev.speed", ("Speed up! Hold onto something!", "Faster! Nobody asked for faster!"))
+        elif "REVERS" in b:
+            txt = self._pick("ev.rev", ("Controls reversed! Pure panic!", "Reversed controls! Left is right now!"))
+        elif "GRAVITY" in b:
+            txt = self._pick("ev.grav", ("Gravity just changed its mind!", "Gravity's gone weird!"))
+        elif b:
+            txt = self._pick("ev.any", ("Here comes a twist!", "Oh, the castle has a surprise!"))
+        else:
+            return None
+        return Line(txt, "hype", "SWEATING_INTENSE", "event")
+
+    def final_call(self) -> Line:
+        txt = self._pick("final", ("Final stretch! Here we go!", "Into the endgame now!", "It all comes down to this!",
+                                   "Endgame! Don't blink!"))
+        return Line(txt, "hype", "SWEATING_INTENSE", "final")
+
+    def fillers(self, r: RaceInfo) -> list[Line]:
+        """Spoiler-free colour lines for quiet stretches (never reveal the winner)."""
+        generic = (("Absolute scenes in the castle.", "Nobody here is steering. Nobody."),
+                   ("Physics is having a terrible day.", "This is beautiful, beautiful chaos."),
+                   ("The crash dummies look more confident than the heroes.", "Somebody call the insurance company."))
+        out = [Line(self._pick(f"fill.g{i}", g), "normal", "HYPED_TALKING", "filler") for i, g in enumerate(generic)]
+        lurkers = [k for k in r.hero_ranking[1:3] if k in HERO_BY_KEY]
+        for k in lurkers:
+            X = name(k)
+            out.insert(1, Line(self._pick("fill.named", (f"Keep an eye on {X}. Lurking.", f"{X} is quietly hanging in there.",
+                                                         f"{X} smells an opportunity.")), "normal", "HYPED_TALKING", "filler"))
+        return out
+
+    def post_lines(self, r: RaceInfo) -> list[Line]:
+        """Lines for the slow-mo replay after the verdict (facts only)."""
+        out = [Line(self._pick("post.replay", ("Let's see that one more time.", "Again! In glorious slow motion.",
+                                               "One more look. Pure art.", "Roll it back. Look at that.")),
+                    "normal", "LAUGHING_TEARS", "post")]
+        if r.stage == "league" and r.leader_after in r.stats_after:
+            pts = int(r.stats_after[r.leader_after]["points"])
+            out.append(Line(self._pick("post.table", (f"{name(r.leader_after)} sits top of the table on {pts}.",
+                                                      f"Table check: {name(r.leader_after)} leads on {pts}.")),
+                            "normal", "HYPED_TALKING", "post"))
+        if r.race < self.recap.end_race:
+            out.append(Line(self._pick("post.next", (f"Right. {self._race_word(r.race + 1)} next.",
+                                                     "Next race. Brace yourselves.")), "normal", "HYPED_TALKING", "post"))
+        return out
+
+    def chart_mid(self) -> Line | None:
+        r = self.recap
+        start = r.stats_entering(r.start_race)
+        gains = {k: int(v["points"]) - int((start.get(k) or {}).get("points", 0)) for k, v in r.final_stats.items()}
+        if not gains:
+            return None
+        k = max(gains, key=lambda x: (gains[x], x))
+        return Line(f"Look at {name(k)} go. Plus {gains[k]} in this part alone.", "hype", "SHOCKED_JAWDROP", "chart")
+
+    def chart_close(self) -> Line:
+        r = self.recap
+        order = sorted(r.final_stats.items(), key=lambda kv: (-int(kv[1]["points"]), kv[0]))
+        (lk, lv), (bk, bv) = order[0], order[-1]
+        return Line(f"{name(lk)} out in front on {lv['points']} points. {name(bk)} propping up the table on "
+                    f"{bv['points']}.", "normal", "LAUGHING_TEARS", "chart")
+
+    def standings_tail(self) -> Line:
+        r = self.recap
+        order = sorted(r.final_stats.items(), key=lambda kv: (-int(kv[1]["points"]), kv[0]))
+        last = name(order[-1][0])
+        txt = self._pick("st.tail", (f"And {last} is bottom. They're fine. They're not fine.",
+                                     f"Spare a thought for {last}. Actually, don't.",
+                                     f"{last} is last, and blaming the floor."))
+        return Line(txt, "deadpan", "FACEPALM", "table")
+
+    def end_extra(self) -> Line:
+        return Line(self._pick("end.x", ("Pick a video on screen. I'll wait. Actually, no, I won't.",
+                                         "Go on, click one. The balls need the views.")), "normal", "HYPED_TALKING", "outro")
+
     def table_check(self, r: RaceInfo) -> Line:
         order = r.standings_after
         lead, last = order[0], order[-1]
