@@ -1,3 +1,38 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "day": 1,
+      "mode": "SIDE_VIEW",
+      "arena": "crusher_gauntlet",
+      "goal": "reach_finish",
+      "hazards": [
+        "falling_floor_tiles",
+        "slippery_ice"
+      ],
+      "twist": null,
+      "theme": "royal_classic",
+      "fingerprint": "99fbce337dc34bc48c463a9e50a440a1245fcfe7a17eeb1d9957d1b6e5a5b06d",
+      "season": 1,
+      "race": 1,
+      "stage": "league",
+      "winner": "glitch",
+      "line_ids": [
+        "intro:1",
+        "winner:1",
+        "outro:0",
+        "overtime:0",
+        "kill.juggernaut:0",
+        "dummy:3",
+        "squash:0",
+        "trait:1",
+        "filler_lead:1",
+        "filler:5"
+      ],
+      "cliches": [],
+      "utc_date": "2026-11-21",
+      "published": true,
+      "youtube_id": "21UG6Vz6Oz4",
+      "instagram_id": "18181230226449454"
+    }
+  ]
 }
