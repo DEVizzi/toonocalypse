@@ -1246,12 +1246,14 @@ class RecapVideo:
             rs = txt(f"AFTER RACE {race_no}", 56, fill=WHITE, width=5)
             fr.blit(rs, rs.get_rect(topright=(1840, 32)))
             maxw = 880
+            stride = CHART_ROW_H + CHART_MARGIN_Y
+            for slot in range(len(order)):
+                rk_s = txt(f"#{slot + 1}", 28, fill=MEDALS[slot] if slot < 3 else (148, 163, 184), width=3)
+                fr.blit(rk_s, rk_s.get_rect(midleft=(52, CHART_TOP_Y + slot * stride + CHART_ROW_H // 2)))
             for idx, k in enumerate(order):
                 y = int(round(row_ys[k]))
                 hero = HERO_BY_KEY[k]
                 bw_ = max(16, int(maxw * cur[k] / top))
-                rk_s = txt(f"#{idx + 1}", 28, fill=MEDALS[idx] if idx < 3 else (148, 163, 184), width=3)
-                fr.blit(rk_s, rk_s.get_rect(midleft=(52, y + CHART_ROW_H // 2)))
                 nm_s = fit(txt(hero.name.upper(), 34, width=3), 196)
                 fr.blit(nm_s, nm_s.get_rect(midleft=(108, y + CHART_ROW_H // 2)))
                 col = tuple(int(hero.colour.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
