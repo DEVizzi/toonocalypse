@@ -498,11 +498,25 @@ def punch_up_winners(items: list[tuple[RaceInfo, Line]], log=print) -> int:
               "order and length.\n\n" + json.dumps(facts))
     base = "https://generativelanguage.googleapis.com/v1beta"
     lines = None
-    for model in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
-        payload = {"contents": [{"parts": [{"text": prompt}]}],
-                   "generationConfig": {"responseMimeType": "application/json", "temperature": 0.9,
-                                        "thinkingConfig": {"thinkingBudget": 0}}}
+    cands: list[str] = []
+    st, body = script._gemini_http(f"{base}/models?pageSize=100", key, timeout=6.0)
+    if st == 200:
+        for item in body.get("models", []):
+            mname = str(item.get("name", "")).replace("models/", "")
+            lm = mname.lower()
+            if "generateContent" in (item.get("supportedGenerationMethods") or []) and "flash" in lm and \
+                    all(x not in lm for x in ("tts", "image", "audio", "live", "thinking", "8b")):
+                cands.append(mname)
+        cands.sort(key=lambda s: ("lite" in s, "preview" in s or "exp" in s, s))
+    for model in (cands or ["gemini-2.5-flash", "gemini-2.5-flash-lite"])[:4]:
+        cfg: dict = {"responseMimeType": "application/json", "temperature": 0.9}
+        if model.startswith(("gemini-2.5", "gemini-3")):
+            cfg["thinkingConfig"] = {"thinkingBudget": 0}
+        payload = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": cfg}
         code, body = script._gemini_http(f"{base}/models/{model}:generateContent", key, payload, 15.0)
+        if code != 200 and "thinkingConfig" in str(body):
+            cfg.pop("thinkingConfig", None)
+            code, body = script._gemini_http(f"{base}/models/{model}:generateContent", key, payload, 15.0)
         if code == 200:
             try:
                 parts = body["candidates"][0]["content"]["parts"]
