@@ -507,16 +507,16 @@ def punch_up_winners(items: list[tuple[RaceInfo, Line]], log=print) -> int:
             if "generateContent" in (item.get("supportedGenerationMethods") or []) and "flash" in lm and \
                     all(x not in lm for x in ("tts", "image", "audio", "live", "thinking", "8b")):
                 cands.append(mname)
-        cands.sort(key=lambda s: ("lite" in s, "preview" in s or "exp" in s, s))
+        cands.sort(key=lambda s: ("lite" not in s, "preview" in s or "exp" in s, s))   # fast lite models first
     for model in (cands or ["gemini-2.5-flash", "gemini-2.5-flash-lite"])[:4]:
         cfg: dict = {"responseMimeType": "application/json", "temperature": 0.9}
         if model.startswith(("gemini-2.5", "gemini-3")):
             cfg["thinkingConfig"] = {"thinkingBudget": 0}
         payload = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": cfg}
-        code, body = script._gemini_http(f"{base}/models/{model}:generateContent", key, payload, 15.0)
+        code, body = script._gemini_http(f"{base}/models/{model}:generateContent", key, payload, 25.0)
         if code != 200 and "thinkingConfig" in str(body):
             cfg.pop("thinkingConfig", None)
-            code, body = script._gemini_http(f"{base}/models/{model}:generateContent", key, payload, 15.0)
+            code, body = script._gemini_http(f"{base}/models/{model}:generateContent", key, payload, 25.0)
         if code == 200:
             try:
                 parts = body["candidates"][0]["content"]["parts"]
