@@ -1402,8 +1402,9 @@ class RecapVideo:
             n_frames = min(n_frames, max_frames)
         cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{HH}",
                "-r", str(FPS), "-i", "-", "-i", str(wav),
-               "-c:v", "libx264", "-preset", "superfast", "-crf", "23", "-pix_fmt", "yuv420p",
-               "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-shortest", "-movflags", "+faststart", str(out_mp4)]
+               "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-maxrate", "2800k", "-bufsize", "5600k",
+               "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-shortest",
+               "-movflags", "+faststart", str(out_mp4)]
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
         assert proc.stdin is not None
         if stills_dir:
