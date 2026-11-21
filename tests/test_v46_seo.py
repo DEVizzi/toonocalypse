@@ -109,6 +109,27 @@ class TestV46Clients(unittest.TestCase):
         req.RequestException = Exception
         return req
 
+    def test_upload_refuses_wrong_channel(self) -> None:
+        from src.publish import oauth
+
+        with mock.patch.object(oauth, "channel_identity", return_value=("UCother000000000000000000", "Other")), \
+                mock.patch.dict(os.environ, {"YOUTUBE_EXPECTED_CHANNEL_ID": "UCDFPguMeI582rA374rLa7ow"}):
+            with self.assertRaisesRegex(oauth.OAuthError, "expected UCDFPguMeI582rA374rLa7ow"):
+                oauth.assert_expected_channel("tok")
+            tmp = Path(tempfile.mkdtemp(prefix="ttc_v46_up_"))
+            self.addCleanup(lambda: shutil.rmtree(tmp, ignore_errors=True))
+            mp4 = tmp / "e.mp4"
+            mp4.write_bytes(b"x" * 10)
+            req = self._fake_req()
+            with mock.patch.object(youtube, "access_token", return_value=("tok", 3600, "s")), \
+                    mock.patch.object(youtube, "_requests", return_value=req):
+                with self.assertRaises(oauth.OAuthError):
+                    youtube.upload_short(mp4, "T", "D", [], "public", "20")
+            req.post.assert_not_called()
+        with mock.patch.object(oauth, "channel_identity", return_value=("UCDFPguMeI582rA374rLa7ow", "ToonToonCastle")), \
+                mock.patch.dict(os.environ, {"YOUTUBE_EXPECTED_CHANNEL_ID": "UCDFPguMeI582rA374rLa7ow"}):
+            self.assertEqual(oauth.assert_expected_channel("tok"), "UCDFPguMeI582rA374rLa7ow")
+
     def test_youtube_update_metadata_keeps_newlines_and_category(self) -> None:
         req = self._fake_req()
         req.put.return_value = mock.Mock(status_code=200)
@@ -258,9 +279,17 @@ class TestV46YouTubeReauthHelper(unittest.TestCase):
         good, bad = tmp / "good.json", tmp / "bad.json"
         good.write_text(json.dumps({"installed": {"client_id": "1-a.apps.googleusercontent.com", "client_secret": "s"}}))
         bad.write_text(json.dumps({"installed": {"client_id": "nope", "client_secret": ""}}))
-        self.assertEqual(self.mod.load_client(good), ("1-a.apps.googleusercontent.com", "s"))
+        self.assertEqual(self.mod.load_client(good), ("1-a.apps.googleusercontent.com", "s", []))
         with self.assertRaises(ValueError):
             self.mod.load_client(bad)
+        web = tmp / "web.json"
+        web.write_text(json.dumps({"web": {"client_id": "2-b.apps.googleusercontent.com", "client_secret": "w",
+                                           "redirect_uris": ["https://developers.google.com/oauthplayground",
+                                                             "http://localhost:8080/"]}}))
+        cid, _sec, redirects = self.mod.load_client(web)
+        self.assertEqual(cid, "2-b.apps.googleusercontent.com")
+        self.assertEqual(self.mod.pick_redirect(redirects), ("http://localhost:8080/", 8080))
+        self.assertIsNone(self.mod.pick_redirect(["https://example.com/cb", "http://evil.example:8080/"]))
 
 
 if __name__ == "__main__":

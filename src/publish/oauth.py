@@ -90,12 +90,45 @@ def check_channel(token: str) -> int:
     return len(resp.json().get("items") or [])
 
 
+def channel_identity(token: str) -> tuple[str, str]:
+    """(channel_id, channel_title) the token is bound to (public info, safe to log)."""
+    req = _requests()
+    try:
+        resp = req.get(CHANNELS_URL, params={"part": "snippet", "mine": "true"},
+                       headers={"Authorization": f"Bearer {token}"}, timeout=TIMEOUT_S)
+    except req.RequestException as exc:
+        raise OAuthError(f"YouTube API unreachable ({type(exc).__name__})") from None
+    if resp.status_code != 200:
+        raise OAuthError(f"YouTube channels.list failed: HTTP {resp.status_code}")
+    items = resp.json().get("items") or []
+    if not items:
+        return "", ""
+    return str(items[0].get("id") or ""), str((items[0].get("snippet") or {}).get("title") or "")
+
+
+def assert_expected_channel(token: str) -> str:
+    """Fails closed if YOUTUBE_EXPECTED_CHANNEL_ID is set and the token belongs to another channel
+    (the Google account owns several brand channels; a wrong pick at consent time must never upload elsewhere)."""
+    expected = (os.environ.get("YOUTUBE_EXPECTED_CHANNEL_ID") or "").strip()
+    cid, title = channel_identity(token)
+    if expected and cid != expected:
+        raise OAuthError(f"token is bound to channel {title or '?'} ({cid or 'none'}), expected {expected}")
+    return cid
+
+
 def main() -> int:
     try:
         tok, ttl, scopes = access_token()
         n = check_channel(tok)
+        cid, title = channel_identity(tok)
+        expected = (os.environ.get("YOUTUBE_EXPECTED_CHANNEL_ID") or "").strip()
     except OAuthError as exc:
         print(f"[OAUTH FAIL] {exc}", file=sys.stderr)
+        return 1
+    print(f"[OAUTH OK] bound channel: {title or '?'} ({cid or 'none'})")
+    if expected and cid != expected:
+        print(f"[OAUTH FAIL] token is bound to the wrong channel (expected {expected}); re-run "
+              "scripts/youtube_reauth.py and pick the ToonToonCastle channel", file=sys.stderr)
         return 1
     granted = {s.rsplit("/", 1)[-1] for s in scopes.split()}
     upload_ok = bool(granted & {"youtube.upload", "youtube", "youtube.force-ssl", "youtubepartner"})

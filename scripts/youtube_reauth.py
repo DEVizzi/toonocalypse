@@ -41,17 +41,31 @@ SCOPES = (
 )
 REQUIRED_SCOPES = {SCOPES[0], SCOPES[1]}
 _SAFE_REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+_LOOPBACK = re.compile(r"^http://(localhost|127\.0\.0\.1):(\d{2,5})/?$")
 CALLBACK_TIMEOUT_S = 300
 
 
-def load_client(path: Path) -> tuple[str, str]:
+def load_client(path: Path) -> tuple[str, str, list[str]]:
+    """Returns (client_id, client_secret, redirect_uris). redirect_uris is [] for Desktop ("installed") clients,
+    which accept any loopback port; Web clients only accept their exact registered URIs."""
     data = json.loads(path.read_text(encoding="utf-8"))
-    block = data.get("installed") or data.get("web") or {}
+    kind = "installed" if "installed" in data else "web"
+    block = data.get(kind) or {}
     cid = str(block.get("client_id") or "").strip()
     csec = str(block.get("client_secret") or "").strip()
     if not cid.endswith(".apps.googleusercontent.com") or not csec:
         raise ValueError("client secrets JSON is missing a valid client_id/client_secret")
-    return cid, csec
+    redirects = [str(u).strip() for u in (block.get("redirect_uris") or [])] if kind == "web" else []
+    return cid, csec, redirects
+
+
+def pick_redirect(redirects: list[str]) -> tuple[str, int] | None:
+    """First registered loopback redirect URI (e.g. http://localhost:8080/) and its port."""
+    for uri in redirects:
+        m = _LOOPBACK.match(uri)
+        if m:
+            return uri, int(m.group(2))
+    return None
 
 
 def pkce_pair() -> tuple[str, str]:
@@ -153,8 +167,11 @@ def detect_repo(gh: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Re-authorize YouTube OAuth with youtube.force-ssl")
-    ap.add_argument("--client-secrets", required=True, help="Desktop-app OAuth client JSON from Google Cloud Console")
+    ap.add_argument("--client-secrets", required=True, help="OAuth client JSON (Desktop or Web) from Google Cloud Console")
     ap.add_argument("--repo", default=None, help="owner/name (default: this checkout's GitHub repo)")
+    ap.add_argument("--redirect-uri", default=None,
+                    help="registered loopback redirect for Web clients, e.g. http://localhost:8080/")
+    ap.add_argument("--no-browser", action="store_true", help="print the consent URL instead of opening it")
     a = ap.parse_args(argv)
     gh = shutil.which("gh")
     if not gh:
@@ -165,20 +182,30 @@ def main(argv: list[str] | None = None) -> int:
         print("Could not determine the GitHub repo; pass --repo owner/name", file=sys.stderr)
         return 2
     try:
-        client_id, client_secret = load_client(Path(a.client_secrets).expanduser())
+        client_id, client_secret, redirects = load_client(Path(a.client_secrets).expanduser())
     except (OSError, ValueError) as exc:
         print(f"Could not read client secrets: {exc}", file=sys.stderr)
         return 2
 
-    server = http.server.HTTPServer(("127.0.0.1", 0), _CallbackHandler)
-    redirect_uri = f"http://127.0.0.1:{server.server_address[1]}/"
+    chosen = pick_redirect([a.redirect_uri] if a.redirect_uri else redirects)
+    if (a.redirect_uri or redirects) and not chosen:
+        print("No loopback redirect URI found. Add http://localhost:8080/ to the client's Authorized redirect URIs "
+              "or pass --redirect-uri.", file=sys.stderr)
+        return 2
+    try:
+        server = http.server.HTTPServer(("127.0.0.1", chosen[1] if chosen else 0), _CallbackHandler)
+    except OSError as exc:
+        print(f"Cannot listen on the redirect port: {exc}", file=sys.stderr)
+        return 2
+    redirect_uri = chosen[0] if chosen else f"http://127.0.0.1:{server.server_address[1]}/"
     state = secrets.token_urlsafe(24)
     verifier, challenge = pkce_pair()
     url = build_auth_url(client_id, redirect_uri, state, challenge)
     print("Opening Google consent in your browser. Sign in with the ToonToonCastle channel account and allow ALL")
     print("requested permissions (if you see 'Google hasn't verified this app': Advanced -> Go to app).")
-    print(f"If the browser does not open, visit:\n{url}\n")
-    webbrowser.open(url)
+    print(f"If the browser does not open, visit:\n{url}\n", flush=True)
+    if not a.no_browser:
+        webbrowser.open(url)
     try:
         code = parse_callback(wait_for_callback(server), state)
         tok = exchange_code(code, client_id, client_secret, redirect_uri, verifier)

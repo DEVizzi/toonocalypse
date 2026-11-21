@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from src.publish.alerts import redact
-from src.publish.oauth import OAuthError, access_token
+from src.publish.oauth import OAuthError, access_token, assert_expected_channel
 
 UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
 VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
@@ -82,6 +82,8 @@ def upload_short(mp4: Path, title: str, description: str, tags: list[str], priva
         raise RuntimeError("video size out of bounds")
     req = _requests()
     token, _, _ = access_token()
+    if (os.environ.get("YOUTUBE_EXPECTED_CHANNEL_ID") or "").strip():
+        assert_expected_channel(token)   # fail closed: never upload to the wrong brand channel
     meta = {
         "snippet": {
             "title": _clip(title, 100),
