@@ -2093,9 +2093,9 @@ class Renderer:
             return Cam(cam.x, cam.y, min(cam.zoom * shot.zoom_mult, cap), cam.shake)
         return cam
 
-    def render_world_crop(self, shot: Shot, index: int, out_w: int = 1120, out_h: int = 840) -> pygame.Surface:
-        """Part 5: Renders a clean HUD-free 4:3 (1120x840) widescreen action crop centered on the camera's focal band
-        so characters and physics fill 58% of the 1920x1080 Tuno Report screen with zero aspect distortion."""
+    def render_world_crop(self, shot: Shot, index: int, out_w: int = 1080, out_h: int = 810) -> pygame.Surface:
+        """Part 5: Renders a clean HUD-free 4:3 (1080x810) widescreen action crop centered on the camera's focal band
+        so characters and physics fill 56.25% of the 1920x1080 Tuno Report screen with zero scaling overhead."""
         hud.TEXT_BOXES.clear()
         tf = shot.tf
         fi = int(min(self.tr.n_frames - 1, max(0, round(tf))))
@@ -2107,29 +2107,35 @@ class Renderer:
         slow = shot.segment in ("cold", "replay", "chaos_slomo") or abs(tf - round(tf)) > 1e-3
         active_seg = shot.segment in ("play", "replay", "chaos_slomo")
 
-        self.frame.set_clip(None)
-        self.draw_world(cam, fi, t_anim, 0.0 if shot.segment == "cold" else play_t)
-        self.frame.set_clip(pygame.Rect(0, 0, W, H))
-        self.draw_contestants(cam, tf if slow else fi, t_anim, ranks=ranks, show_tags=active_seg)
-        if shot.segment == "replay":
-            effects.draw_confetti(self.frame, shot.seg_t, 5, pygame.Rect(0, 420, W, 1080))
-        if shot.segment in ("play", "replay", "chaos_slomo", "cold"):
-            self.draw_juice(cam, eff_play_t, t_anim, popups=False)
-        if active_seg:
-            self._draw_glitch_blinks(cam, fi, eff_play_t)
-        if self.tr.mode == "SIDE_VIEW":
-            self._abyss(cam, fi, t_anim)
-            if shot.segment != "card":
-                self._draw_killer_fire(cam, fi, eff_play_t, t_anim)
-        if active_seg:
-            self.draw_popups(cam, eff_play_t)
-        self.frame.set_clip(None)
-
-        # Exact 4:3 crop (1080x810) centered at the camera's SCREEN_CY (950) -> scaled cleanly to out_w x out_h (1120x840)
         crop_h = int(round(W * out_h / max(1, out_w)))
         cy_screen = int(round(sum(LAYOUT["action_bias"]) / 2))
         y0 = max(0, min(H - crop_h, cy_screen - crop_h // 2))
-        sub = self.frame.subsurface(pygame.Rect(0, y0, W, crop_h))
+        crop_rect = pygame.Rect(0, y0, W, crop_h)
+
+        prev_wr = self.world_rect
+        self.world_rect = crop_rect
+        try:
+            self.frame.set_clip(crop_rect)
+            self.draw_world(cam, fi, t_anim, 0.0 if shot.segment == "cold" else play_t)
+            self.frame.set_clip(crop_rect)
+            self.draw_contestants(cam, tf if slow else fi, t_anim, ranks=ranks, show_tags=active_seg)
+            if shot.segment == "replay":
+                effects.draw_confetti(self.frame, shot.seg_t, 5, crop_rect)
+            if shot.segment in ("play", "replay", "chaos_slomo", "cold"):
+                self.draw_juice(cam, eff_play_t, t_anim, popups=False)
+            if active_seg:
+                self._draw_glitch_blinks(cam, fi, eff_play_t)
+            if self.tr.mode == "SIDE_VIEW":
+                self._abyss(cam, fi, t_anim)
+                if shot.segment != "card":
+                    self._draw_killer_fire(cam, fi, eff_play_t, t_anim)
+            if active_seg:
+                self.draw_popups(cam, eff_play_t)
+            self.frame.set_clip(None)
+        finally:
+            self.world_rect = prev_wr
+
+        sub = self.frame.subsurface(crop_rect)
         out = pygame.transform.smoothscale(sub, (out_w, out_h)) if (W, crop_h) != (out_w, out_h) else sub.copy()
         if shot.segment in ("replay", "chaos_slomo"):
             lbl_s = "INSTANT REPLAY" if shot.segment == "replay" else "CHAOS CAM • 0.4X"

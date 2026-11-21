@@ -80,7 +80,7 @@ def run_worker(root: Path, job: dict[str, Any], log=print) -> dict[str, Any]:
         return {"ok": False, "verified": False, "reason": "clip worker wrote no sidecar"}
 
 
-CLIP_W, CLIP_H = 1120, 840
+CLIP_W, CLIP_H = 1080, 810
 
 
 def render_race_clip(record: dict, label: str, stage: str, out_dir: Path, tag: str,

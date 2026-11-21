@@ -35,16 +35,16 @@ from src.rendering import effects  # noqa: E402
 from src.rendering import hud as H  # noqa: E402
 
 W, HH, FPS = 1920, 1080, 30
-# Part 5: 58.3% Left Main 4:3 Viewport (1120x840) + Race Scoreboard Strip, 41.7% Right Esports Sidebar (712px)
-VIEWPORT = pygame.Rect(32, 28, 1120, 840)
-RACE_BAR = pygame.Rect(32, 884, 1120, 164)
-COLD_VIEW = pygame.Rect(40, 120, 1120, 840)
+# Part 5: 56.25% Left Main 4:3 Viewport (1080x810, zero-scale native crop) + Scoreboard Strip, 43.75% Right Esports Sidebar
+VIEWPORT = pygame.Rect(36, 32, 1080, 810)
+RACE_BAR = pygame.Rect(36, 860, 1080, 184)
+COLD_VIEW = pygame.Rect(48, 135, 1080, 810)
 PHONE = VIEWPORT
-SIDE_X, SIDE_W = 1176, 712
+SIDE_X, SIDE_W = 1144, 744
 RX0, RX1 = SIDE_X, SIDE_X + SIDE_W
-BOOTH_RECT = pygame.Rect(SIDE_X, 28, SIDE_W, 314)
-TICKER_RECT = pygame.Rect(SIDE_X, 358, SIDE_W, 304)
-STANDINGS_RECT = pygame.Rect(SIDE_X, 678, SIDE_W, 370)
+BOOTH_RECT = pygame.Rect(SIDE_X, 32, SIDE_W, 310)
+TICKER_RECT = pygame.Rect(SIDE_X, 358, SIDE_W, 300)
+STANDINGS_RECT = pygame.Rect(SIDE_X, 674, SIDE_W, 370)
 CHART_TOP_Y = 124
 CHART_ROW_H = 46
 CHART_MARGIN_Y = 24
@@ -175,6 +175,7 @@ def panel(dst: pygame.Surface, rect: pygame.Rect, fill=NAVY, border=GOLD, radius
     pygame.draw.rect(dst, border, rect, bw, border_radius=radius)
 
 
+@lru_cache(maxsize=512)
 def chip(text: str, color, size: int = 30, fg=WHITE) -> pygame.Surface:
     t = txt(text, size, fill=fg, width=3)
     s = pygame.Surface((t.get_width() + 30, t.get_height() + 10), pygame.SRCALPHA)
@@ -247,20 +248,31 @@ def sunburst(dst: pygame.Surface, center, t: float, col_a, col_b, n: int = 18, r
 
 
 # ---------------------------------------------------------------------------------------------- MC Tuno corner
-def tuno_booth(dst: pygame.Surface, rect: pygame.Rect, state: str, t: float, rms: float, scale: float) -> None:
-    panel(dst, rect, fill=(28, 20, 56), border=GOLD, radius=28, alpha=250)
-    inner = rect.inflate(-14, -14)
-    buf = pygame.Surface(inner.size, pygame.SRCALPHA)
-    for x in range(10, inner.w, 30):
-        pygame.draw.line(buf, (40, 30, 80, 255), (x, 0), (x, inner.h), 6)
-    pygame.draw.polygon(buf, (90, 56, 160, 120), [(0, 0), (inner.w * 0.35, 0), (inner.w * 0.85, inner.h), (inner.w * 0.4, inner.h)])
-    pygame.draw.circle(buf, (0, 229, 255, 50), (int(inner.w * 0.58), int(inner.h * 0.45)), int(min(inner.size) * 0.36), 6)
-    draw_tuno(buf, inner.w * 0.55, inner.h - 4, state, t, scale=scale, voice_rms=rms)
-    mask = pygame.Surface(inner.size, pygame.SRCALPHA)
+@lru_cache(maxsize=16)
+def _booth_chrome(w: int, h: int) -> tuple[pygame.Surface, pygame.Surface]:
+    base = pygame.Surface((w + 16, h + 16), pygame.SRCALPHA)
+    panel(base, pygame.Rect(8, 8, w, h), fill=(28, 20, 56), border=GOLD, radius=28, alpha=250)
+    iw, ih = w - 14, h - 14
+    bg = pygame.Surface((iw, ih), pygame.SRCALPHA)
+    for x in range(10, iw, 30):
+        pygame.draw.line(bg, (40, 30, 80, 255), (x, 0), (x, ih), 6)
+    pygame.draw.polygon(bg, (90, 56, 160, 120), [(0, 0), (iw * 0.35, 0), (iw * 0.85, ih), (iw * 0.4, ih)])
+    pygame.draw.circle(bg, (0, 229, 255, 50), (int(iw * 0.58), int(ih * 0.45)), int(min(iw, ih) * 0.36), 6)
+    mask = pygame.Surface((iw, ih), pygame.SRCALPHA)
     pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=22)
-    buf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
-    dst.blit(buf, inner.topleft)
-    live = chip("MC TUNO", (220, 38, 38), 24)
+    bg.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+    base.blit(bg, (15, 15))
+    return base, chip("MC TUNO", (220, 38, 38), 24)
+
+
+def tuno_booth(dst: pygame.Surface, rect: pygame.Rect, state: str, t: float, rms: float, scale: float) -> None:
+    chrome, live = _booth_chrome(rect.w, rect.h)
+    dst.blit(chrome, (rect.x - 8, rect.y - 8))
+    inner = rect.inflate(-18, -18)
+    prev_clip = dst.get_clip()
+    dst.set_clip(inner)
+    draw_tuno(dst, rect.x + rect.w * 0.55, rect.bottom - 11, state, t, scale=scale, voice_rms=rms)
+    dst.set_clip(prev_clip)
     dst.blit(live, (rect.x + 18, rect.y + 16))
 
 
@@ -914,6 +926,18 @@ class RecapVideo:
 
         header = self._race_header(ri)
         feed = self._format_feed_items(clip, ri) if has else []
+        booth_sub = pygame.Rect(BOOTH_RECT.x, BOOTH_RECT.y, 360, BOOTH_RECT.h)
+        tracker_sub = pygame.Rect(BOOTH_RECT.x + 372, BOOTH_RECT.y, BOOTH_RECT.w - 372, BOOTH_RECT.h)
+
+        # Pre-render static sidebar cards once per race instead of 1,150x per race
+        tracker_surf = pygame.Surface((tracker_sub.w + 16, tracker_sub.h + 16), pygame.SRCALPHA)
+        self._draw_part_tracker(tracker_surf, ri, pygame.Rect(8, 8, tracker_sub.w, tracker_sub.h))
+        standings_surf = pygame.Surface((STANDINGS_RECT.w + 16, STANDINGS_RECT.h + 16), pygame.SRCALPHA)
+        self._draw_live_standings(standings_surf, ri, pygame.Rect(8, 8, STANDINGS_RECT.w, STANDINGS_RECT.h))
+        ticker_bg = pygame.Surface((TICKER_RECT.w + 16, TICKER_RECT.h + 16), pygame.SRCALPHA)
+        panel(ticker_bg, pygame.Rect(8, 8, TICKER_RECT.w, TICKER_RECT.h), fill=NAVY, border=(56, 189, 248), radius=24, bw=3)
+        results_settled = self._results_card(ri, 1.0)
+
         reader = {"r": None}
         boundaries = []
         for i in range(1, len(timeline)):
@@ -938,6 +962,12 @@ class RecapVideo:
                 reader["r"].close()
 
         noise = [self._noise_frame(i) for i in range(4)] if not has else []
+        tag_map = {
+            "opening": ("GATE DROP", (37, 99, 235)),
+            "chaos": ("CHAOS CAM", (217, 119, 6)),
+            "final": ("FINAL STRETCH", (220, 38, 38)),
+            "replay": ("SLOW-MO REPLAY", (190, 30, 60)),
+        }
 
         def draw(fr: pygame.Surface, t: float, ctx: Ctx) -> None:
             seg = "play"
@@ -972,9 +1002,7 @@ class RecapVideo:
             pygame.draw.rect(fr, GOLD, VIEWPORT.inflate(4, 4), 4, border_radius=14)
             self._draw_race_progress_bar(fr, header, t, dur, clip_s, seg)
 
-            # Right Esports Sidebar (41.7% width): Top Booth + Tracker | Middle Ticker | Bottom Standings/Podium
-            booth_sub = pygame.Rect(BOOTH_RECT.x, BOOTH_RECT.y, 360, BOOTH_RECT.h)
-            tracker_sub = pygame.Rect(BOOTH_RECT.x + 372, BOOTH_RECT.y, BOOTH_RECT.w - 372, BOOTH_RECT.h)
+            # Right Esports Sidebar (43.75% width): Top Booth + Tracker | Middle Ticker | Bottom Standings/Podium
             mood = ctx.line.mood if ctx.line else ("TROPHY_CHEER" if t >= results_t else "HYPED_TALKING")
             if has and ctx.line is None and t < results_t:
                 if seg == "final" and (results_t - t) < 4.5:
@@ -982,15 +1010,53 @@ class RecapVideo:
                 elif seg == "chaos":
                     mood = "SHOCKED_JAWDROP"
             tuno_booth(fr, booth_sub, mood, t, ctx.rms, 1.48)
-            self._draw_part_tracker(fr, ri, tracker_sub)
+            fr.blit(tracker_surf, (tracker_sub.x - 8, tracker_sub.y - 8))
 
-            self._draw_commentary_ticker(fr, TICKER_RECT, ctx, feed, t, seg, ri)
+            # Fast pre-chromed ticker draw
+            fr.blit(ticker_bg, (TICKER_RECT.x - 8, TICKER_RECT.y - 8))
+            lbl_s, lbl_c = tag_map.get(seg, ("LIVE FEED", (15, 118, 110)))
+            fr.blit(txt("PLAY-BY-PLAY TICKER", 26, fill=(125, 211, 252), width=3), (TICKER_RECT.x + 22, TICKER_RECT.y + 16))
+            c_chip = chip(lbl_s, lbl_c, 20)
+            fr.blit(c_chip, c_chip.get_rect(topright=(TICKER_RECT.right - 20, TICKER_RECT.y + 14)))
+            y_feed = TICKER_RECT.y + 62
+            max_items = 4
+            if ctx.line is not None and ctx.line.text:
+                sp_box = pygame.Rect(TICKER_RECT.x + 18, TICKER_RECT.y + 58, TICKER_RECT.w - 36, 122)
+                pygame.draw.rect(fr, BLACK, sp_box.inflate(6, 6), border_radius=20)
+                pygame.draw.rect(fr, WHITE, sp_box, border_radius=18)
+                rows = wrap(ctx.line.text, 29, sp_box.w - 34, COMIC)[:3]
+                lh = 33
+                ty = sp_box.centery - (len(rows) * lh) // 2 + 2
+                for row in rows:
+                    rs = plain(row, 29, INK, COMIC)
+                    fr.blit(rs, rs.get_rect(midtop=(sp_box.centerx, ty)))
+                    ty += lh
+                y_feed = sp_box.bottom + 14
+                max_items = 2
+            recent = [it for it in feed if it[0] <= t][-max_items:]
+            if not recent:
+                goal_s = GOAL_LABELS.get(ri.goal, ri.goal.replace("_", " ").upper())
+                recent = [(0.0, f"GOAL: {goal_s}", (203, 213, 225))]
+                if ri.twist:
+                    recent.append((0.0, f"ACTIVE TWIST: {ri.twist.replace('_', ' ').upper()}", (192, 132, 252)))
+            for idx_i, (_, msg, col) in enumerate(reversed(recent)):
+                row_r = pygame.Rect(TICKER_RECT.x + 18, y_feed + idx_i * 48, TICKER_RECT.w - 36, 42)
+                if row_r.bottom > TICKER_RECT.bottom - 10:
+                    break
+                pygame.draw.rect(fr, (24, 35, 62), row_r, border_radius=12)
+                pygame.draw.circle(fr, col, (row_r.x + 18, row_r.centery), 6)
+                s_m = fit(txt(msg, 22, fill=col, width=2), row_r.w - 44)
+                fr.blit(s_m, s_m.get_rect(midleft=(row_r.x + 34, row_r.centery + 1)))
 
             if t >= results_t:
-                slide = int((1 - ease((t - results_t) / 0.30)) * 80)
-                fr.blit(self._results_card(ri, t - results_t), (STANDINGS_RECT.x, STANDINGS_RECT.y + slide))
+                dt_res = t - results_t
+                if dt_res >= 0.70:
+                    fr.blit(results_settled, STANDINGS_RECT.topleft)
+                else:
+                    slide = int((1 - ease(dt_res / 0.30)) * 80)
+                    fr.blit(self._results_card(ri, dt_res), (STANDINGS_RECT.x, STANDINGS_RECT.y + slide))
             else:
-                self._draw_live_standings(fr, ri, STANDINGS_RECT)
+                fr.blit(standings_surf, (STANDINGS_RECT.x - 8, STANDINGS_RECT.y - 8))
 
         ch_lbl = f"Race {ri.race}: {STAGE_LABELS.get(ri.stage, '').title() or self._arena_name(ri.arena)}"
         return Segment(f"race_{ri.race}", dur, draw, voice=voice, sfx=sfx_, chapter=ch_lbl, caption_mode="none",
@@ -1255,10 +1321,19 @@ class RecapVideo:
     def build_audio(self, total: float, starts: list[float], wav: Path) -> tuple[list[float], list[tuple[float, float, Line]]]:
         from src.narration import tts
 
+        def _boxcar_mean(x: np.ndarray, w: int) -> np.ndarray:
+            w = max(1, int(w))
+            pad_l = w // 2
+            pad_r = w - 1 - pad_l
+            xp = np.pad(x.astype(np.float64), (pad_l + 1, pad_r), mode="constant")
+            cs = np.cumsum(xp, dtype=np.float64)
+            return ((cs[w:] - cs[:-w]) / w).astype(np.float32)
+
         n = int(math.ceil(total * SR)) + SR
         voice = np.zeros(n, np.float32)
         fx = np.zeros(n, np.float32)
         spoken: list[tuple[float, float, Line]] = []
+        sfx_cache: dict[str, np.ndarray] = {}
         for seg, s0 in zip(self.segments, starts):
             for lt, ln in seg.voice:
                 pcm, d = self.bank.get(ln)
@@ -1273,7 +1348,9 @@ class RecapVideo:
                 fn = SFX_LIB.get(nm)
                 if fn is None:
                     continue
-                clip = fn()
+                if nm not in sfx_cache:
+                    sfx_cache[nm] = fn()
+                clip = sfx_cache[nm]
                 i0 = int(max(0.0, s0 + lt) * SR)
                 k = min(clip.size, n - i0)
                 if k > 0:
@@ -1283,19 +1360,25 @@ class RecapVideo:
         rms = [float(np.sqrt(np.mean(voice[int(i * SR / FPS):int((i + 1) * SR / FPS)] ** 2) or 0.0))
                for i in range(int(round(total * FPS)))]
         win = max(1, int(SR / FPS))
-        env = np.sqrt(np.convolve(voice * voice, np.ones(win, np.float32) / win, mode="same"))
+        env = np.sqrt(np.maximum(0.0, _boxcar_mean(voice * voice, win)))
         gate = (env > 0.02).astype(np.float32)
-        duck = np.clip(np.convolve(gate, np.ones(int(0.14 * SR), np.float32) / int(0.14 * SR), mode="same") * 1.35, 0, 1)
+        duck = np.clip(_boxcar_mean(gate, int(0.14 * SR)) * 1.35, 0.0, 1.0)
         fx *= (10.0 ** ((-6.0 * duck - 5.0) / 20.0)).astype(np.float32)
-        bed = music.theme_bgm(total + 1.0, music.track_for_theme(self.theme.key), seed=self.recap.season * 10 + (self.recap.part or 0))
-        mus = np.zeros(n, np.float32)
-        mus[:min(n, bed.size)] = bed[:min(n, bed.size)]
+        # Synthesize an exact 32-bar (126 BPM -> 60.9524s) seamless loop once and tile across total duration
+        loop_s = min(total + 1.0, 32.0 * 4.0 * 60.0 / 126.0)
+        bed_unit = music.theme_bgm(loop_s, music.track_for_theme(self.theme.key), seed=self.recap.season * 10 + (self.recap.part or 0))
+        reps = int(math.ceil(n / max(1, bed_unit.size)))
+        mus = np.tile(bed_unit, reps)[:n].astype(np.float32, copy=True)
         mus *= (10.0 ** ((-20.0 - 7.0 * duck) / 20.0)).astype(np.float32)
         fade = int(1.5 * SR)
         end_i = int(total * SR)
         mus[max(0, end_i - fade):end_i] *= np.linspace(1, 0, min(fade, end_i), dtype=np.float32)
         mus[end_i:] = 0
-        mixd = np.tanh((voice + fx + mus)[:end_i] * 1.05) * 0.94
+        raw_mix = (voice + fx + mus)[:end_i]
+        cur_rms = float(np.sqrt(np.mean(raw_mix * raw_mix) + 1e-12))
+        target_rms = float(10.0 ** (-15.5 / 20.0))
+        gain = min(2.4, max(0.7, target_rms / cur_rms)) if cur_rms > 1e-4 else 1.0
+        mixd = np.tanh(raw_mix * gain) * 0.88
         pcm16 = (np.clip(mixd, -1, 1) * 32767).astype(np.int16)
         with wave.open(str(wav), "wb") as w_:
             w_.setnchannels(2)
@@ -1318,8 +1401,8 @@ class RecapVideo:
         if max_frames:
             n_frames = min(n_frames, max_frames)
         cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{HH}",
-               "-r", str(FPS), "-i", "-", "-i", str(wav), "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
-               "-c:v", "libx264", "-preset", "superfast", "-crf", "21", "-pix_fmt", "yuv420p",
+               "-r", str(FPS), "-i", "-", "-i", str(wav),
+               "-c:v", "libx264", "-preset", "ultrafast", "-crf", "20", "-pix_fmt", "yuv420p",
                "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-shortest", "-movflags", "+faststart", str(out_mp4)]
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
         assert proc.stdin is not None

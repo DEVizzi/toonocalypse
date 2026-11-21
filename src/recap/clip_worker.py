@@ -21,9 +21,9 @@ import sys
 from pathlib import Path
 
 FPS = 30
-DEFAULT_W, DEFAULT_H = 1120, 840
+DEFAULT_W, DEFAULT_H = 1080, 810
 MIN_CLIP_FRAMES = int(31.5 * FPS)
-MAX_CLIP_FRAMES = int(36.0 * FPS)
+MAX_CLIP_FRAMES = int(35.0 * FPS)
 REACTION_S = 0.20
 
 

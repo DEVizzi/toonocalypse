@@ -99,6 +99,9 @@ def build_demo_state(n_races: int, state_dir: Path, log=print) -> None:
     from src.recap.record import build_record
     from src.state import league
 
+    from src.characters.roster import HERO_BY_KEY
+    from src.physics.engine import Sim
+
     sha = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     state = league.fresh_season_state(1, None, 1)
     hof: dict = {"seasons": []}
@@ -108,8 +111,13 @@ def build_demo_state(n_races: int, state_dir: Path, log=print) -> None:
         recipe, _ = recipe_generator.generate(entries, race, seed, season_theme=for_season(1).key)
         heroes, extras, gf = league.select_cast_for_race(copy.deepcopy(state), random.Random(seed))
         recipe.finale = gf
-        trace, _, _ = ep_main.simulate_best(recipe, heroes, extras, seed, history={"recent_winners": []},
-                                            log=lambda *_: None)
+        trace = None
+        for k in range(4):
+            cand = Sim(recipe, heroes, extras, seed * 1000 + k).run()
+            trace = cand
+            if cand.meta.get("winner") in HERO_BY_KEY:
+                break
+        assert trace is not None
         outcome, nxt, hof = league.evaluate_and_advance(state, trace, hall_of_fame=hof, mutate=True)
         entry = recipe_generator.history_entry(recipe, race)
         entry.update(season=1, race=race, stage=outcome.stage, winner=outcome.winner_key, published=True,
