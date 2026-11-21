@@ -209,6 +209,59 @@ class TestV46Engagement(unittest.TestCase):
         self.assertEqual(calls, [("ytLive0001", "18000000000000001", "Which ball?")])
         self.assertEqual(json.loads((st_dir / "season_state.json").read_text())["race_number"], race_before + 1)
 
+    def test_retrofit_comment_on_youtube_skips_instagram(self) -> None:
+        tmp = Path(tempfile.mkdtemp(prefix="ttc_v46_eng_"))
+        self.addCleanup(lambda: shutil.rmtree(tmp, ignore_errors=True))
+        (tmp / "episode_history.json").write_text(json.dumps({"entries": [{
+            "season": 1, "race": 1, "stage": "league", "arena": "crusher_gauntlet", "goal": "reach_finish",
+            "hazards": [], "published": True, "youtube_id": "21UG6Vz6Oz4", "instagram_id": "18181230226449454"}]}))
+        with mock.patch.object(youtube, "post_comment", return_value="Ugz1") as yt_c, \
+                mock.patch.object(instagram, "post_comment", return_value="c1") as ig_c:
+            rc = engage.main(["--comments", "--comment-on", "youtube", "--state-dir", str(tmp)])
+        self.assertEqual(rc, 0)
+        yt_c.assert_called_once()
+        ig_c.assert_not_called()
+
+
+class TestV46YouTubeReauthHelper(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("youtube_reauth", ROOT / "scripts" / "youtube_reauth.py")
+        cls.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.mod)
+
+    def test_auth_url_requests_force_ssl_with_pkce_on_loopback(self) -> None:
+        from urllib.parse import parse_qs, urlparse
+
+        verifier, challenge = self.mod.pkce_pair()
+        self.assertGreaterEqual(len(verifier), 43)
+        q = parse_qs(urlparse(self.mod.build_auth_url("x.apps.googleusercontent.com", "http://127.0.0.1:5555/",
+                                                      "st8", challenge)).query)
+        self.assertIn("https://www.googleapis.com/auth/youtube.force-ssl", q["scope"][0].split())
+        self.assertIn("https://www.googleapis.com/auth/youtube.upload", q["scope"][0].split())
+        self.assertEqual(q["code_challenge_method"], ["S256"])
+        self.assertEqual(q["access_type"], ["offline"])
+        self.assertEqual(q["redirect_uri"], ["http://127.0.0.1:5555/"])
+
+    def test_callback_state_and_errors(self) -> None:
+        self.assertEqual(self.mod.parse_callback("/?state=abc&code=4%2Fxyz", "abc"), "4/xyz")
+        for bad in ("/?state=evil&code=1", "/?code=1", "/?state=abc&error=access_denied", "/?state=abc",
+                    "/?state=%C3%A9&code=1"):
+            with self.assertRaises(ValueError):
+                self.mod.parse_callback(bad, "abc")
+
+    def test_client_json_validation(self) -> None:
+        tmp = Path(tempfile.mkdtemp(prefix="ttc_v46_cs_"))
+        self.addCleanup(lambda: shutil.rmtree(tmp, ignore_errors=True))
+        good, bad = tmp / "good.json", tmp / "bad.json"
+        good.write_text(json.dumps({"installed": {"client_id": "1-a.apps.googleusercontent.com", "client_secret": "s"}}))
+        bad.write_text(json.dumps({"installed": {"client_id": "nope", "client_secret": ""}}))
+        self.assertEqual(self.mod.load_client(good), ("1-a.apps.googleusercontent.com", "s"))
+        with self.assertRaises(ValueError):
+            self.mod.load_client(bad)
+
 
 if __name__ == "__main__":
     unittest.main()

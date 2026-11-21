@@ -87,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--published-index", type=int, default=-1, help="index into published episodes (-1 = latest)")
     ap.add_argument("--update-youtube-metadata", action="store_true")
     ap.add_argument("--comments", action="store_true")
+    ap.add_argument("--comment-on", choices=["both", "youtube", "instagram"], default="both")
     ap.add_argument("--state-dir", default=str(ROOT / "state"))
     a = ap.parse_args(argv)
 
@@ -117,7 +118,8 @@ def main(argv: list[str] | None = None) -> int:
             failures += 1
             print(f"[ENGAGE FAIL] YouTube metadata update: {_err(exc)}")
     if a.comments:
-        res = post_launch_engagement(yt_id, ig_id, meta)
+        res = post_launch_engagement(yt_id if a.comment_on in ("both", "youtube") else None,
+                                     ig_id if a.comment_on in ("both", "instagram") else None, meta)
         for k, v in res.items():
             print(f"[ENGAGE {'FAIL' if k.endswith('_error') else 'OK'}] {k}: {v}")
         failures += sum(1 for k in res if k.endswith("_error"))

@@ -15,9 +15,14 @@ on:
         type: boolean
         default: true
       post_comments:
-        description: "Post first comments on YouTube + Instagram"
+        description: "Post first comments"
         type: boolean
         default: true
+      comment_on:
+        description: "Where to post the first comment (avoid duplicates on re-runs)"
+        type: choice
+        default: both
+        options: [both, youtube, instagram]
 
 permissions:
   contents: read
@@ -39,6 +44,7 @@ jobs:
       PUBLISHED_INDEX: ${{ inputs.published_index }}
       UPDATE_YT: ${{ (inputs.update_youtube_metadata == true || inputs.update_youtube_metadata == 'true') && 'true' || 'false' }}
       POST_COMMENTS: ${{ (inputs.post_comments == true || inputs.post_comments == 'true') && 'true' || 'false' }}
+      COMMENT_ON: ${{ inputs.comment_on || 'both' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -48,7 +54,7 @@ jobs:
       - run: pip install requests==2.34.2 PyYAML==6.0.3
       - name: Apply SEO metadata + first comments
         run: |
-          set -- --published-index "$PUBLISHED_INDEX"
+          set -- --published-index "$PUBLISHED_INDEX" --comment-on "$COMMENT_ON"
           if [ "$UPDATE_YT" = "true" ]; then set -- "$@" --update-youtube-metadata; fi
           if [ "$POST_COMMENTS" = "true" ]; then set -- "$@" --comments; fi
           python -m src.publish.engage "$@"
