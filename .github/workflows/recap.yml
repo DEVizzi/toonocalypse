@@ -1,0 +1,122 @@
+name: The Tuno Report (Season Recap)
+
+# Long-form 16:9 ToonToonCastle recaps after every third of a season:
+#   Part 1 after Race 10 (Races 1-10) • Part 2 after Race 20 (Races 11-20) • Part 3 after Race 30 (playoffs + Grand Final)
+# Daily check ~2.5 h after the 14:17 UTC episode. Exits in seconds unless a part is due (stdlib-only check).
+on:
+  schedule:
+    - cron: "45 16 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "auto = next due part | part1/part2/part3 = specific part | preview = races so far (never uploads) | demo = simulated 10-race season (CI test) | backfill = verify+write legacy replay record"
+        type: choice
+        default: demo
+        options: [auto, part1, part2, part3, preview, demo, backfill]
+      season:
+        description: "Season number (optional; defaults to the current season)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run (render + gates + artifact, no upload / no state commit)"
+        type: boolean
+        default: true
+      privacy:
+        description: "YouTube privacy for live uploads"
+        type: choice
+        default: public
+        options: [public, unlisted, private]
+      backfill_args:
+        description: "backfill only: '<season> <race> <seed> <code_sha>'"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: toontooncastle-recap
+  cancel-in-progress: false
+
+jobs:
+  recap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+      MODE: ${{ inputs.mode || 'auto' }}
+      SEASON: ${{ inputs.season || '' }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run == true || inputs.dry_run == 'true') && 'true' || 'false' }}
+      PRIVACY: ${{ inputs.privacy || 'public' }}
+      BACKFILL_ARGS: ${{ inputs.backfill_args || '' }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      YOUTUBE_EXPECTED_CHANNEL_ID: UCDFPguMeI582rA374rLa7ow   # @ToonToonCastle (public channel id)
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the time machine replays each race at its own commit
+      - name: Is a recap due? (stdlib only, < 1 s)
+        id: due
+        run: |
+          if [ "$MODE" = "auto" ]; then python3 -m src.recap.schedule | tee -a "$GITHUB_OUTPUT"; else echo "due=true" | tee -a "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-python@v5
+        if: steps.due.outputs.due == 'true'
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install ffmpeg (IPv4 fast path + retries)
+        if: steps.due.outputs.due == 'true'
+        timeout-minutes: 4
+        run: |
+          if which ffmpeg && which ffprobe; then ffmpeg -version | head -1; exit 0; fi
+          APT_OPTS="-o Acquire::ForceIPv4=true -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15"
+          for i in 1 2 3; do
+            sudo apt-get $APT_OPTS update -q && sudo apt-get $APT_OPTS install -y -q --no-install-recommends ffmpeg && break
+            echo "apt attempt $i failed; retrying in 5s"; sleep 5
+          done
+          ffmpeg -version | head -1 && ffprobe -version | head -1
+      - if: steps.due.outputs.due == 'true'
+        run: pip install -r requirements.txt
+      - name: Configure git identity
+        if: steps.due.outputs.due == 'true'
+        run: |
+          git config user.name "toontooncastle-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Backfill legacy replay record (verified; commits only when every check passes)
+        if: steps.due.outputs.due == 'true' && env.MODE == 'backfill'
+        run: |
+          set -- $BACKFILL_ARGS
+          [ "$#" -eq 4 ] || { echo "backfill_args must be '<season> <race> <seed> <code_sha>'"; exit 2; }
+          python -m src.recap.backfill --season "$1" --race "$2" --seed "$3" --code-sha "$4" --write
+          if [ "$DRY_RUN" != "true" ]; then
+            git add state/recap_backfill.json
+            git diff --cached --quiet || git commit -m "chore(recap): verified replay record S$1 R$2"
+            git pull --rebase --autostash && git push
+          else
+            cat state/recap_backfill.json
+          fi
+      - name: Render (and publish) The Tuno Report
+        if: steps.due.outputs.due == 'true' && env.MODE != 'backfill'
+        run: |
+          ARGS="--mode $MODE --privacy $PRIVACY --stills"
+          if [ -n "$SEASON" ]; then ARGS="$ARGS --season $SEASON"; fi
+          if [ "$DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          python -m src.recap.run $ARGS
+      - name: Upload recap preview, thumbnail & QA stills (dry runs; auto-expire in 3 days)
+        if: always() && steps.due.outputs.due == 'true' && env.MODE != 'backfill' && (env.DRY_RUN == 'true' || env.MODE == 'demo' || env.MODE == 'preview')
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuno-report-preview
+          path: |
+            output/recap*/tuno_report_*.mp4
+            output/recap*/tuno_report_*.json
+            output/recap*/tuno_report_*_thumb.jpg
+            output/recap*/stills/*.png
+          retention-days: 3
+          if-no-files-found: ignore

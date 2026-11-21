@@ -17,6 +17,11 @@ Autonomous 1-episode/day 2D physics marble-race championship pipeline on GitHub 
   - Spoiler-free rotating "pick a ball" titles (≤ 60 chars, no `#shorts`), separate YouTube description vs Instagram caption (DM-share prompt, ≤ 5 hashtags), truthful keyword tags, Gaming category.
   - Best-effort "Which ball did you pick?" first comment on YouTube + Instagram after every publish (never blocks or rolls back a live episode). **Pin the YouTube comment manually** (the API can't pin).
   - `.github/workflows/engage.yml` (manual): re-applies the SEO metadata + first comments to an already-published episode.
+- **The Tuno Report — 3-part long-form season recaps ([src/recap](src/recap), `.github/workflows/recap.yml`)**:
+  - 16:9 YouTube recap after every third of a season: **Part 1** after Race 10 (Races 1-10), **Part 2** after Race 20 (Races 11-20), **Part 3** after Race 30 (last league races + playoffs + Grand Final + champion ceremony). Daily `45 16 * * *` check exits in < 1 s unless a part is due; one recap per run, never duplicated (`state/recaps.json`).
+  - **Real footage, replayed**: every race stores a compact replay record (`entry["recap"]`: seeds, recipe, cast, ranking, eliminations, `code_sha`). The time machine (`src/recap/timemachine.py`) re-simulates each race with the **exact commit** that produced it and only uses the footage if the outcome matches the published race (otherwise a "FOOTAGE LOST" gag card).
+  - **Exact tables**: the season is rebuilt race-by-race through `league.evaluate_and_advance` and must match `state/season_state.json` / `hall_of_fame.json` before anything publishes (fail closed).
+  - **MC Tuno hosts**: freeze-frame "Yep, that's Pip" cold open, per-race roasts built only from real facts, **The Tunos** awards (Main Character, Certified Menace, Always the Bridesmaid, Beaten By A Dummy, Speedrun Exit, Participation Trophy), title-race bar chart, table, next-part teaser, lip-synced edge-tts voice, chapters + thumbnail.
 
 ## Quick Commands
 
@@ -26,4 +31,9 @@ python -m src.state.reset --yes
 
 # Transactional dry-run preview + brand verification stills (no uploads, state/ untouched)
 python run_daily_episode.py --dry-run --brand-stills --out output/dry_run_s1_e1.mp4
+
+# The Tuno Report: is a recap due? / dry-run a part / CI demo season (no uploads, state/ untouched)
+python -m src.recap.schedule
+python -m src.recap.run --mode part1 --season 1 --dry-run --stills
+python -m src.recap.run --mode demo --dry-run --stills
 ```
