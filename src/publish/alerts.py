@@ -34,7 +34,7 @@ def open_alert_issue(title: str, body: str) -> bool:
     """Opens a GitHub Issue on GITHUB_REPOSITORY via `gh issue create`. Returns True if created."""
     gh = shutil.which("gh")
     repo = (os.environ.get("GITHUB_REPOSITORY") or "").strip()
-    token = (os.environ.get("GH_PAT") or os.environ.get("GH_TOKEN") or "").strip()
+    token = (os.environ.get("GITHUB_ISSUE_TOKEN") or os.environ.get("GH_PAT") or os.environ.get("GH_TOKEN") or "").strip()
     if not gh or not repo or not token or not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
         print(f"[ALERT] (local/no-gh) {redact(title)}: {redact(body)}")
         return False

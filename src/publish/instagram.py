@@ -75,7 +75,8 @@ def stage_ephemeral_release(mp4: Path, tag: str | None = None) -> tuple[str, str
         check=False,
     )
     if res.returncode != 0:
-        raise InstagramError(f"ephemeral release staging failed (exit {res.returncode})")
+        detail = redact(" ".join((res.stderr or res.stdout or "").split()))[:160]
+        raise InstagramError(f"ephemeral release staging failed (exit {res.returncode}: {detail})")
     return use_tag, f"https://github.com/{repo}/releases/download/{use_tag}/{mp4.name}"
 
 
