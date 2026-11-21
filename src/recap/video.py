@@ -1558,7 +1558,20 @@ class RecapVideo:
                 last = s0
         if chapters:
             chapters[0] = (0.0, chapters[0][1])
-        return {"duration": total, "frames": n_frames, "chapters": chapters,
+        qa_segs, speech_total = [], 0.0
+        for sg, s0 in zip(segs, starts):
+            spans = sorted((max(s0, a), min(s0 + sg.duration, b)) for a, b, _ in spoken_sorted
+                           if a < s0 + sg.duration and b > s0)
+            sp = sum(max(0.0, b - a) for a, b in spans)
+            speech_total += sp
+            edges = [s0] + [x for ab in spans for x in ab] + [s0 + sg.duration]
+            gap = max((edges[i + 1] - edges[i] for i in range(0, len(edges) - 1, 2)), default=sg.duration)
+            qa_segs.append({"seg": sg.name, "dur": round(sg.duration, 1), "lines": len(sg.voice),
+                            "max_quiet_s": round(gap, 1)})
+        qa = {"narration_pct": round(100 * speech_total / max(1.0, total), 1),
+              "max_quiet_s": max((q["max_quiet_s"] for q in qa_segs if q["seg"].startswith("race_")), default=0),
+              "segments": qa_segs}
+        return {"duration": total, "frames": n_frames, "chapters": chapters, "qa": qa,
                 "voice_ok": len(spoken_sorted) - getattr(self, "voice_missing", 0) if self.bank.use_tts else 0,
                 "voice_failed": getattr(self, "voice_missing", 0),
                 "lines": [ln.text for _, _, ln in spoken_sorted]}

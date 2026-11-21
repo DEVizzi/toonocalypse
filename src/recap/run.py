@@ -90,6 +90,29 @@ def validate_long_video(mp4: Path, expect_s: float) -> list[str]:
     return fails
 
 
+def _contact_sheet(stills_dir: Path) -> Path:
+    """Tiles every QA still into one labelled 4-column image (cheap single-image review of the whole video)."""
+    import os
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    import pygame
+    pygame.init()
+    files = sorted(p for p in stills_dir.glob("*.png") if p.name != "contact_sheet.png")
+    if not files:
+        raise FileNotFoundError("no stills")
+    cw_, ch_, cols = 480, 270, 4
+    rows = (len(files) + cols - 1) // cols
+    sheet = pygame.Surface((cw_ * cols, (ch_ + 26) * rows))
+    sheet.fill((12, 12, 20))
+    font = pygame.font.Font(None, 26)
+    for i, f in enumerate(files):
+        x, y = (i % cols) * cw_, (i // cols) * (ch_ + 26)
+        sheet.blit(pygame.transform.smoothscale(pygame.image.load(str(f)), (cw_, ch_)), (x, y + 26))
+        sheet.blit(font.render(f.stem, True, (250, 204, 21)), (x + 6, y + 4))
+    out = stills_dir / "contact_sheet.png"
+    pygame.image.save(sheet, str(out))
+    return out
+
+
 # ---------------------------------------------------------------------------------------------- demo season (CI)
 def build_demo_state(n_races: int, state_dir: Path, log=print) -> None:
     """Simulates an n-race Season 1 with the real pipeline steps into `state_dir` (never touches repo `state/`)."""
@@ -256,8 +279,22 @@ def run(mode: str, season: int | None, dry_run: bool, privacy: str, end_race: in
                "voice_ok": info["voice_ok"], "voice_failed": info["voice_failed"], "lines": info["lines"],
                "metadata": meta, "video": str(out_mp4), "thumbnail": str(thumb),
                "clip_sources": {r: c.get("source") for r, c in clips.items()},
-               "render_s": round(time.time() - t0, 1)}
+               "render_s": round(time.time() - t0, 1),
+               "qa": {**info.get("qa", {}),
+                      "camera": {r: c.get("camera_qa") for r, c in clips.items()},
+                      "size_mb": round(out_mp4.stat().st_size / 1e6, 1) if out_mp4.exists() else None}}
+    if stills:
+        try:
+            _contact_sheet(out_dir / "stills")
+        except Exception as exc:  # noqa: BLE001
+            log(f"[RECAP WARN] contact sheet: {type(exc).__name__}: {exc}")
     out_mp4.with_suffix(".json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+    q = summary.get("qa") or {}
+    cams = [c for c in (q.get("camera") or {}).values() if isinstance(c, dict) and "avg_visible_pct" in c]
+    log(f"[RECAP QA] duration={info['duration']:.1f}s size={q.get('size_mb')}MB narration={q.get('narration_pct')}% "
+        f"worst_race_quiet={q.get('max_quiet_s')}s camera_visible_avg="
+        f"{round(sum(c['avg_visible_pct'] for c in cams) / max(1, len(cams)), 1)}% "
+        f"camera_empty_max={max((c['empty_frame_pct'] for c in cams), default='n/a')}%")
     log(f"[RECAP] rendered {out_mp4.name}: {info['duration']:.1f}s, voice {info['voice_ok']} ok / "
         f"{info['voice_failed']} failed, {time.time() - t0:.0f}s total")
 

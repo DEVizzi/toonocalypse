@@ -337,6 +337,27 @@ def run(root: Path, job: dict) -> dict:
             enc2.close()
             side["freeze"] = {"path": str(out_dir / f"{tag}_freeze.mp4"), "frames": enc2.n, "victim": fz["victim"],
                               "width": w, "height": h, "pos": last_pos}
+    try:   # camera QA: share of living heroes inside the 4:3 window + frames with no hero visible
+        hidx = [trace.index(k) for k in trace.meta.get("heroes") or [] if k in trace.keys]
+        crop_h = 1080.0 * h / max(1, w)
+        vis, empty, nf = 0.0, 0, 0
+        for shot, seg, _ in plan:
+            if seg == "replay":
+                continue
+            fi = int(min(n - 1, max(0, round(shot.tf))))
+            alive = [i for i in hidx if trace.flags[fi][i] & 1]
+            if not alive:
+                continue
+            cam = r.cams[fi]
+            inw = sum(1 for i in alive if 0 <= cam.to_screen(*trace.frames[fi][i][:2])[0] <= 1080
+                      and abs(cam.to_screen(*trace.frames[fi][i][:2])[1] - scy) <= crop_h / 2)
+            vis += inw / len(alive)
+            empty += inw == 0
+            nf += 1
+        side["camera_qa"] = {"avg_visible_pct": round(100 * vis / max(1, nf), 1),
+                             "empty_frame_pct": round(100 * empty / max(1, nf), 1)}
+    except Exception as exc:  # noqa: BLE001
+        side["camera_qa"] = {"error": type(exc).__name__}
     side["ok"] = True
     return side
 

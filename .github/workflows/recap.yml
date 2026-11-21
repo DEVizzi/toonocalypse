@@ -108,6 +108,16 @@ jobs:
           if [ -n "$SEASON" ]; then ARGS="$ARGS --season $SEASON"; fi
           if [ "$DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           python -m src.recap.run $ARGS
+      - name: Upload compact QA (contact sheet + summary JSON)
+        if: always() && steps.due.outputs.due == 'true' && env.MODE != 'backfill'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuno-report-qa
+          path: |
+            output/recap*/tuno_report_*.json
+            output/recap*/stills/contact_sheet.png
+          retention-days: 7
+          if-no-files-found: ignore
       - name: Upload recap preview, thumbnail & QA stills (dry runs; auto-expire in 3 days)
         if: always() && steps.due.outputs.due == 'true' && env.MODE != 'backfill' && (env.DRY_RUN == 'true' || env.MODE == 'demo' || env.MODE == 'preview')
         uses: actions/upload-artifact@v4
