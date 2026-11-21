@@ -182,6 +182,39 @@ def publish_prepared_reel(creation_id: str) -> str:
     return media_id
 
 
+def post_comment(media_id: str, message: str) -> str:
+    """Posts a comment from the account on its own published Reel (`POST /{media-id}/comments`). Returns comment id.
+    Needs `instagram_business_manage_comments` (Instagram Login) or `instagram_manage_comments` (Facebook Login)."""
+    mid = str(media_id or "").strip()
+    if not _SAFE_ID.match(mid):
+        raise InstagramError("invalid media_id for comment")
+    msg = str(message or "").strip()[:2000]
+    if not msg:
+        raise InstagramError("empty comment text")
+    req = _requests()
+    _, token, base = _ig_creds()
+    try:
+        resp = req.post(
+            f"{base}/{mid}/comments",
+            headers={"Authorization": f"Bearer {token}"},
+            data={"message": msg},
+            timeout=TIMEOUT_S,
+        )
+    except req.RequestException as exc:
+        raise InstagramError(f"comment request failed ({type(exc).__name__})") from None
+    if resp.status_code != 200:
+        err_msg = ""
+        try:
+            err_msg = str(((resp.json() or {}).get("error") or {}).get("message", ""))[:120]
+        except ValueError:
+            err_msg = "non-JSON error"
+        raise InstagramError(f"comment HTTP {resp.status_code}: {redact(err_msg)}")
+    cid = str((resp.json() or {}).get("id") or "").strip()
+    if not cid:
+        raise InstagramError("comment response had no id")
+    return cid
+
+
 def upload_reel(mp4: Path, caption: str, video_url: str | None = None) -> str:
     """Single-call convenience wrapper (stages -> waits for FINISHED -> publishes -> cleans up)."""
     size = mp4.stat().st_size
@@ -202,6 +235,7 @@ __all__ = [
     "InstagramError",
     "cleanup_ephemeral_release_by_tag",
     "make_stage_tag",
+    "post_comment",
     "prepare_reel_container",
     "publish_prepared_reel",
     "stage_ephemeral_release",

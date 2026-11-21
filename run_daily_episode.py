@@ -37,7 +37,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.publish import alerts, instagram, validate, youtube  # noqa: E402
+from src.publish import alerts, engage, instagram, validate, youtube  # noqa: E402
 from src.state import league  # noqa: E402
 
 STATE_DIR = ROOT / "state"
@@ -271,6 +271,7 @@ def _worker_execute(
         pub_meta["description"],
         pub_meta["tags"],
         privacy=privacy,
+        category_id=pub_meta.get("category_id"),
     )
     manifest.update(yt_video_id=yt_id, stage="step_c_ig_media_publish")
     _write_manifest(manifest_path, manifest)
@@ -328,6 +329,32 @@ def _commit_step_d(
     return pushed
 
 
+def _read_upload_metadata(out_mp4: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(out_mp4.with_suffix(".json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    meta = data.get("upload_metadata") if isinstance(data, dict) else None
+    return dict(meta) if isinstance(meta, dict) else {}
+
+
+def _run_engagement(
+    engage_fn: Callable[[str | None, str | None, dict[str, Any]], dict[str, Any]] | None,
+    manifest: dict[str, Any],
+    upload_meta: dict[str, Any],
+) -> dict[str, Any]:
+    """v4.6 first comments on the live YT Short + IG Reel. Best-effort: errors are logged, never raised."""
+    if engage_fn is None or not upload_meta:
+        return {}
+    try:
+        res = engage_fn(manifest.get("yt_video_id"), manifest.get("ig_media_id"), upload_meta) or {}
+    except Exception as exc:  # noqa: BLE001 - engagement must never fail an already-published episode
+        res = {"engagement_error": alerts.redact(f"{type(exc).__name__}: {exc}")[:220]}
+    for key, val in res.items():
+        print(f"[ENGAGEMENT] {key}: {val}", flush=True)
+    return res
+
+
 def run_transactional_pipeline(
     dry_run: bool = False,
     force_run: bool = False,
@@ -344,6 +371,7 @@ def run_transactional_pipeline(
     cleanup_ig_fn: Callable[[str], bool] = instagram.cleanup_ephemeral_release_by_tag,
     alert_fn: Callable[[str, str], bool] = alerts.open_alert_issue,
     seed_override: int | None = None,
+    engage_fn: Callable[[str | None, str | None, dict[str, Any]], dict[str, Any]] | None = engage.post_launch_engagement,
 ) -> int:
     today_utc = utc_today_str()
     if not dry_run and not force_run and is_today_published(state_dir=state_dir, today_utc=today_utc):
@@ -409,6 +437,7 @@ def run_transactional_pipeline(
                 restore_state_snapshot(snap, state_dir=state_dir)
                 print(f"[DRY-RUN SUCCESS] {target_mp4} verified in {elapsed:.1f}s (state/ untouched)", flush=True)
                 return 0
+            upload_meta = _read_upload_metadata(target_mp4)   # read before Step D deletes local files
             ok_commit = _commit_step_d(
                 target_mp4,
                 manifest,
@@ -418,6 +447,8 @@ def run_transactional_pipeline(
             )
             if ok_commit:
                 print(f"[LIVE PUBLISH SUCCESS] Attempt {attempt} completed in {elapsed:.1f}s", flush=True)
+            _run_engagement(engage_fn, manifest, upload_meta)   # videos are live either way; never fatal
+            if ok_commit:
                 return 0
             reason = f"Attempt {attempt} failed at step_d_git_push after {elapsed:.1f}s"
             failure_notes.append(reason)

@@ -99,8 +99,12 @@ def main() -> int:
         return 1
     granted = {s.rsplit("/", 1)[-1] for s in scopes.split()}
     upload_ok = bool(granted & {"youtube.upload", "youtube", "youtube.force-ssl", "youtubepartner"})
+    manage_ok = bool(granted & {"youtube", "youtube.force-ssl", "youtubepartner"})
     print(f"[OAUTH OK] access token refreshed (ttl {ttl}s), channels visible: {n}, "
-          f"upload scope: {'yes' if upload_ok else 'NO'}")
+          f"upload scope: {'yes' if upload_ok else 'NO'}, scopes: {', '.join(sorted(granted)) or 'unknown'}")
+    if not manage_ok:
+        print("[OAUTH WARN] token lacks youtube.force-ssl: auto-comments, title/description updates and rollback "
+              "deletes of partial uploads will fail. Re-run OAuth consent with youtube.upload + youtube.force-ssl.")
     if n < 1:
         print("[OAUTH FAIL] token is valid but sees no YouTube channel", file=sys.stderr)
         return 1

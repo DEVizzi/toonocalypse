@@ -163,6 +163,7 @@ def main(argv: list[str] | None = None) -> int:
 
     heroes, extras, is_grand_final = league.select_cast_for_race(season_state, rng)
     pre_table = [k for k, _ in league.sorted_standings(season_state["stats"])]
+    pre_points = [(k, int(d.get("points", 0))) for k, d in league.sorted_standings(season_state["stats"])]
     pre_rank = {k: i + 1 for i, k in enumerate(pre_table)}
     cast_sorted = sorted([h.key for h in heroes], key=lambda k: pre_rank.get(k, 99))
     prev_winner = next((e.get("winner") for e in reversed(entries) if isinstance(e, dict) and e.get("winner")), None)
@@ -258,7 +259,14 @@ def main(argv: list[str] | None = None) -> int:
 
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    meta_bundle = pub_meta.build_upload_metadata(recipe.arena, outcome, cta_prompt)
+    meta_ctx = {
+        "goal": recipe.goal,
+        "hazards": list(recipe.hazards or []),
+        "twist": recipe.twist,
+        "cast_keys": [h.key for h in heroes],
+        "pre_standings": pre_points,
+    }
+    meta_bundle = pub_meta.build_upload_metadata(recipe.arena, outcome, cta_prompt, **meta_ctx)
     summary = {
         "season": outcome.season_number,
         "race": outcome.race_number,
@@ -307,7 +315,7 @@ def main(argv: list[str] | None = None) -> int:
             line_ids = list(info["sound"].get("line_ids") or [])
             cliches = list(info["sound"].get("cliches") or [])
             print(f"sound: {info['sound']}")
-        meta_bundle = pub_meta.build_upload_metadata(recipe.arena, outcome, ep.prompt)
+        meta_bundle = pub_meta.build_upload_metadata(recipe.arena, outcome, ep.prompt, **meta_ctx)
         summary.update(
             video=str(out),
             duration=info["duration"],
@@ -375,6 +383,7 @@ def main(argv: list[str] | None = None) -> int:
                         meta_bundle["description"],
                         meta_bundle["tags"],
                         privacy=a.privacy,
+                        category_id=meta_bundle.get("category_id"),
                     )
                     summary["youtube_id"] = vid
                     succeeded += 1

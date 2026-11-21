@@ -156,15 +156,17 @@ class TestV45TransactionalLock(unittest.TestCase):
         self.assertIn("ig-stage-1700000002-77", ig_cleaned)
         self.assertEqual(alerts_sent, [])
 
-        # Verify Step D after Attempt 2 deleted local MP4 and committed exactly 1 published entry
+        # Verify Step D after Attempt 2 deleted local MP4 and committed exactly 1 NEW published entry
         self.assertFalse(out_mp4.exists())
         final_st = json.loads((st_dir / "season_state.json").read_text())
         final_hist = json.loads((st_dir / "episode_history.json").read_text())
+        orig_entries = json.loads(orig_hist).get("entries", [])
         self.assertEqual(final_st["race_number"], 2)
-        self.assertEqual(len(final_hist["entries"]), 1)
-        self.assertTrue(final_hist["entries"][0]["published"])
-        self.assertEqual(final_hist["entries"][0]["youtube_id"], "ytLiveVid77")
-        self.assertEqual(final_hist["entries"][0]["instagram_id"], "igLiveReel88")
+        self.assertEqual(len(final_hist["entries"]), len(orig_entries) + 1)
+        self.assertEqual(final_hist["entries"][:-1], orig_entries)
+        self.assertTrue(final_hist["entries"][-1]["published"])
+        self.assertEqual(final_hist["entries"][-1]["youtube_id"], "ytLiveVid77")
+        self.assertEqual(final_hist["entries"][-1]["instagram_id"], "igLiveReel88")
 
     def test_double_timeout_preserves_state_verbatim_and_opens_alert(self) -> None:
         tmp, st_dir, out_dir = self._make_temp_env()

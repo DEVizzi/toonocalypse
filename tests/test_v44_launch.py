@@ -36,12 +36,14 @@ class TestV44LaunchLock(unittest.TestCase):
             ribbon_text="SEASON 1 • RACE 1 / 30",
             is_grand_final=False,
         )
-        m = metadata.build_upload_metadata("rotating_disc", outcome, "Dash or Sly tomorrow? Drop your pick!")
-        self.assertEqual(m["title"], "Rotating Disc Chaos! S1 E1 | ToonToonCastle #shorts")
+        m = metadata.build_upload_metadata("rotating_disc", outcome, "Dash or Sly tomorrow? Drop your pick!",
+                                           goal="last_one_standing")
+        self.assertEqual(m["title"], "Only ONE Ball Survives the Rotating Disc 😱")   # v4.6 replaces the v4.4 title
         self.assertLessEqual(len(m["title"]), 100)
-        for tag in ("@ToonToonCastle", "#ToonToonCastle", "#physics", "#marblerace", "#shorts", "#reels"):
-            self.assertIn(tag, m["description"])
-            self.assertIn(tag, m["ig_caption"])
+        self.assertNotIn("#shorts", m["title"])
+        self.assertIn("#ToonToonCastle", m["description"])
+        self.assertIn("#toontooncastle", m["ig_caption"])
+        self.assertIn("ToonToonCastle", m["tags"])
 
     def test_gitignore_blocks_all_media_and_temp_dirs(self) -> None:
         gi = (ROOT / ".gitignore").read_text()

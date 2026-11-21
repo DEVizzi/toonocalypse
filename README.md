@@ -13,6 +13,10 @@ Autonomous 1-episode/day 2D physics marble-race championship pipeline on GitHub 
   - Staged safe publish (Step A render/gates -> Step B IG Reels container `FINISHED` -> Step C YouTube upload + IG `media_publish` -> Step D temp release cleanup + atomic `state/*.json` commit/push).
   - Hard **10-minute (`600s`) watchdog** with full local/remote/state rollback (`videos.delete`, temp IG release delete, verbatim `state/*.json` restore) and 1 automatic recreation (`MAX_ATTEMPTS = 2`).
 - **60-Day Instagram Token Maintenance (`0 10 1,15 * *`)**: Automatically refreshes `IG_ACCESS_TOKEN` every 45–50 days and opens a GitHub Issue immediately if refresh fails.
+- **v4.6 Viral SEO & Engagement ([metadata.py](src/publish/metadata.py), [engage.py](src/publish/engage.py))**:
+  - Spoiler-free rotating "pick a ball" titles (≤ 60 chars, no `#shorts`), separate YouTube description vs Instagram caption (DM-share prompt, ≤ 5 hashtags), truthful keyword tags, Gaming category.
+  - Best-effort "Which ball did you pick?" first comment on YouTube + Instagram after every publish (never blocks or rolls back a live episode). **Pin the YouTube comment manually** (the API can't pin).
+  - `.github/workflows/engage.yml` (manual): re-applies the SEO metadata + first comments to an already-published episode.
 
 ## Quick Commands
 

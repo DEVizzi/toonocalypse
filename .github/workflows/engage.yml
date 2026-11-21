@@ -1,0 +1,54 @@
+name: Engagement Boost (manual)
+
+# v4.6: re-applies the spoiler-free viral SEO metadata (YouTube title/description/tags/category) to an
+# already-published episode and posts the "Which ball did you pick?" first comments on YouTube + Instagram.
+# Never scheduled and never touches state/. Instagram captions of published Reels can't be edited via API:
+# the generated caption is printed in the log for manual paste.
+on:
+  workflow_dispatch:
+    inputs:
+      published_index:
+        description: "Published episode index in episode_history.json (-1 = latest)"
+        default: "-1"
+      update_youtube_metadata:
+        description: "Update YouTube title/description/tags/category"
+        type: boolean
+        default: true
+      post_comments:
+        description: "Post first comments on YouTube + Instagram"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toontooncastle-engage
+  cancel-in-progress: false
+
+jobs:
+  engage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      PUBLISHED_INDEX: ${{ inputs.published_index }}
+      UPDATE_YT: ${{ (inputs.update_youtube_metadata == true || inputs.update_youtube_metadata == 'true') && 'true' || 'false' }}
+      POST_COMMENTS: ${{ (inputs.post_comments == true || inputs.post_comments == 'true') && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install requests==2.34.2 PyYAML==6.0.3
+      - name: Apply SEO metadata + first comments
+        run: |
+          set -- --published-index "$PUBLISHED_INDEX"
+          if [ "$UPDATE_YT" = "true" ]; then set -- "$@" --update-youtube-metadata; fi
+          if [ "$POST_COMMENTS" = "true" ]; then set -- "$@" --comments; fi
+          python -m src.publish.engage "$@"
