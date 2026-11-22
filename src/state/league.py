@@ -77,8 +77,16 @@ def next_season_roster(season_number: int, prev_roster: list[str] | None = None,
     for k in rookies_for_season(s):
         if k not in roster:
             roster.append(k)
-    for k in BASE_ROSTER:                      # never drop below 10 balls
-        if len(roster) >= 10:
+    relegated = set((prev_roster or [])) - set(roster)
+    from src.characters.roster import ROOKIES
+    # keep the league at exactly 12 from Season 2: top up with unused rookies, then returning founders
+    for k in [r.key for r in ROOKIES] + list(BASE_ROSTER):
+        if len(roster) >= 12:
+            break
+        if k not in roster and k not in relegated:
+            roster.append(k)
+    for k in list(BASE_ROSTER) + [r.key for r in ROOKIES]:
+        if len(roster) >= 12:
             break
         if k not in roster:
             roster.append(k)
