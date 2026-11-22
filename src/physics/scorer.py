@@ -65,6 +65,8 @@ def score(trace: Trace, history: dict | None = None) -> Score:
         hi = 30.0                      # v3.3/v4.0: plays to genuine ALIVE: 1/X finish (natural 19-26 s)
     if rules.get("max_s"):
         hi = float(rules["max_s"])
+    if (trace.meta.get("recipe", {}).get("params") or {}).get("single_winner"):
+        hi = float(settings()["scorer"].get("single_winner_cap_s", 75))   # v6: plays to ALIVE: 1, any length
     p["duration"] = -50 if not (lo <= end <= hi) else 0
     how = next((e.data.get("how") for e in ev if e.kind == "win"), None)
     p["forced_finish"] = settings()["scorer"]["reject_penalty"] if (true_ko and how != "last_standing") else 0

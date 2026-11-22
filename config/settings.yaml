@@ -148,6 +148,8 @@ scorer:
   min_video_s: 22        # v6+: a Short shorter than this is re-simulated (then another arena) before publishing
   video_overhead_s: 6.8  # cold open + replay + winner card around the gameplay (measured ~7.2 s)
   remake_seeds: 60
+  single_winner: true     # v6+: no forced/timer winner while rivals live -> SUDDEN DEATH until ALIVE: 1
+  single_winner_cap_s: 75
   max_seeds: 16
   min_score: 30
   dummy_win_penalty: -1000

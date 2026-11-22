@@ -238,6 +238,9 @@ def main(argv: list[str] | None = None) -> int:
     if a.flash_forward != "auto":
         recipe.flash_forward = a.flash_forward == "on"
     recipe.finale = is_grand_final
+    single = day >= recipe_generator.v6_from_day() and bool(settings()["scorer"].get("single_winner", True))
+    if single:
+        recipe.params["single_winner"] = True     # v6: race plays on (SUDDEN DEATH) until exactly one ball is left
     recipe.episode_kind = "rumble_final" if is_grand_final else "spotlight"
 
     recent_winners = [e.get("winner") for e in entries[-6:] if isinstance(e, dict) and e.get("winner")]
@@ -274,6 +277,8 @@ def main(argv: list[str] | None = None) -> int:
             recipe2.theme = a.theme
         if a.flash_forward != "auto":
             recipe2.flash_forward = a.flash_forward == "on"
+        if single:
+            recipe2.params["single_winner"] = True
         recipe = recipe2
         print(f"recipe: {recipe.mode} {recipe.arena} / {recipe.goal} / {recipe.hazards} / twist={recipe.twist}")
         trace, best, report = simulate_best(recipe, heroes, extras, seed + 7919 * tries, history=sim_hist,

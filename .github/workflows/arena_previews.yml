@@ -3,7 +3,7 @@ name: Arena Previews (v6)
 on:
   push:
     branches: [v51-variety]
-    paths: ["src/narration/**", "src/audio/**", "src/games/arenas_v6/**", "src/rendering/arena_art/**", "src/games/arena_kit.py", ".github/workflows/arena_previews.yml"]
+    paths: ["src/physics/**", "src/games/goals.py", "src/main.py", "config/settings.yaml", "src/narration/**", "src/audio/**", "src/games/arenas_v6/**", "src/rendering/arena_art/**", "src/games/arena_kit.py", ".github/workflows/arena_previews.yml"]
   workflow_dispatch:
     inputs:
       arenas:

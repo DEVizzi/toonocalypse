@@ -104,6 +104,10 @@ class Sim:
 
         self.cfg = settings()["physics"]
         self.recipe = recipe
+        # v6: new races play to a genuine single survivor (stored in params so recaps replay identically)
+        self.single_winner = bool((recipe.params or {}).get("single_winner"))
+        self.sudden_death_t: float | None = None
+        self._sd_next = 0.0
         self.mode = recipe.mode
         self.rng = random.Random(seed)
         self.seed = seed
@@ -615,7 +619,12 @@ class Sim:
                 break
             true_finish = getattr(self.arena, "true_finish", False)
             cap = float(self.cfg["disc"]["hard_stop_s"]) if true_finish else hard
-            if not true_finish and self.t >= TIMELINE.forced_resolution_s and not self.winner:
+            if self.single_winner:
+                cap = float(settings()["scorer"].get("single_winner_cap_s", 75))
+                if self.t >= TIMELINE.forced_resolution_s and not self.winner:
+                    self.start_sudden_death(self.t)
+                self._sudden_death_tick()
+            elif not true_finish and self.t >= TIMELINE.forced_resolution_s and not self.winner:
                 self.goal.force_resolve(self.t)
             if self.t >= cap and not self.winner:
                 self.goal.force_resolve(self.t, hard=True)
@@ -627,6 +636,32 @@ class Sim:
                                finish_won=self._finish_won,
                                props=[{"shapes": p.shapes, "style": p.style} for p in self.props])
         return self.trace
+
+    def start_sudden_death(self, t: float) -> None:
+        if self.sudden_death_t is not None or self.winner:
+            return
+        self.sudden_death_t = t
+        # let the race play on naturally (overtime chaos); zaps only begin at the normal resolution time
+        self._sd_next = max(t + 1.0, float(TIMELINE.forced_resolution_s))
+        self.event("escalation", [], None, mult=self.speed_mult, banner="SUDDEN DEATH!", sudden_death=True)
+        if not self.overtime:
+            self._start_overtime("SUDDEN DEATH!")
+
+    def _sudden_death_tick(self) -> None:
+        """Every 1.2 s the worst-placed survivor is zapped (dummies first) until exactly one ball is left."""
+        if self.sudden_death_t is None or self.winner or self.t < self._sd_next:
+            return
+        alive = self.alive()
+        if len(alive) <= 1:
+            return
+        last_ko = max((c.eliminated_at or 0.0) for c in self.contestants if not c.alive) if len(alive) < len(
+            self.contestants) else -9.0
+        if self.t - last_ko < 2.0:                     # a real knockout just happened: give physics the next one too
+            self._sd_next = last_ko + 2.0
+            return
+        self._sd_next = self.t + 1.5
+        worst = min(alive, key=lambda c: (c.is_hero, self.goal.score(c)))
+        self.eliminate(worst, "sudden_death")
 
     def _apply_drives(self) -> None:
         for c in self.contestants:

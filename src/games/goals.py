@@ -45,6 +45,12 @@ class Goal:
             return
         if getattr(self.sim.arena, "true_finish", False) and len(self.sim.alive()) > 1 and how != "tiebreak":
             return                         # v3.3: Rotating Disc only ends at genuine ALIVE: 1
+        if getattr(self.sim, "single_winner", False) and len(self.sim.alive()) > 1 and how not in ("finish", "cap"):
+            self.sim.start_sudden_death(t)  # v6: never crown a ball while rivals live - SUDDEN DEATH until ALIVE: 1
+            return
+        if getattr(self.sim, "single_winner", False) and how == "finish":
+            for c in [o for o in self.sim.alive() if o.key != key]:
+                self.sim.eliminate(c, "left_behind")   # finish line crossed: everyone still on course is OUT
         self.sim.winner = key
         self.sim.resolved_at = t
         self.sim.event("win", [key], self.sim.by_key[key].pos, how=how, podium=self.ranking()[:3])
@@ -52,7 +58,10 @@ class Goal:
     def force_resolve(self, t: float, hard: bool = False) -> None:
         alive = self.sim.alive()
         if alive:
-            self.declare(max(alive, key=self.score).key, t, "tiebreak" if hard else "forced")
+            how = "tiebreak" if hard else "forced"
+            if hard and getattr(self.sim, "single_winner", False):
+                how = "cap"                # safety net only (sudden death normally ends it long before)
+            self.declare(max(alive, key=self.score).key, t, how)
 
     def target(self, c: "Contestant") -> tuple[float, float]:
         """Personal anchor around the centre (so the crowd doesn't pile onto one spot); aggressive ones go central."""
