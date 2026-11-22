@@ -29,6 +29,9 @@ from src.games.base import (
 from src.games.themes import THEMES
 
 MAX_ATTEMPTS = 500
+# v6 arenas whose races still run short in the lab (0/6 accepted): drawn rarely until tuned.
+V6_LOW_WEIGHT = {"big_bubble": 0.3, "lily_pads": 0.3, "swing_canyon": 0.3, "inferno_ascent": 0.3,
+                 "clockwork_cogs": 0.3, "glass_bridge": 0.5}
 
 
 # ---------------------------------------------------------------------------------------------- v6 arena pool
@@ -194,7 +197,8 @@ def _sample(rng: random.Random, mode: str, weights: dict | None, seed: int, seas
             twist = None
     else:
         v6 = _v6_info() if any(a not in ARENAS for a in arenas) else {}
-        a_weights = [w.get("arena", {}).get(a, 1.8 if a in SHOWCASE_ARENAS else (v6[a]["weight"] if a in v6 else 1.0))
+        a_weights = [w.get("arena", {}).get(a, 1.8 if a in SHOWCASE_ARENAS else
+                                           (V6_LOW_WEIGHT.get(a, v6[a]["weight"]) if a in v6 else 1.0))
                      for a in arenas]
         arena = rng.choices(arenas, a_weights)[0]
         goals = goals_for(arena, mode)
