@@ -38,7 +38,7 @@ class TestV50PipelineUpgrade(unittest.TestCase):
         # Find a deterministic flat_track seed that crosses the finish line
         tr = None
         for seed in range(100, 220):
-            rec, _ = recipe_generator.generate([], 10, seed, arena="flat_track", goal="reach_finish", season_theme="royal_classic")
+            rec, _ = recipe_generator.generate([], 1, seed, arena="flat_track", goal="reach_finish", season_theme="royal_classic")
             cand = Sim(rec, list(HEROES), make_extras(4, random.Random(seed)), seed).run()
             if cand.meta.get("finish_won"):
                 tr = cand
