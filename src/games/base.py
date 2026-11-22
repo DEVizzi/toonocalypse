@@ -153,6 +153,7 @@ class Recipe:
     flash_forward: bool = False
     episode_kind: str = "spotlight"
     finale: bool = False
+    favour: str | None = None          # v5.1: hero key the arena/twist was built to favour (not in fingerprint)
 
     def key(self) -> tuple:
         return (self.arena, self.goal, tuple(sorted(self.hazards)), self.twist)

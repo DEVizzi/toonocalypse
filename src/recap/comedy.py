@@ -147,19 +147,26 @@ WINNER: dict[str, tuple[str, ...]] = {
 }
 SPICE: dict[str, tuple[str, ...]] = {
     "lead_self": ("And {W} climbs to the top of the table on {pts}.",
-                  "And that puts {W} top of the whole table. Crown polish incoming."),
+                  "And that puts {W} top of the whole table. Crown polish incoming.",
+                  "{W} wins it AND takes the league lead. Greedy.", "Top of the table now: {W}, on {pts}."),
     "lead_other": ("Plot twist: {L} takes over top spot on {pts}.",
-                   "And somehow that hands {L} first place in the table."),
+                   "And somehow that hands {L} first place in the table.",
+                   "New name at the top: {L}, on {pts}.", "And just like that, {L} is the league leader."),
     "streak": ("That's back-to-back wins. Somebody stop {W}.",
-               "Two in a row for {W}. This is getting embarrassing for everyone else."),
+               "Two in a row for {W}. This is getting embarrassing for everyone else.",
+               "{W} again! Is anyone else even trying?"),
     "betrayal": ("{K} knocked {V} into orbit along the way. No apology issued.",
-                 "Also, {K} binned {V}. Friendship status: over."),
+                 "Also, {K} binned {V}. Friendship status: over.",
+                 "Special mention to {K} for ending {V} mid-race."),
     "menace": ("{K} binned {n} rivals on the way. Absolute menace.",
-               "{K} took out {n} balls. That's not racing, that's a crime spree."),
+               "{K} took out {n} balls. That's not racing, that's a crime spree.",
+               "{n} knockouts for {K} in one race. Someone confiscate that ball."),
     "dummy": ("Meanwhile, {X} finished behind a crash test dummy. It doesn't even have a brain.",
-              "And {X} lost to a crash dummy. A literal dummy."),
+              "And {X} lost to a crash dummy. A literal dummy.",
+              "Shout out to the crash dummy that beat {X}. Career highlight."),
     "first_out": ("{X} was first out. Speedrun strats.",
-                  "{X} went out first. Didn't even warm up."),
+                  "{X} went out first. Didn't even warm up.",
+                  "First one gone? {X}. Of course."),
     "first_win": ("First win of the season for {W}. Only took {n} races.",
                   "{W}'s first win of the season. Better late than never."),
     "upset": ("From bottom of the table to the top step. Movie rights pending.",
@@ -172,6 +179,128 @@ LOST: tuple[str, ...] = (
 )
 
 
+
+def skeleton(text: str) -> str:
+    """Line 'shape' used by the zero-repeat ledger: hero names, dummies and numbers blanked, punctuation dropped,
+    so 'K with zero remorse. Bye, V.' counts as ONE line no matter who it's about."""
+    s = (text or "").lower()
+    for h in HERO_BY_KEY.values():
+        s = re.sub(rf"\b{re.escape(h.name.lower())}\b", "#", s)
+    s = re.sub(r"\ba crash dummy\b|\bdummy #?\d+\b", "#", s)
+    s = re.sub(r"\d+", "0", s)
+    for w in NUM.values():
+        s = re.sub(rf"\b{w.lower()}\b", "0", s)
+    s = re.sub(r"[^a-z0# ]", " ", s)
+    return " ".join(s.split())
+
+
+def favour_of(r: RaceInfo) -> str | None:
+    """Hero key an arena was built to favour (Season 2+ recipes carry `favour`), else None."""
+    try:
+        fav = ((r.record or {}).get("recipe") or {}).get("favour")
+    except AttributeError:
+        return None
+    return fav if (fav in HERO_BY_KEY and fav in (r.heroes or [])) else None
+
+
+BIOME_QUIPS: dict[str, tuple[str, ...]] = {
+    "night": ("Night race. Nobody can see a thing, including the balls.", "Lights out. Brains were already out."),
+    "storm": ("Storm's rolling in. Perfect weather for terrible decisions.", "Thunder, lightning, and ten idiots."),
+    "lava": ("Lava hour. The floor is literally lava. Tell your friends.", "Everything is on fire. Business as usual."),
+    "sunset": ("Sunset race. Romantic. Violent, but romantic.", "Golden hour. Golden carnage."),
+    "dawn": ("Dawn raid. Way too early for this.", "Sunrise race. Nobody has had their coffee."),
+    "day": ("Blue skies. A false sense of security.", "Lovely day for it. It won't stay lovely."),
+}
+GENERIC_ARENA_QUIPS: tuple[str, ...] = (
+    "Same castle, fresh disaster.", "The architect has been fired. Again.", "Health and safety did not sign off.",
+    "Somebody built this on purpose.", "Pray for the balls.")
+FAVOUR_INTROS: tuple[str, ...] = (
+    "Fair warning, this course was basically built for {X}.", "This one suits {X}. Everyone else, good luck.",
+    "The castle has a favourite today, and it's {X}.")
+WIN_GENERIC: tuple[str, ...] = (
+    "{W} takes it! Somebody check the rule book.", "And {W} wins! I did not have that on my bingo card.",
+    "{W} gets it done. Messy, loud, and first.", "Victory for {W}! The crowd goes mild.",
+    "{W} wins it. Don't ask me how. I was watching and I still don't know.")
+KO_BY_FLAVOUR: dict[str, tuple[str, ...]] = {
+    "bonk": ("{K} didn't even move, and {V} bounced into the void!", "{V} ran into {K}. {K} won that argument."),
+    "pip": ("Tiny {K} takes out {V}! Humiliating!", "{V} just got bullied off by a ping-pong ball!"),
+    "boing": ("{K} boings straight through {V}!", "{V} got trampolined into oblivion by {K}!"),
+    "sly": ("{K} saw that coming three moves ago. Bye, {V}.", "Textbook from {K}. {V} never saw the angle."),
+    "grumble": ("{K} bins {V} and still looks furious about it!", "{K} hates everyone, and {V} just found out."),
+    "dash": ("{K} hits {V} at full speed! No brakes, no mercy!", "{V} got run over by the {K} express!"),
+    "magneto": ("{K} drags {V} in close, then spits him out!", "Magnet menace! {K} yanks {V} right off the track!"),
+    "floater": ("{K} drifts over and nudges {V} off! So rude!", "Death by beach ball! {V} is out, courtesy of {K}!"),
+    "juggernaut": ("{K} flattens {V}. Like a bus through a hedge.", "{V} met {K}. {V} is no longer with us."),
+    "glitch": ("{K} lagged straight into {V}, and {V} just vanished!", "Glitch in the matrix! {K} deletes {V}!"),
+}
+KO_BY_GENERIC: tuple[str, ...] = (
+    "Betrayal! {K} bins {V}!", "{K} sends {V} into orbit!", "{V} is gone, courtesy of {K}!",
+    "{K} chose violence, and {V} paid for it!", "And {K} evicts {V}!", "Hit and run! {K} on {V}!",
+    "Ooh, {K} on {V}! That'll leave a dent!", "{V} trusted {K}. Big mistake.", "{K} clears {V} off the map!",
+    "Sorry {V}, {K} needed the space!", "{K} bowls {V} clean off the course!", "{V} gets the {K} special. Goodnight!")
+KO_SOLO_FLAVOUR: dict[str, tuple[str, ...]] = {
+    "bonk": ("The heaviest ball in the castle, gone! Bonk is out!",),
+    "pip": ("Pip blows away like a crisp packet!",),
+    "boing": ("Boing bounced the wrong way. Bye!",),
+    "sly": ("So much for the big brain. Sly is out!",),
+    "grumble": ("Grumble is out, and he's going to complain about this for weeks!",),
+    "dash": ("Dash couldn't stop. Dash never stops. Dash is gone!",),
+    "magneto": ("Even the grip couldn't save Magneto!",),
+    "floater": ("Floater just drifts off into the abyss. Peaceful, honestly.",),
+    "juggernaut": ("Juggernaut is down! The ground felt that one!",),
+    "glitch": ("Glitch has disconnected. Permanently.",),
+}
+KO_SOLO_GENERIC: tuple[str, ...] = (
+    "{V} is out!", "Down goes {V}!", "Bye bye, {V}!", "{V} has left the building!", "And {V} falls off the planet!",
+    "{V}, no! Gone!", "That's the end of {V}!", "{V} takes the express lift down!", "Farewell, {V}. Nobody will miss you.",
+    "{V} is history!")
+EVENT_CALLS: dict[str, tuple[str, ...]] = {
+    "ot": ("Overtime! Total chaos now!", "Overtime! The castle wants blood!", "Overtime, and it's getting silly!"),
+    "shrink": ("The arena is shrinking! Nowhere to hide!", "It's shrinking! Squeeze time!"),
+    "speed": ("Speed up! Hold onto something!", "Faster! Nobody asked for faster!", "The track just hit fast forward!"),
+    "rev": ("Controls reversed! Pure panic!", "Reversed controls! Left is right now!"),
+    "grav": ("Gravity just changed its mind!", "Gravity's gone weird!"),
+    "any": ("Here comes a twist!", "Oh, the castle has a surprise!", "Plot twist incoming!"),
+}
+FINAL_CALLS: tuple[str, ...] = (
+    "Final stretch! Here we go!", "Into the endgame now!", "It all comes down to this!", "Endgame! Don't blink!",
+    "Last few seconds! Hold your breath!", "Here's your finish!", "Business end of the race!",
+    "Moment of truth!", "The crown is right there!", "Somebody has to win this. Unfortunately.")
+FILLERS: tuple[str, ...] = (
+    "Absolute scenes in the castle.", "Nobody here is steering. Nobody.", "Physics is having a terrible day.",
+    "This is beautiful, beautiful chaos.", "The crash dummies look more confident than the heroes.",
+    "Somebody call the insurance company.", "I've seen better driving at a bumper car funeral.",
+    "This is why we can't have nice things.", "My lawyer says I can't comment on this.",
+    "Not a single brain cell on the track.", "Ten balls, zero plans.", "That's not a race, that's a pinball machine.",
+    "If you're just joining us, I'm so sorry.", "Every single one of them is panicking. I love it.",
+    "Pure carnage, and we're not even done.", "Hold on, the commentary box is shaking.",
+    "Somebody pass me the popcorn.", "I genuinely can't tell who's winning.", "They're all trying. It's not working.",
+    "The castle eats balls for breakfast.", "Do not try this at home. Or anywhere.",
+    "The physics engine is screaming.", "Someone call a ref. Oh wait, we fired him.", "Rolling chaos, folks.")
+FACT_LEADER: tuple[str, ...] = (
+    "{X} came into this one top of the table on {n}.", "Remember, {X} leads the league on {n} points.",
+    "{X} is the one to catch. {n} points and counting.")
+FACT_DUMMY: tuple[str, ...] = (
+    "Fun fact, {X} has already lost to a crash dummy {n}.", "{X} has been beaten by a dummy {n} this season. Watch.")
+FACT_KOS: tuple[str, ...] = (
+    "{X} has {n} knockouts this season. Keep your distance.", "Careful near {X}. {n} knockouts already.")
+FACT_WINLESS: tuple[str, ...] = (
+    "{X} is still hunting a first win this season.", "{X} needs a win. Badly.")
+REPLAY_INTROS: dict[str, tuple[str, ...]] = {
+    "tight": ("Closer. Closer. Look at the face on {W}.", "Let's zoom in on that finish.",
+              "Up close and personal with the finish.", "Here it is, nice and close."),
+    "wide": ("Wide angle. Watch the whole mess unfold.", "Pull back. Look at all of that.",
+             "From up here you can see every bad decision.", "The full picture. It's not pretty."),
+    "rewind": ("Rewind that! Rewind!", "Hang on, run it back!", "Again! Back it up!", "Wait, wait, wind it back."),
+}
+POST_TABLE: tuple[str, ...] = (
+    "{X} sits top of the table on {n}.", "Table check: {X} leads on {n}.", "{X} still top of the pile on {n}.",
+    "That leaves {X} leading on {n}.", "Top spot belongs to {X}, on {n}.")
+POST_NEXT: tuple[str, ...] = (
+    "Right. {R} next.", "Next race. Brace yourselves.", "Onwards. {R}.", "Moving on, before anyone sues.",
+    "Deep breath. {R}.", "Okay. Next.")
+
+
 class Writer:
     def __init__(self, recap: SeasonRecap, seed: int | None = None, log=print) -> None:
         self.recap = recap
@@ -180,12 +309,36 @@ class Writer:
         self.used: dict[str, int] = {}
         self.stats = part_stats(recap)
         self.prev_spice = ""
+        self.said: set[str] = set()      # zero-repeat ledger of line skeletons (names/numbers blanked)
 
     # ------------------------------------------------------------------ helpers
+    def _fresh(self, family: str, options: tuple[str, ...] | list[str]) -> str | None:
+        """Next option (rotating per family) whose skeleton has NOT been spoken in this video, else None."""
+        if not options:
+            return None
+        start = self.used.get(family, self.rng.randrange(len(options)))
+        for j in range(len(options)):
+            txt = options[(start + j) % len(options)]
+            sk = skeleton(txt)
+            if sk not in self.said:
+                self.said.add(sk)
+                self.used[family] = start + j + 1
+                return txt
+        return None
+
     def _pick(self, family: str, options: tuple[str, ...] | list[str]) -> str:
+        txt = self._fresh(family, options)
+        if txt is not None:
+            return txt
         i = self.used.get(family, self.rng.randrange(len(options)))
         self.used[family] = i + 1
         return options[i % len(options)]
+
+    def mark(self, text: str) -> None:
+        self.said.add(skeleton(text))
+
+    def is_fresh(self, text: str) -> bool:
+        return skeleton(text) not in self.said
 
     def _race_word(self, race: int) -> str:
         return f"Race {NUM.get(race, str(race)).lower()}".capitalize()
@@ -208,7 +361,13 @@ class Writer:
         return Line(t, "hype", "HYPED_TALKING", "title")
 
     def roster(self) -> Line:
-        return Line("Quick introductions. A bowling ball, a ping-pong ball, a beach ball, an iron cube, "
+        from src.state import league
+        new = [k for k in (self.recap.final_stats or {}) if k in HERO_BY_KEY and k not in league.BASE_ROSTER]
+        if new:
+            names = " and ".join(name(k) for k in new[:2])
+            return Line(f"Quick introductions. The usual idiots, every one with a power, plus two rookies: {names}. "
+                        "Welcome to the castle. Sorry in advance.", "normal", "LAUGHING_TEARS", "roster")
+        return Line("Quick introductions. Every ball has a power. A wall, a trick shot, a magnet, a beach ball, "
                     "and six more bad decisions.", "normal", "LAUGHING_TEARS", "roster")
 
     def previously(self) -> Line:
@@ -228,14 +387,32 @@ class Writer:
     # ------------------------------------------------------------------ races
     def race_intro(self, r: RaceInfo) -> Line:
         from src.publish.metadata import arena_display_name
+        from src.rendering import biomes
 
         if r.stage in STAGE_INTROS:
             return Line(STAGE_INTROS[r.stage], "hype", "SWEATING_INTENSE", "intro")
-        quip = self._pick(f"arena.{r.arena}", ARENA_QUIPS.get(r.arena, ("Another arena. Another disaster.",)))
+        biome = biomes.biome_for(r.season, r.race)
+        quip = None
         if r.goal in GOAL_QUIPS and self.rng.random() < 0.5:
-            quip = GOAL_QUIPS[r.goal]
-        return Line(f"{self._race_word(r.race)}. {arena_display_name(r.arena)}. {quip}", "normal", "HYPED_TALKING",
-                    "intro")
+            quip = self._fresh(f"goal.{r.goal}", (GOAL_QUIPS[r.goal],))
+        if quip is None and biome != "day" and r.race % 2 == 0:
+            quip = self._fresh(f"biome.{biome}", BIOME_QUIPS.get(biome, ()))
+        if quip is None:
+            quip = self._fresh(f"arena.{r.arena}", ARENA_QUIPS.get(r.arena, ()))
+        if quip is None:
+            quip = self._fresh(f"biome.{biome}", BIOME_QUIPS.get(biome, ()))
+        if quip is None:
+            quip = self._pick("arena.any", GENERIC_ARENA_QUIPS)
+        fav = favour_of(r)
+        if fav:
+            fav_line = self._fresh("favour", tuple(t.format(X=name(fav)) for t in FAVOUR_INTROS))
+            if fav_line:
+                quip = f"{fav_line}"
+        A = arena_display_name(r.arena)
+        rw = self._race_word(r.race)
+        forms = (f"{rw}. {A}.", f"Next up, {A}.", f"{rw} takes us to {A}.", f"Here's {rw.lower()}. {A}.",
+                 f"On to {A} for {rw.lower()}.", f"{rw}, and it's {A}.")
+        return Line(f"{forms[r.race % len(forms)]} {quip}", "normal", "HYPED_TALKING", "intro")
 
     def _spice_options(self, r: RaceInfo, prev: RaceInfo | None) -> list[tuple[str, dict[str, Any]]]:
         W = name(r.winner)
@@ -269,8 +446,9 @@ class Writer:
         if r.stage == "grand_final":
             return [Line(f"{W} wins the Grand Final!", "hype", "TROPHY_CHEER", "winner"),
                     Line(f"{W} is your Season {r.season} champion!", "hype", "TROPHY_CHEER", "winner")]
-        lines = [Line(self._pick(f"win.{r.winner}", WINNER.get(r.winner, (f"{W} wins!",))), "hype", "TROPHY_CHEER",
-                      "winner")]
+        win_txt = self._fresh(f"win.{r.winner}", WINNER.get(r.winner, ())) or \
+            (self._fresh("win.any", tuple(t.format(W=W) for t in WIN_GENERIC)) or f"{W} wins!")
+        lines = [Line(win_txt, "hype", "TROPHY_CHEER", "winner")]
         if r.stage == "play_in":
             lines.append(Line(f"{W} grabs the last playoff seat. The other six are now spectators.", "normal",
                               "LAUGHING_TEARS", "stage"))
@@ -290,24 +468,30 @@ class Writer:
         if r.lead_changed:
             fam = "lead_self" if r.leader_after == r.winner else "lead_other"
             pts = int(r.stats_after[r.leader_after]["points"])
-            txt = self._pick(fam, SPICE[fam]).format(W=W, L=name(r.leader_after), pts=f"{pts} points")
-            lines.append(Line(txt, "hype", "SHOCKED_JAWDROP", "lead"))
-            self.prev_spice = fam
-            return lines
+            tpl = self._fresh(fam, SPICE[fam])
+            if tpl:
+                txt = tpl.format(W=W, L=name(r.leader_after), pts=f"{pts} points")
+                lines.append(Line(txt, "hype", "SHOCKED_JAWDROP", "lead"))
+                self.prev_spice = fam
+                return lines
         opts = self._spice_options(r, prev)
         if opts:
             prio = {k: i for i, k in enumerate(("streak", "upset", "betrayal", "menace", "dummy", "first_out",
                                                 "first_win"))}
             opts.sort(key=lambda o: (o[0] == self.prev_spice, self.used.get(f"spice.{o[0]}", 0), prio.get(o[0], 9)))
-            fam, ctx = opts[0]
-            self.used[f"spice.{fam}"] = self.used.get(f"spice.{fam}", 0) + 1
-            if fam == "dummy":
-                self.used["dummy_hero"] = self.used.get("dummy_hero", 0) + 1
-            txt = self._pick(fam, SPICE[fam]).format(**ctx)
-            mood = "FACEPALM" if fam in ("dummy", "first_out") else ("SHOCKED_JAWDROP" if fam in ("betrayal", "menace")
-                                                                    else "LAUGHING_TEARS")
-            lines.append(Line(txt, "deadpan" if fam in ("dummy", "first_out") else "normal", mood, fam))
-            self.prev_spice = fam
+            for fam, ctx in opts:
+                tpl = self._fresh(fam, SPICE[fam])
+                if not tpl:
+                    continue
+                self.used[f"spice.{fam}"] = self.used.get(f"spice.{fam}", 0) + 1
+                if fam == "dummy":
+                    self.used["dummy_hero"] = self.used.get("dummy_hero", 0) + 1
+                txt = tpl.format(**ctx)
+                mood = "FACEPALM" if fam in ("dummy", "first_out") else ("SHOCKED_JAWDROP" if fam in ("betrayal", "menace")
+                                                                        else "LAUGHING_TEARS")
+                lines.append(Line(txt, "deadpan" if fam in ("dummy", "first_out") else "normal", mood, fam))
+                self.prev_spice = fam
+                break
         return lines
 
     def footage_lost(self, r: RaceInfo) -> Line:
@@ -315,32 +499,62 @@ class Writer:
             return Line("No footage for this one. Glitch corrupted it. Of course he did.", "deadpan", "FACEPALM", "lost")
         return Line(self._pick("lost", LOST), "deadpan", "FACEPALM", "lost")
 
-    def race_mid(self, r: RaceInfo) -> Line:
+    def _peek(self, family: str, options: tuple[str, ...] | list[str], n: int = 1) -> list[str]:
+        """Up to n not-yet-spoken options (rotating per family) WITHOUT claiming them. Live lines are only claimed
+        when the scheduler actually places them, so unused candidates never burn the bank."""
+        if not options:
+            return []
+        start = self.used.get(family, self.rng.randrange(len(options)))
+        self.used.setdefault(family, start)
+        out, seen = [], set()
+        for j in range(len(options)):
+            txt = options[(start + j) % len(options)]
+            sk = skeleton(txt)
+            if sk in self.said or sk in seen:
+                continue
+            seen.add(sk)
+            out.append(txt)
+            if len(out) >= n:
+                break
+        return out
+
+    def claim(self, line: Line) -> bool:
+        """Marks a line as spoken; False if its skeleton was already used in this video (caller must skip it)."""
+        sk = skeleton(line.text)
+        if sk in self.said:
+            return False
+        self.said.add(sk)
+        return True
+
+    def unclaim(self, line: Line) -> None:
+        self.said.discard(skeleton(line.text))
+
+    def race_mid(self, r: RaceInfo) -> Line | None:
         betrayals = [e for e in r.elims if e.get("hero") and e.get("by_hero") and len(e.get("actors") or []) > 1]
         if betrayals:
             e = betrayals[-1]
             k_nm, v_nm = name(e["actors"][1]), name(e["actors"][0])
-            txt = self._pick("mid.betray", (
+            opts = self._peek("mid.betray", (
                 f"Oh! {k_nm} just launched {v_nm} straight into next week!",
                 f"Cold blooded from {k_nm}! {v_nm} never stood a chance.",
                 f"Look at {k_nm} choosing violence on {v_nm} mid-race!",
             ))
-            return Line(txt, "hype", "SHOCKED_JAWDROP", "mid")
+            return Line(opts[0], "hype", "SHOCKED_JAWDROP", "mid") if opts else None
         if r.first_hero_out and r.first_hero_out != r.winner:
             fo = name(r.first_hero_out)
-            txt = self._pick("mid.first", (
+            opts = self._peek("mid.first", (
                 f"{fo} is already in the pit, and we are barely halfway through!",
                 f"Early exit for {fo}. Absolute disasterclass in progress.",
                 f"Down goes {fo}! Now the survivors are getting desperate.",
             ))
-            return Line(txt, "normal", "LAUGHING_TEARS", "mid")
+            return Line(opts[0], "normal", "LAUGHING_TEARS", "mid") if opts else None
         runner = name(r.hero_ranking[1]) if len(r.hero_ranking) > 1 else name(r.winner)
-        txt = self._pick("mid.pack", (
+        opts = self._peek("mid.pack", (
             f"Final stretch now, and {runner} is clinging on by pure panic!",
             f"Bodies flying everywhere! {runner} is fighting for dear life out there!",
             "Three left in the endgame! Zero grip, zero mercy, maximum panic!",
         ))
-        return Line(txt, "hype", "SWEATING_INTENSE", "mid")
+        return Line(opts[0], "hype", "SWEATING_INTENSE", "mid") if opts else None
 
     def race_lines(self, r: RaceInfo, prev: RaceInfo | None, has_footage: bool) -> RaceLines:
         rl = RaceLines(intro=self.race_intro(r), verdict=self.race_verdict(r, prev))
@@ -351,70 +565,189 @@ class Writer:
         return rl
 
     # ------------------------------------------------------------------ live play-by-play (synced to footage)
-    def ko_call(self, victim: str, killer: str | None) -> Line:
+    def ko_call(self, victim: str, killer: str | None) -> Line | None:
+        """A never-repeated KO call. Personality flavour first (killer's style / victim's style), then generic."""
         V = name(victim)
         if killer and killer in HERO_BY_KEY and killer != victim:
             K = name(killer)
-            txt = self._pick("ko.by", (f"Betrayal! {K} bins {V}!", f"{K} sends {V} flying!",
-                                       f"{V} is gone, courtesy of {K}!", f"{K} with zero remorse! Bye, {V}!",
-                                       f"Oh, {K}! That's cold! {V} is out!"))
-            return Line(txt, "hype", "SHOCKED_JAWDROP", "ko")
-        txt = self._pick("ko.solo", (f"{V} is out!", f"Down goes {V}!", f"Bye bye, {V}!",
-                                     f"{V} has left the building!", f"And {V} falls off the planet!",
-                                     f"{V}, no! Gone!"))
-        return Line(txt, "hype", "LAUGHING_TEARS", "ko")
+            opts = [t.format(K=K, V=V) for t in KO_BY_FLAVOUR.get(killer, ())] + \
+                [t.format(K=K, V=V) for t in KO_BY_GENERIC]
+            got = self._peek(f"ko.by.{killer}", opts)
+            return Line(got[0], "hype", "SHOCKED_JAWDROP", "ko") if got else None
+        opts = [t.format(V=V) for t in KO_SOLO_FLAVOUR.get(victim, ())] + [t.format(V=V) for t in KO_SOLO_GENERIC]
+        got = self._peek(f"ko.solo.{victim}", opts)
+        return Line(got[0], "hype", "LAUGHING_TEARS", "ko") if got else None
 
     def event_call(self, banner: str, overtime: bool = False) -> Line | None:
         b = (banner or "").upper()
         if overtime or "OVERTIME" in b:
-            txt = self._pick("ev.ot", ("Overtime! Total chaos now!", "Overtime! The castle wants blood!",
-                                       "Overtime, and it's getting silly!"))
+            fam = "ot"
         elif "SHRINK" in b:
-            txt = self._pick("ev.shrink", ("The arena is shrinking! Nowhere to hide!", "It's shrinking! Squeeze time!"))
+            fam = "shrink"
         elif "SPEED" in b:
-            txt = self._pick("ev.speed", ("Speed up! Hold onto something!", "Faster! Nobody asked for faster!"))
+            fam = "speed"
         elif "REVERS" in b:
-            txt = self._pick("ev.rev", ("Controls reversed! Pure panic!", "Reversed controls! Left is right now!"))
+            fam = "rev"
         elif "GRAVITY" in b:
-            txt = self._pick("ev.grav", ("Gravity just changed its mind!", "Gravity's gone weird!"))
+            fam = "grav"
         elif b:
-            txt = self._pick("ev.any", ("Here comes a twist!", "Oh, the castle has a surprise!"))
+            fam = "any"
         else:
             return None
-        return Line(txt, "hype", "SWEATING_INTENSE", "event")
+        got = self._peek(f"ev.{fam}", EVENT_CALLS[fam])
+        return Line(got[0], "hype", "SWEATING_INTENSE", "event") if got else None
 
-    def final_call(self) -> Line:
-        txt = self._pick("final", ("Final stretch! Here we go!", "Into the endgame now!", "It all comes down to this!",
-                                   "Endgame! Don't blink!"))
-        return Line(txt, "hype", "SWEATING_INTENSE", "final")
+    def final_call(self) -> Line | None:
+        got = self._peek("final", FINAL_CALLS)
+        return Line(got[0], "hype", "SWEATING_INTENSE", "final") if got else None
 
     def fillers(self, r: RaceInfo) -> list[Line]:
-        """Spoiler-free colour lines for quiet stretches (never reveal the winner)."""
-        generic = (("Absolute scenes in the castle.", "Nobody here is steering. Nobody."),
-                   ("Physics is having a terrible day.", "This is beautiful, beautiful chaos."),
-                   ("The crash dummies look more confident than the heroes.", "Somebody call the insurance company."))
-        out = [Line(self._pick(f"fill.g{i}", g), "normal", "HYPED_TALKING", "filler") for i, g in enumerate(generic)]
-        lurkers = [k for k in r.hero_ranking[1:3] if k in HERO_BY_KEY]
-        for k in lurkers:
-            X = name(k)
-            out.insert(1, Line(self._pick("fill.named", (f"Keep an eye on {X}. Lurking.", f"{X} is quietly hanging in there.",
-                                                         f"{X} smells an opportunity.")), "normal", "HYPED_TALKING", "filler"))
+        """Spoiler-free colour for quiet stretches: season facts about the runners first, then one-liners.
+        Candidates only (claimed by the scheduler when used), so the whole video never repeats a filler."""
+        out: list[Line] = []
+        st = r.stats_before or {}
+        facts: list[str] = []
+        order = [k for k, _ in (r.standings_before or [])]
+        if order and r.race > 1:
+            lk = order[0]
+            lp = int((st.get(lk) or {}).get("points", 0))
+            facts += [t.format(X=name(lk), n=lp) for t in FACT_LEADER]
+        for k in r.heroes:
+            if k not in HERO_BY_KEY or k not in st:
+                continue
+            s = st[k]
+            if int(s.get("behind_dummy", 0) or 0) >= 1:
+                facts += [t.format(X=name(k), n=times(int(s["behind_dummy"]))) for t in FACT_DUMMY]
+            if int(s.get("kos", 0) or 0) >= 3:
+                facts += [t.format(X=name(k), n=int(s["kos"])) for t in FACT_KOS]
+            if r.race >= 5 and int(s.get("wins", 0) or 0) == 0 and int(s.get("races", 0) or 0) >= 4:
+                facts += [t.format(X=name(k)) for t in FACT_WINLESS]
+        for txt in self._peek(f"fill.facts.{r.race}", facts, n=3):
+            out.append(Line(txt, "normal", "HYPED_TALKING", "filler"))
+        for txt in self._peek("fill.generic", FILLERS, n=3):
+            out.append(Line(txt, "normal", "HYPED_TALKING", "filler"))
         return out
 
-    def post_lines(self, r: RaceInfo) -> list[Line]:
-        """Lines for the slow-mo replay after the verdict (facts only)."""
-        out = [Line(self._pick("post.replay", ("Let's see that one more time.", "Again! In glorious slow motion.",
-                                               "One more look. Pure art.", "Roll it back. Look at that.")),
-                    "normal", "LAUGHING_TEARS", "post")]
+    def post_lines(self, r: RaceInfo, replay_style: str = "", fmt: str = "STANDARD") -> list[Line]:
+        """Lines for the replay / results tail after the verdict (facts only, never repeated)."""
+        out: list[Line] = []
+        W = name(r.winner)
+        if fmt != "QUICK":
+            bank = REPLAY_INTROS.get(replay_style) or REPLAY_INTROS["tight"]
+            got = self._peek(f"post.replay.{replay_style}", tuple(t.format(W=W) for t in bank))
+            if got:
+                out.append(Line(got[0], "normal", "LAUGHING_TEARS", "post"))
         if r.stage == "league" and r.leader_after in r.stats_after:
             pts = int(r.stats_after[r.leader_after]["points"])
-            out.append(Line(self._pick("post.table", (f"{name(r.leader_after)} sits top of the table on {pts}.",
-                                                      f"Table check: {name(r.leader_after)} leads on {pts}.")),
-                            "normal", "HYPED_TALKING", "post"))
+            got = self._peek("post.table", tuple(t.format(X=name(r.leader_after), n=pts) for t in POST_TABLE))
+            if got:
+                out.append(Line(got[0], "normal", "HYPED_TALKING", "post"))
         if r.race < self.recap.end_race:
-            out.append(Line(self._pick("post.next", (f"Right. {self._race_word(r.race + 1)} next.",
-                                                     "Next race. Brace yourselves.")), "normal", "HYPED_TALKING", "post"))
+            got = self._peek("post.next", tuple(t.format(R=self._race_word(r.race + 1)) for t in POST_NEXT))
+            if got:
+                out.append(Line(got[0], "normal", "HYPED_TALKING", "post"))
         return out
+
+    # ------------------------------------------------------------------ season storylines (desk segments)
+    def storylines(self, max_n: int = 3) -> list[dict[str, Any]]:
+        """2-3 season arcs told between races instead of narrating every KO. Each: after_race, title, hero, stat,
+        expression, line. Built only from facts; placed after the race where the arc becomes true."""
+        races = list(self.recap.part_races)
+        if len(races) < 4:
+            return []
+        cands: list[tuple[float, dict[str, Any]]] = []
+        # 1) title fight: leader changes inside this part
+        flips = [ri for ri in races if ri.lead_changed and ri.stage == "league"]
+        if len(flips) >= 2:
+            ri = flips[1]
+            a, b = name(flips[0].leader_after), name(ri.leader_after)
+            cands.append((3.0 + len(flips), {
+                "after_race": ri.race, "title": "THE TITLE FIGHT", "hero": ri.leader_after,
+                "stat": f"{len(flips)} LEAD CHANGES", "expr": "angry",
+                "line": self._pick("story.title", (
+                    f"Storyline time. Top spot has changed hands {len(flips)} times already. {a} and {b} are trading punches.",
+                    f"The title race is a mess. {len(flips)} lead changes. Nobody wants to stay on top, apparently.",
+                ))}))
+        # 2) the dummy curse: most losses to crash dummies in the part
+        dummy: dict[str, list[int]] = {}
+        for ri in races:
+            for k in ri.behind_dummy:
+                dummy.setdefault(k, []).append(ri.race)
+        if dummy:
+            k, rs = max(dummy.items(), key=lambda kv: (len(kv[1]), kv[0]))
+            if len(rs) >= 2:
+                cands.append((2.5 + len(rs), {
+                    "after_race": rs[1], "title": "THE DUMMY CURSE", "hero": k, "stat": f"LOST TO DUMMIES x{len(rs)}",
+                    "expr": "dizzy",
+                    "line": self._pick("story.dummy", (
+                        f"Running gag alert. {name(k)} has now lost to a crash test dummy {times(len(rs))}. "
+                        "The dummies have started a fan club.",
+                        f"{name(k)} versus the crash dummies. The dummies lead {len(rs)} nil. They don't even have legs.",
+                    ))}))
+        # 3) hot streak: back-to-back wins or 3+ wins in the part
+        wins: dict[str, list[int]] = {}
+        for ri in races:
+            wins.setdefault(ri.winner, []).append(ri.race)
+        streak = next(((races[i].winner, races[i].race) for i in range(1, len(races))
+                       if races[i].winner == races[i - 1].winner), None)
+        if streak:
+            k, at = streak
+            cands.append((4.0, {
+                "after_race": at, "title": "ON FIRE", "hero": k, "stat": "BACK-TO-BACK WINS", "expr": "celebrating",
+                "line": self._pick("story.streak", (
+                    f"Back-to-back wins for {name(k)}. Everyone else, this is your cue to panic.",
+                    f"{name(k)} has won two on the bounce. The castle has a problem.",
+                ))}))
+        else:
+            k, rs = max(wins.items(), key=lambda kv: (len(kv[1]), kv[0]))
+            if len(rs) >= 3:
+                cands.append((3.5, {
+                    "after_race": rs[2], "title": "THE FAVOURITE", "hero": k, "stat": f"{len(rs)} WINS",
+                    "expr": "celebrating",
+                    "line": f"That's win number {NUM.get(len(rs), str(len(rs))).lower()} for {name(k)}. "
+                            "The rest of the league is playing for second."}))
+        # 4) the slump: a contender (top 3 entering the part) with zero wins after 5+ races
+        entering = self.recap.stats_entering(self.recap.start_race)
+        from src.state import league
+        top3 = [k for k, _ in league.sorted_standings(entering)[:3]] if self.recap.start_race > 1 else []
+        for k in top3:
+            if k not in wins and len(races) >= 6:
+                cands.append((3.0, {
+                    "after_race": races[5].race, "title": "THE SLUMP", "hero": k, "stat": "0 WINS THIS PART",
+                    "expr": "scared",
+                    "line": f"Meanwhile, {name(k)} came into this part as a contender. Six races later, zero wins. Yikes."}))
+                break
+        # 5) the menace: knockouts in the part
+        kos: dict[str, int] = {}
+        ko_at: dict[str, int] = {}
+        for ri in races:
+            for k2, n in ri.ko_counts.items():
+                kos[k2] = kos.get(k2, 0) + int(n)
+                if kos[k2] >= 3 and k2 not in ko_at:
+                    ko_at[k2] = ri.race
+        if ko_at:
+            k = max(ko_at, key=lambda x: (kos[x], x))
+            cands.append((2.0 + kos[k] * 0.4, {
+                "after_race": ko_at[k], "title": "PUBLIC MENACE", "hero": k, "stat": f"{kos[k]} KOs",
+                "expr": "angry",
+                "line": self._pick("story.menace", (
+                    f"A word about {name(k)}. {kos[k]} knockouts this part. Somebody call security.",
+                    f"{name(k)} has binned {kos[k]} rivals already. That's not racing, that's a crime spree.",
+                ))}))
+        cands.sort(key=lambda c: -c[0])
+        chosen: list[dict[str, Any]] = []
+        last = races[-1].race
+        for _, c in cands:
+            if c["after_race"] >= last:
+                continue
+            if any(abs(c["after_race"] - o["after_race"]) < 2 for o in chosen):
+                continue
+            chosen.append(c)
+            if len(chosen) >= max_n:
+                break
+        for c in chosen:
+            self.mark(c["line"])
+        return sorted(chosen, key=lambda c: c["after_race"])
 
     def chart_mid(self) -> Line | None:
         r = self.recap
@@ -427,14 +760,16 @@ class Writer:
 
     def chart_close(self) -> Line:
         r = self.recap
-        order = sorted(r.final_stats.items(), key=lambda kv: (-int(kv[1]["points"]), kv[0]))
+        from src.state import league
+        order = league.sorted_standings(r.final_stats)
         (lk, lv), (bk, bv) = order[0], order[-1]
         return Line(f"{name(lk)} out in front on {lv['points']} points. {name(bk)} propping up the table on "
                     f"{bv['points']}.", "normal", "LAUGHING_TEARS", "chart")
 
     def standings_tail(self) -> Line:
         r = self.recap
-        order = sorted(r.final_stats.items(), key=lambda kv: (-int(kv[1]["points"]), kv[0]))
+        from src.state import league
+        order = league.sorted_standings(r.final_stats)
         last = name(order[-1][0])
         txt = self._pick("st.tail", (f"And {last} is bottom. They're fine. They're not fine.",
                                      f"Spare a thought for {last}. Actually, don't.",
@@ -513,6 +848,14 @@ class Writer:
                                   "Efficient. Tragic, but efficient.", "deadpan", "FACEPALM", "award"), False))
         p = best("points", 0, low=True)
         if p:
+            # ties on fewest points resolve exactly like the table/chart: the LOWEST-ranked of the tied heroes
+            from src.state import league
+            low_pts = p[1]
+            tied = {k for k, v in st.items() if v["races"] > 0 and v["points"] == low_pts}
+            table = [k for k, _ in league.sorted_standings(self.recap.final_stats)] if self.recap.final_stats else []
+            ranked_tied = [k for k in table if k in tied]
+            if ranked_tied:
+                p = (ranked_tied[-1], low_pts)
             pre = again(p[0])
             if p[1] == 0:
                 txt = (f"{pre}And the Participation Trophy goes to {name(p[0])}. Zero points. It's made of "
@@ -619,7 +962,9 @@ def punch_up_winners(items: list[tuple[RaceInfo, Line]], log=print) -> int:
     prompt = ("You are MC Tuno, an unhinged Takeshi's Castle / Ozzy Man Reviews style caster recapping a cartoon "
               "ball-race season on YouTube. Rewrite each draft winner line to be FUNNIER: cheeky, roasty, 6-14 words, "
               "pub-banter energy, must name facts.winner exactly. Only names from facts. Never describe a ball's "
-              "material or colour literally. Plain ASCII, no emojis. Return ONLY a JSON array of strings, same "
+              "material or colour literally. Plain ASCII, no emojis. EVERY line must use a different joke and "
+              "sentence structure: never reuse a phrase, opener or punchline pattern across lines (no repeated "
+              "'proving that', 'apparently', 'somehow'). Return ONLY a JSON array of strings, same "
               "order and length.\n\n" + json.dumps(facts))
     base = "https://generativelanguage.googleapis.com/v1beta"
     lines = None
@@ -656,12 +1001,22 @@ def punch_up_winners(items: list[tuple[RaceInfo, Line]], log=print) -> int:
         log("  [RECAP LLM] unavailable -> offline comedy bank")
         return 0
     n = 0
+    seen_grams: set[tuple[str, ...]] = set()
+
+    def grams(txt: str) -> set[tuple[str, ...]]:
+        w = [x for x in re.sub(r"[^a-z' ]", " ", skeleton(txt)).split() if x != "#"]
+        return {tuple(w[i:i + 3]) for i in range(max(0, len(w) - 2))}
+
     for (r, ln), new in zip(items, lines):
         allowed = {name(r.winner)} | ({name(r.hero_ranking[1])} if len(r.hero_ranking) > 1 else set())
         if isinstance(new, str):
             new = " ".join(new.replace("\u2014", "-").replace("\u2019", "'").split())
-            if _valid_winner_line(new, name(r.winner), allowed):
+            g = grams(new)
+            if _valid_winner_line(new, name(r.winner), allowed) and not (g & seen_grams):
                 ln.text = new
+                seen_grams |= g
                 n += 1
+            else:
+                seen_grams |= grams(ln.text)
     log(f"  [RECAP LLM] punched up {n}/{len(items)} winner lines")
     return n

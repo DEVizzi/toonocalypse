@@ -340,6 +340,8 @@ class Sim:
             c.prop_mult = 1.0
         else:
             c.prop_mult = self.cfg["dummy_propulsion"]
+        if hero is not None and getattr(self.recipe, "favour", None) == hero.key:
+            c.prop_mult *= float(self.cfg.get("favour_propulsion", 1.06))   # "built for X": a small home edge
         body.velocity_func = self._velocity_func([c])
         shape.contestant = c  # type: ignore[attr-defined]
         if hero is not None and hero.trait == "glitch":

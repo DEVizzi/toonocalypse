@@ -127,6 +127,33 @@ def _pattern(s: pygame.Surface, key: str, cx: float, cy: float, r: float, th: fl
         for k in range(-3, 4):
             a, b = _rot(cx, cy, r, th + k * 0.18 - math.pi / 2), _rot(cx, cy, r, th - k * 0.18 + math.pi / 2)
             pygame.draw.line(s, shade(neon, 0.50), a, b, max(1, int(r * 0.07)))
+    elif key == "zap":                                           # electric ball: rotating lightning bolt
+        pts = [_rot(cx, cy, r * d, th + a) for d, a in ((0.95, -1.9), (0.15, -0.25), (0.45, 0.35), (0.95, 1.6),
+                                                        (0.1, 2.6), (0.4, 3.1))]
+        pygame.draw.lines(s, WHITE, False, pts, max(3, int(r * 0.16)))
+        pygame.draw.lines(s, (40, 40, 60), False, pts, max(1, int(r * 0.06)))
+    elif key == "goo":                                           # slime ball: bubbles + drips
+        for k in range(5):
+            p = _rot(cx, cy, r * (0.35 + 0.12 * (k % 3)), th + k * 1.26)
+            pygame.draw.circle(s, shade((88, 214, 88), 1.35), p, r * (0.10 + 0.04 * (k % 2)))
+        pygame.draw.arc(s, (40, 120, 40), (cx - r * 0.7, cy - r * 0.7, r * 1.4, r * 1.4), th, th + 1.4, max(2, int(r * 0.1)))
+    elif key == "frosty":                                        # ice ball: 6-arm snowflake
+        for k in range(6):
+            a = th + k * math.pi / 3
+            pygame.draw.line(s, WHITE, (cx, cy), _rot(cx, cy, r * 0.82, a), max(2, int(r * 0.09)))
+            pygame.draw.line(s, WHITE, _rot(cx, cy, r * 0.5, a), _rot(cx, cy, r * 0.68, a + 0.35), max(1, int(r * 0.06)))
+    elif key == "blaze":                                         # fire ball: flame tongues
+        for k in range(5):
+            a = th + k * 2 * math.pi / 5
+            pts = [_rot(cx, cy, r * 0.25, a - 0.35), _rot(cx, cy, r * 1.05, a), _rot(cx, cy, r * 0.25, a + 0.35)]
+            pygame.draw.polygon(s, (255, 214, 0), pts)
+    elif key == "shadow":                                        # ninja ball: eye-mask band
+        a, b = _rot(cx, cy, r, th - 0.25), _rot(cx, cy, r, th + math.pi + 0.25)
+        pygame.draw.line(s, (126, 34, 206), a, b, max(4, int(r * 0.42)))
+    elif key == "comet":                                         # meteor rock: craters
+        for k, d in enumerate((0.45, 0.6, 0.3)):
+            p = _rot(cx, cy, r * d, th + k * 2.1)
+            pygame.draw.circle(s, shade((120, 92, 78), 0.7), p, r * (0.16 - 0.03 * k))
     elif key in ("dummy", "dummy_gold"):                         # 4-quadrant crash-test shell (standard or Grand Final gold)
         q_col = (34, 34, 46) if key == "dummy_gold" else (255, 205, 20)
         for k in (0, 2):
@@ -336,6 +363,11 @@ def draw_ball(frame: pygame.Surface, hero: Hero | None, extra: Extra | None, pos
               scale: float = 1.0, alpha: int = 255, force_grin: bool = False, phase: str = "", look=(0.0, 0.0),
               tint: tuple[int, int, int] | None = None) -> None:
     is_gold_dummy = bool(hero is None and extra is not None and getattr(extra, "golden", False))
+    if hero is not None:
+        from src.characters.personality import ALWAYS_GRUMPY, expression_for
+        expression = expression_for(hero.key, expression)
+        if hero.key in ALWAYS_GRUMPY:
+            force_grin = False
     key = hero.key if hero else ("dummy_gold" if is_gold_dummy else "dummy")
     shape = hero.shape if hero else "circle"
     if hero:

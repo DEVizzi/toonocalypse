@@ -116,7 +116,7 @@ class TestV50PipelineUpgrade(unittest.TestCase):
         # Left 4:3 viewport is 55-60% of 1920px; Right sidebar is 37-45%
         self.assertAlmostEqual(VIEWPORT.w / VIEWPORT.h, 4.0 / 3.0, places=3)
         self.assertGreaterEqual(VIEWPORT.w / 1920.0, 0.55)
-        self.assertLessEqual(VIEWPORT.w / 1920.0, 0.60)
+        self.assertLessEqual(VIEWPORT.w / 1920.0, 0.66)   # v5.1: ticker removed, viewport enlarged
         self.assertGreaterEqual(SIDE_W / 1920.0, 0.36)
 
         # Title Race horizontal bars never collide even on rapid rank swaps (e.g. Sly 19 vs Grumble 18)

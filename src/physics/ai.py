@@ -24,6 +24,8 @@ class Brain:
     def __init__(self, sim: Sim) -> None:
         self.sim = sim
         self.ray_filter = pymunk.ShapeFilter()
+        from src.physics.powers import PowerSystem
+        self.powers = PowerSystem(sim)
 
     def think(self, sim: Sim) -> None:
         for c in sim.contestants:
@@ -37,6 +39,7 @@ class Brain:
             self._grounded(sim, c)
             if c.hero is not None:
                 self._traits(sim, c)
+                self.powers.update(sim, c)
             if c.stun > 0 or c.finished or sim.t < c.panic_until:
                 continue
             if sim.mode == SIDE:

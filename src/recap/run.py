@@ -153,9 +153,51 @@ def build_demo_state(n_races: int, state_dir: Path, log=print) -> None:
 
 
 # ---------------------------------------------------------------------------------------------- main flow
+def race_drama(ri) -> float:
+    """How much a race deserves screen time: lead changes, hero-on-hero KOs, upsets, dummy humiliations."""
+    s = 0.0
+    s += 3.0 if getattr(ri, "lead_changed", False) else 0.0
+    s += 1.4 * sum(1 for e in (ri.elims or []) if e.get("hero") and e.get("by_hero"))
+    s += 0.5 * sum(1 for e in (ri.elims or []) if e.get("hero"))
+    before = ri.stats_before or {}
+    if before and ri.winner in before:
+        order = sorted(before, key=lambda k: (-int(before[k].get("points", 0)), k))
+        if order.index(ri.winner) >= len(order) // 2:
+            s += 2.2   # an upset win from the bottom half of the table
+    s += 0.8 * len(ri.behind_dummy or [])
+    return s
+
+
+def race_formats(part_races) -> dict[int, str]:
+    """FEATURE for the 3 most dramatic races, QUICK for the 3 least (never the opener or the closer, never back to
+    back), STANDARD otherwise. Deterministic, so re-runs render the same film."""
+    races = list(part_races)
+    if len(races) < 5:
+        return {ri.race: "FEATURE" for ri in races}
+    score = {ri.race: race_drama(ri) for ri in races}
+    first, last = races[0].race, races[-1].race
+    out = {ri.race: "STANDARD" for ri in races}
+    for r in sorted(score, key=lambda r: (-score[r], r))[:3]:
+        out[r] = "FEATURE"
+    n_quick = 3 if len(races) >= 8 else 1
+    order = [r for r in sorted(score, key=lambda r: (score[r], r)) if out[r] == "STANDARD" and r not in (first, last)]
+    nums = [ri.race for ri in races]
+    for r in order:
+        if n_quick <= 0:
+            break
+        i = nums.index(r)
+        neigh = [nums[j] for j in (i - 1, i + 1) if 0 <= j < len(nums)]
+        if any(out[x] == "QUICK" for x in neigh):
+            continue
+        out[r] = "QUICK"
+        n_quick -= 1
+    return out
+
+
 def run(mode: str, season: int | None, dry_run: bool, privacy: str, end_race: int | None, use_tts: bool,
         stills: bool, max_frames: int | None, commit_git: bool, demo_races: int, log=print) -> int:
     from src.recap import data, timemachine
+    from src.rendering import biomes
     from src.recap.comedy import Writer
     from src.state import league
 
@@ -245,10 +287,17 @@ def run(mode: str, season: int | None, dry_run: bool, privacy: str, end_race: in
     for sha_u in sorted({str(ri.record.get("code_sha") or "") for ri in recap.part_races if ri.record.get("code_sha")}):
         timemachine.ensure_tree(sha_u, log=log)
 
+    formats = race_formats(recap.part_races)
+    style_of = {ri.race: i % 3 for i, ri in enumerate(r for r in recap.part_races if formats.get(r.race) != "QUICK")}
+    log("[RECAP] formats: " + ", ".join(f"R{ri.race}={formats[ri.race][0]}" for ri in recap.part_races))
+
     def _one_clip(ri):
         freeze = {"victim": pick[0], "t": pick[2]} if (pick and pick[1].race == ri.race) else None
         label = league.header_label(ri.season, ri.race, ri.arena.replace("_", " ").upper())
-        side = timemachine.render_race_clip(ri.record, label, ri.stage, clip_dir, ri.tag, freeze=freeze, log=log)
+        side = timemachine.render_race_clip(ri.record, label, ri.stage, clip_dir, ri.tag, freeze=freeze, log=log,
+                                            fmt=formats.get(ri.race, "STANDARD"),
+                                            replay_style=style_of.get(ri.race, 0),
+                                            biome=biomes.biome_for(ri.season, ri.race))
         return ri.race, freeze is not None, side
 
     clips: dict[int, dict] = {}
@@ -295,6 +344,10 @@ def run(mode: str, season: int | None, dry_run: bool, privacy: str, end_race: in
         f"worst_race_quiet={q.get('max_quiet_s')}s camera_visible_avg="
         f"{round(sum(c['avg_visible_pct'] for c in cams) / max(1, len(cams)), 1)}% "
         f"camera_empty_max={max((c['empty_frame_pct'] for c in cams), default='n/a')}%")
+    log("[RECAP QA] variety: " + " ".join(
+        f"R{r}={str(c.get('format') or '?')[0]}/{c.get('biome', '?')}/{c.get('replay_style', '-')}"
+        for r, c in sorted(clips.items())) + f" | lines={len(info['lines'])} repeats={q.get('repeats', 'n/a')}"
+        f" stories={sum(1 for s in video.segments if s.name.startswith('story_'))}")
     log(f"[RECAP] rendered {out_mp4.name}: {info['duration']:.1f}s, voice {info['voice_ok']} ok / "
         f"{info['voice_failed']} failed, {time.time() - t0:.0f}s total")
 

@@ -25,6 +25,62 @@ DEFAULT_W, DEFAULT_H = 1080, 810
 MIN_CLIP_FRAMES = int(37.0 * FPS)
 MAX_CLIP_FRAMES = int(41.0 * FPS)
 REACTION_S = 0.20
+# Race formats vary the rhythm across a 10-race recap (no identical 40 s loop ten times):
+#   FEATURE  = the most dramatic races: full race, ONE 0.4x Chaos Cam on the best hero-on-hero KO, slow replay
+#   STANDARD = full race + one replay (no Chaos Cam)
+#   QUICK    = fast-cut: race at (near) real speed straight into the result (no replay, no slow-mo)
+FORMATS = {
+    "FEATURE": {"min_s": 38.0, "max_s": 43.0, "chaos": 1, "replay": True},
+    "STANDARD": {"min_s": 30.0, "max_s": 37.0, "chaos": 0, "replay": True},
+    "QUICK": {"min_s": 18.0, "max_s": 28.0, "chaos": 0, "replay": False},
+}
+# Replay looks rotate per race so slow motion never looks like the same shot twice in a row.
+REPLAY_STYLES = (
+    {"name": "tight", "zoom": 1.30, "rate": 0.50, "span_s": 1.5, "rewind": False},
+    {"name": "wide", "zoom": 0.92, "rate": 0.62, "span_s": 2.0, "rewind": False},
+    {"name": "rewind", "zoom": 1.12, "rate": 0.50, "span_s": 1.4, "rewind": True},
+)
+
+
+class _SmoothSeq(list):
+    """Per-frame sequence (cameras or prop rows) that returns a value interpolated at the CURRENT fractional source
+    frame `tf` when indexed with round(tf). Slow-motion shots read cams[fi]/props[fi] with an integer index, which made
+    the camera and hazards step every 2-3 output frames at 0.3-0.5x ("choppy" slow-mo). Works on pinned legacy trees
+    too because it only changes what indexing returns."""
+
+    def __init__(self, items, kind: str) -> None:
+        super().__init__(items)
+        self.kind = kind
+        self.tf: float | None = None
+
+    def __getitem__(self, i):
+        base = list.__getitem__(self, i)
+        tf = self.tf
+        if tf is None or not isinstance(i, int) or i < 0:
+            return base
+        n = list.__len__(self)
+        if i != int(round(tf)) or abs(tf - round(tf)) < 1e-3:
+            return base
+        f0 = int(math.floor(tf))
+        f1 = min(n - 1, f0 + 1)
+        a = tf - f0
+        if f0 < 0 or f0 >= n:
+            return base
+        p, q = list.__getitem__(self, f0), list.__getitem__(self, f1)
+        try:
+            if self.kind == "cam":
+                import dataclasses as _dc
+                return _dc.replace(p, x=p.x + (q.x - p.x) * a, y=p.y + (q.y - p.y) * a,
+                                   zoom=p.zoom + (q.zoom - p.zoom) * a)
+            if getattr(p, "shape", None) != getattr(q, "shape", None) or len(p) == 0:
+                return base
+            out = p + (q - p) * a
+            if p.ndim == 2 and p.shape[-1] >= 3:   # shortest-arc angle blend (kinematic spinners wrap around)
+                d = (q[:, 2] - p[:, 2] + math.pi) % (2 * math.pi) - math.pi
+                out[:, 2] = p[:, 2] + d * a
+            return out.astype(p.dtype)
+        except Exception:  # noqa: BLE001 - never break a render over a cosmetic blend
+            return base
 
 
 def _json_safe(v):
@@ -38,7 +94,8 @@ def _json_safe(v):
 
 
 def _event_dict(e) -> dict:
-    keep = ("cause", "hero", "by_hero", "impulse", "hero_pair", "name", "banner", "overtime", "twist", "how")
+    keep = ("cause", "hero", "by_hero", "impulse", "hero_pair", "name", "banner", "overtime", "twist", "how",
+            "power", "popup", "target")
     return {"t": round(float(e.t), 3), "kind": str(e.kind), "actors": [str(a) for a in (e.actors or [])][:3],
             "data": {k: _json_safe(e.data.get(k)) for k in keep if k in (e.data or {})}}
 
@@ -115,13 +172,29 @@ def _render_crop(r, shot, idx: int, w: int, h: int, Shot, pygame, scy: float = 9
     return pygame.transform.smoothscale(sub, (w, h)) if (fw, crop_h) != (w, h) else sub.copy()
 
 
-def _build_highlight_plan(trace, pre: int, end_t: float, Shot) -> tuple[list[tuple[object, str, float]], list]:
-    """Builds a 31.5-35.5s widescreen highlight sequence:
-    Gate drop -> Full/Extended race with zoomed 0.4x Chaos Cam slomo beats -> Final-3 breathing zoom -> 0.3x Finish Replay."""
+def _pick_feature_ko(trace, end_t: float) -> list:
+    """The single best hero-on-hero knockout (else the best action beat) for a FEATURE race's Chaos Cam."""
+    lim = max(2.2, end_t - 2.8)
+    cands = [e for e in trace.events if 1.4 <= e.t <= lim and _event_rank(e) > 0]
+    if not cands:
+        return []
+    return [max(cands, key=lambda e: (_event_rank(e), -e.t))]
+
+
+def _build_highlight_plan(trace, pre: int, end_t: float, Shot, fmt: str = "FEATURE",
+                          style: int = 0) -> tuple[list[tuple[object, str, float]], list]:
+    """Builds a format-dependent widescreen highlight sequence:
+    Gate drop -> race (FEATURE: one 0.4x Chaos Cam) -> eased Final-3 -> rotating-style replay (not in QUICK)."""
+    spec = FORMATS.get(fmt, FORMATS["FEATURE"])
+    min_frames, max_frames = int(spec["min_s"] * FPS), int(spec["max_s"] * FPS)
+    rstyle = REPLAY_STYLES[style % len(REPLAY_STYLES)]
     n = trace.n_frames
     side_view = trace.mode == "SIDE_VIEW"
     end_f = min(n - 1, pre + int(round((end_t + REACTION_S) * FPS)))
-    chaos_list = _pick_chaos_events(trace, end_t, max_picks=3)
+    chaos_list = _pick_feature_ko(trace, end_t) if spec["chaos"] else []
+    rep_frames = int(round(rstyle["span_s"] / rstyle["rate"] * FPS)) if spec["replay"] else 0
+    if rstyle["rewind"] and spec["replay"]:
+        rep_frames += int(round(0.5 * FPS))
 
     plan: list[tuple[object, str, float]] = []
     # 1. Opening starting-gate beat (0.8s)
@@ -157,47 +230,51 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot) -> tuple[list[tup
                     _add_chaos_slomo(chaos_by_f.pop(cf_k))
             tf += tail_rate
 
-    # 2. Main race highlight body (adaptive so total clip cleanly hits ~32-35s)
+    # 2. Main race highlight body (format-adaptive length; no padding replays)
     if end_t <= 26.0:
-        # Play full race continuously + let Final-3 endgame breathe!
-        est_play = end_t + 0.8 + 2.0 * len(chaos_list) + 3.8
-        need_extra_s = max(0.0, 37.5 - est_play)
-        # Pace the final 6-9s smoothly (0.58x-0.78x) to let Final-3 collisions & expressions shine
+        est_play = end_t + 0.8 + 2.0 * len(chaos_list) + rep_frames / FPS
+        need_extra_s = max(0.0, min_frames / FPS + 0.3 - est_play)
+        # Ease the final seconds (0.62x-1.0x) only as much as the format needs; QUICK stays near real speed
         tail_window = min(max(4.5, end_t * 0.45), 9.0)
-        # Each second at rate r takes (1/r) seconds -> extra = tail_window * (1/r - 1)
-        rate = tail_window / (tail_window + min(need_extra_s, tail_window * 0.72))
-        rate = max(0.58, min(0.85, rate))
-        _append_range(0.0, end_t + REACTION_S, "play", slow_tail_s=tail_window, tail_rate=rate)
+        rate = tail_window / (tail_window + min(need_extra_s, tail_window * 0.6))
+        rate = max(0.62, min(1.0, rate))
+        if fmt == "QUICK":
+            rate = max(0.85, rate)
+        _append_range(0.0, end_t + REACTION_S, "play", slow_tail_s=tail_window if rate < 0.999 else 0.0,
+                      tail_rate=rate)
     else:
-        # Extended 3-act highlight cut for longer archival races (>26s)
+        # Extended 3-act highlight cut for longer races (>26s)
         _append_range(0.0, 7.0, "opening")
         mid_c = chaos_list[0] if chaos_list else None
         m0 = max(7.2, (mid_c.t - 4.0) if mid_c else end_t * 0.42)
-        m1 = min(end_t - 11.5, m0 + 7.5)
+        m1 = min(end_t - 11.5, m0 + (7.5 if fmt != "QUICK" else 4.0))
         if m1 > m0 + 1.5:
             _append_range(m0, m1, "chaos")
-        _append_range(max(7.2, end_t - 11.2), end_t + REACTION_S, "final", slow_tail_s=5.5, tail_rate=0.72)
+        tail_s, tail_rate = (5.0, 0.75) if fmt != "QUICK" else (0.0, 1.0)
+        _append_range(max(7.2, end_t - 11.2), end_t + REACTION_S, "final", slow_tail_s=tail_s, tail_rate=tail_rate)
 
-    # 3. Slow-motion Instant Replay of the decisive finish (3.8s at ~0.30x)
-    rep_s = 3.8
-    src_span = 1.15 * FPS
-    src0 = max(float(pre), float(end_f) - src_span)
-    n_rep = int(round(rep_s * FPS))
-    for i in range(n_rep):
-        tf = src0 + (float(end_f) - src0) * i / max(1, n_rep)
-        plan.append((Shot(tf, "replay", i / FPS, 1.18, None), "replay", (tf - pre) / FPS))
+    # 3. Instant Replay of the decisive finish in a rotating style (tight 0.5x / wide 0.62x / rewind + 0.5x)
+    if spec["replay"]:
+        src0 = max(float(pre), float(end_f) - rstyle["span_s"] * FPS)
+        k = 0
+        if rstyle["rewind"]:   # quick VHS-style rewind from the finish back to the replay start, then play slow
+            n_rw = int(round(0.5 * FPS))
+            for i in range(n_rw):
+                tf = float(end_f) - (float(end_f) - src0) * (i + 1) / n_rw
+                plan.append((Shot(tf, "replay", k / FPS, rstyle["zoom"], None), "replay", (tf - pre) / FPS))
+                k += 1
+        n_rep = max(1, int(round((float(end_f) - src0) / rstyle["rate"])))
+        for i in range(n_rep):
+            # ease-out time warp: starts a touch faster, decelerates into the decisive moment (no flat crawl)
+            u = 1.0 - (1.0 - i / n_rep) ** 1.35
+            tf = src0 + (float(end_f) - src0) * u
+            plan.append((Shot(tf, "replay", k / FPS, rstyle["zoom"], None), "replay", (tf - pre) / FPS))
+            k += 1
 
-    # 4. If a flash knockout finished ultra-early (<13s), add a crisp Photo-Finish Wide Angle replay so clip >= 31.5s
-    if len(plan) < MIN_CLIP_FRAMES:
-        rem = MIN_CLIP_FRAMES - len(plan)
-        p0 = max(float(pre), float(end_f) - min(float(end_f - pre), 2.4 * FPS))
-        for i in range(rem):
-            tf = p0 + (float(end_f) - p0) * i / max(1, rem)
-            plan.append((Shot(tf, "replay", (n_rep + i) / FPS, 1.18, None), "replay", (tf - pre) / FPS))
-    elif len(plan) > MAX_CLIP_FRAMES:
-        # Trim early middle play frames if slightly over cap while keeping replay intact
-        keep_tail = n_rep + int(8.0 * FPS)
-        excess = len(plan) - MAX_CLIP_FRAMES
+    if len(plan) > max_frames:
+        # Trim early middle play frames if over the format cap while keeping the ending + replay intact
+        keep_tail = rep_frames + int(8.0 * FPS)
+        excess = len(plan) - max_frames
         head_cut = max(int(3.0 * FPS), len(plan) - keep_tail - excess)
         plan = plan[:head_cut] + plan[head_cut + excess:]
 
@@ -273,9 +350,42 @@ def run(root: Path, job: dict) -> dict:
         side["reason"] = "re-simulated outcome differs from the published race"
         return side
 
+    biome = str(job.get("biome") or "")
     ep = pipeline.Episode(trace, str(job.get("label") or ""), season_line="", prompt="", flash_event=None,
-                          outcome=None, league_ctx={"stage": job.get("stage", "league")})
+                          outcome=None, league_ctx={"stage": job.get("stage", "league"), "biome": biome})
     r = pipeline.Renderer(ep)
+    if biome and not getattr(r, "_biome_applied", None):
+        try:   # archived trees predate biomes.py: load it from the CURRENT tree
+            import importlib.util
+            bp = Path(__file__).resolve().parents[2] / "src" / "rendering" / "biomes.py"
+            spec = importlib.util.spec_from_file_location("recap_biomes", bp)
+            bmod = importlib.util.module_from_spec(spec)
+            assert spec.loader is not None
+            spec.loader.exec_module(bmod)
+            bmod.apply(r, biome)
+        except Exception as exc:  # noqa: BLE001
+            side["biome_error"] = type(exc).__name__
+    side["biome"] = getattr(r, "_biome_applied", None) or "day"
+    try:   # archived trees predate personality faces (Grumble grumpy everywhere): wrap their draw_ball
+        from src.rendering import balls as _balls
+        if not getattr(_balls.draw_ball, "_personality", False):
+            import importlib.util
+            pp = Path(__file__).resolve().parents[2] / "src" / "characters" / "personality.py"
+            spec_p = importlib.util.spec_from_file_location("recap_personality", pp)
+            pmod = importlib.util.module_from_spec(spec_p)
+            assert spec_p.loader is not None
+            spec_p.loader.exec_module(pmod)
+            _orig = _balls.draw_ball
+            with open(Path(_balls.__file__), encoding="utf-8") as fh:
+                has_own = "personality" in fh.read()
+            if not has_own:
+                def _draw_ball(frame, hero, extra, pos, angle_deg, face_deg, vel, angvel, expression, *a, **k):
+                    expression = pmod.expression_for(getattr(hero, "key", None), expression)
+                    return _orig(frame, hero, extra, pos, angle_deg, face_deg, vel, angvel, expression, *a, **k)
+                _draw_ball._personality = True  # type: ignore[attr-defined]
+                _balls.draw_ball = _draw_ball
+    except Exception as exc:  # noqa: BLE001
+        side["personality_error"] = type(exc).__name__
     tracker, scy = _load_window_tracker()
     if tracker is not None:
         try:   # dedicated 4:3 recap camera (falls back to the tree's 9:16 Shorts camera on any error)
@@ -288,15 +398,24 @@ def run(root: Path, job: dict) -> dict:
     n = trace.n_frames
     Shot = pipeline.Shot
 
-    plan, chaos_list = _build_highlight_plan(trace, pre, end_t, Shot)
+    plan, chaos_list = _build_highlight_plan(trace, pre, end_t, Shot, fmt=str(job.get("format") or "FEATURE"),
+                                             style=int(job.get("replay_style") or 0))
     chaos0 = chaos_list[0] if chaos_list else None
+    smooth_cams = _SmoothSeq(r.cams, "cam")
+    smooth_props = _SmoothSeq(trace.props, "props")
+    r.cams = smooth_cams
+    trace.props = smooth_props
 
     enc = _Encoder(out_dir / f"{tag}_clip.mp4", w, h)
     timeline = []
     for idx, (shot, seg, gt) in enumerate(plan):
+        smooth_cams.tf = smooth_props.tf = float(shot.tf)
         enc.write(_render_crop(r, shot, idx, w, h, Shot, pygame, scy), pygame)
         timeline.append([round(gt, 3), seg])
+    smooth_cams.tf = smooth_props.tf = None
     enc.close()
+    side["format"] = str(job.get("format") or "FEATURE")
+    side["replay_style"] = REPLAY_STYLES[int(job.get("replay_style") or 0) % len(REPLAY_STYLES)]["name"]
     side["clip"] = {"path": str(out_dir / f"{tag}_clip.mp4"), "frames": enc.n, "width": w, "height": h,
                     "timeline": timeline,
                     "chaos_t": round(chaos0.t, 3) if chaos0 is not None else None,
@@ -304,13 +423,21 @@ def run(root: Path, job: dict) -> dict:
                     "chaos_actors": [str(a) for a in chaos0.actors] if chaos0 is not None else [],
                     "decisive_index": next((i for i, x in enumerate(timeline) if x[1] == "replay"), len(timeline))}
 
-    # ---- optional cold-open freeze: 1.5 s leading into a hero's elimination, rendered in matching 4:3 crop
+    # ---- optional cold-open freeze: the build-up THROUGH the hit that dooms a hero (freezes right after impact)
     fz = job.get("freeze") or None
     if fz and fz.get("victim") in trace.keys:
         vi = trace.keys.index(fz["victim"])
         te = float(fz.get("t") or 0.0)
-        frames = [f for f in _frames_for(pre, te - 1.7, te - 0.2, n)
+        hits = [e for e in trace.events if e.kind in ("impact", "crush_hit") and te - 2.6 <= e.t <= te - 0.05
+                and fz["victim"] in [str(a) for a in (e.actors or [])]]
+        if hits:
+            ti = max(hits, key=lambda e: (float((e.data or {}).get("impulse", 0) or 0) > 900, e.t)).t
+            t0f, t1f = ti - 1.25, min(te - 0.05, ti + 0.40)
+        else:
+            t0f, t1f = te - 1.7, te - 0.2
+        frames = [f for f in _frames_for(pre, t0f, t1f, n)
                   if trace.flags[f][vi] & 1]
+        side["freeze_anchor"] = "impact" if hits else "elimination"
         if len(frames) >= 12:
             from src.physics.camera import Cam
 

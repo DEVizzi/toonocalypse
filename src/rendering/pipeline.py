@@ -152,6 +152,19 @@ class Renderer:
                 self.splat_wins.setdefault(e.actors[0], []).append(e.t)
         self._lowest_slab_y = 0.0
         self._void = self._build_void() if self.tr.mode == "TOP_DOWN" else None
+        self.biome = "day"
+        try:   # cosmetic per-race time-of-day / biome grade of the backdrop (never physics or RNG)
+            from src.rendering import biomes
+            lctx = self.ep.league_ctx or {}
+            if lctx.get("biome"):
+                self.biome = biomes.apply(self, str(lctx["biome"]))
+            elif not self.finale:
+                s_no = int(lctx.get("season_number") or getattr(self.ep.outcome, "season_number", 0) or 0)
+                e_no = int(lctx.get("episode_number") or getattr(self.ep.outcome, "race_number", 0) or 0)
+                if s_no and e_no:
+                    self.biome = biomes.apply(self, biomes.biome_for(s_no, e_no))
+        except Exception:  # noqa: BLE001
+            self.biome = "day"
         self.finish_t = next((e.t for e in self.tr.events if e.kind in ("finish", "win")), None) \
             if self.meta.get("finish_x") is not None else None
         self.popups = self._schedule_popups()
@@ -363,6 +376,8 @@ class Renderer:
                 word, prio = "SQUASHED!", 3
             elif e.kind == "glitch_blink" and e.data.get("moved"):
                 word, prio = ("LAG!" if e.data.get("back") else "ZAP!"), 2
+            elif e.kind == "trait" and e.data.get("power"):
+                word, prio = str(e.data.get("popup") or "POWER!"), 3
             elif e.kind == "trait":
                 word, prio = effects.CONTEXT_POPUPS.get(e.actors[0], "BOING!"), 2
             if word:
@@ -2066,6 +2081,9 @@ class Renderer:
         """P1.1: Crisp <= 1.5s instant-action viewer hook overlay ('PICK YOUR FIGHTER!' or 'WHO SURVIVES?')."""
         goal = str(self.meta.get("recipe", {}).get("goal") or "reach_finish")
         text = "WHO SURVIVES?" if (self.tr.mode == "TOP_DOWN" or goal in ("last_one_standing", "survive_timer", "hot_potato_bomb")) else "PICK YOUR FIGHTER!"
+        fav = self.meta.get("recipe", {}).get("favour")
+        if fav and fav in (self.meta.get("heroes") or []) and fav in HERO_BY_KEY:
+            text = f"BUILT FOR {HERO_BY_KEY[fav].name.upper()}!"
         k_in = min(1.0, seg_t / 0.14)
         k_out = 1.0 if seg_t < TIMELINE.cold_open_s - 0.22 else max(0.0, (TIMELINE.cold_open_s - seg_t) / 0.22)
         alpha = int(255 * min(k_in, k_out))

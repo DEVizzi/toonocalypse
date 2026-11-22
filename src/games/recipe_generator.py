@@ -212,6 +212,10 @@ def generate(history: list[dict], day: int, seed: int, weights: dict | None = No
         chosen_mode = mode
     else:
         chosen_mode = SIDE if rng.random() < mix["SIDE_VIEW"] else TOP
+        # v5.1 variety: never three races in a row from the same camera mode (RNG consumption unchanged)
+        last_modes = [h.get("mode") for h in (history or [])[-2:]]
+        if len(last_modes) == 2 and last_modes[0] == last_modes[1] == chosen_mode:
+            chosen_mode = TOP if chosen_mode == SIDE else SIDE
 
     relaxed: list[int] = []
     for relax_level in range(4):
@@ -241,9 +245,41 @@ def generate(history: list[dict], day: int, seed: int, weights: dict | None = No
             if arena or goal:
                 v -= {1, 2, 3}
             if not v:
+                if not explicit_mode and goal is None:
+                    _apply_favour(r, history, day, season_theme)
                 return r, sorted(ignore)
         relaxed = sorted(ignore)
     raise RuntimeError(f"recipe generator could not satisfy hard rules 1-3 (relaxed {relaxed})")
+
+
+# v5.1 "built for X" arenas: some twists naturally suit one ball type. ~25% of league races pick a favoured ball and
+# (when the arena allows it) swap in the matching twist. Uses its own RNG stream; recipe fingerprints are unchanged.
+FAVOUR_TWISTS: dict[str, tuple[str, ...]] = {
+    "low_gravity": ("floater", "pip", "boing"),
+    "heavy_gravity": ("juggernaut", "bonk", "comet"),
+    "speed_boost_zones": ("dash", "blaze", "zap"),
+    "slippery_floor": ("magneto", "grumble", "frosty"),
+}
+FAVOUR_RATE = 0.25
+
+
+def _apply_favour(r: Recipe, history: list[dict], day: int, season_theme: str | None) -> None:
+    frng = random.Random((int(r.seed) * 2654435761 + 0xFA5) & 0xFFFFFFFF)
+    if r.twist in FAVOUR_TWISTS:
+        r.favour = frng.choice(FAVOUR_TWISTS[r.twist][:2])
+        return
+    if frng.random() >= FAVOUR_RATE:
+        return
+    opts = [t for t in FAVOUR_TWISTS if twist_fits(t, r.mode, r.arena)]
+    if not opts:
+        return
+    tw = frng.choice(opts)
+    old = r.twist
+    r.twist = tw
+    if _violations(r, history, day, lock_theme=(season_theme is not None)):
+        r.twist = old
+        return
+    r.favour = frng.choice(FAVOUR_TWISTS[tw][:2])
 
 
 def history_entry(r: Recipe, day: int) -> dict:

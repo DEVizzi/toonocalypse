@@ -319,19 +319,23 @@ def build_recap(season: int, kind: str, state_dir: Path = STATE_DIR, end_race: i
 # ---------------------------------------------------------------------------------------------- part stats
 def part_stats(recap: SeasonRecap) -> dict[str, dict[str, int]]:
     """Per-hero counters over the part's races: wins, seconds, kos, behind_dummy, first_out, eliminated, points."""
-    out = {h.key: {"wins": 0, "seconds": 0, "kos": 0, "behind_dummy": 0, "first_out": 0, "eliminated": 0,
-                   "points": 0, "races": 0} for h in HEROES}
+    keys = [k for k in (recap.final_stats or {}) if k in HERO_BY_KEY] or [h.key for h in HEROES]
+    out = {k: {"wins": 0, "seconds": 0, "kos": 0, "behind_dummy": 0, "first_out": 0, "eliminated": 0,
+               "points": 0, "races": 0} for k in keys}
     for r in recap.part_races:
         for k in r.heroes:
             if k in out:
                 out[k]["races"] += 1
-        out[r.winner]["wins"] += 1
-        if len(r.hero_ranking) > 1:
+        if r.winner in out:
+            out[r.winner]["wins"] += 1
+        if len(r.hero_ranking) > 1 and r.hero_ranking[1] in out:
             out[r.hero_ranking[1]]["seconds"] += 1
         for k, n in r.ko_counts.items():
-            out[k]["kos"] += n
+            if k in out:
+                out[k]["kos"] += n
         for k in r.behind_dummy:
-            out[k]["behind_dummy"] += 1
+            if k in out:
+                out[k]["behind_dummy"] += 1
         if r.first_hero_out in out:
             out[r.first_hero_out]["first_out"] += 1
         for e in r.elims:

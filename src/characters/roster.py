@@ -76,6 +76,35 @@ HEROES: tuple[Hero, ...] = (
 )
 HERO_BY_KEY = {h.key: h for h in HEROES}
 
+# v5.1 Rookie pool: from Season 2, TWO new balls (new personality + power, see src/physics/powers.py) join every
+# season; from Season 3 the bottom two of the previous season are relegated so the league stays at 12.
+# `HEROES` (the Season 1 founding ten) is intentionally unchanged: live Season 1 state and fingerprints depend on it.
+ROOKIES: tuple[Hero, ...] = (
+    Hero("zap", "Zap", "⚡", "Electric Spark Ball", "circle", (22, 22), "#FACC15", 1.40, 300, 0.50, 0.70,
+         "rookie", "grinning", "spring", Behaviour(0.6, 0.3, 0.45, 0.55)),
+    Hero("goo", "Goo", "🟩", "Slime Blob", "circle", (26, 26), "#58D658", 1.60, 250, 1.40, 0.15,
+         "rookie", "chill", "squeak", Behaviour(0.4, 0.4, 0.3, 0.6)),
+    Hero("frosty", "Frosty", "❄", "Snowball", "circle", (25, 25), "#BFE9FF", 1.20, 270, 0.12, 0.50,
+         "rookie", "smug", "whistle", Behaviour(0.35, 0.5, 0.4, 0.7)),
+    Hero("blaze", "Blaze", "🔥", "Fireball", "circle", (23, 23), "#FF5722", 1.50, 320, 0.40, 0.60,
+         "rookie", "focused", "screech", Behaviour(0.55, 0.15, 0.4, 0.35)),
+    Hero("shadow", "Shadow", "🥷", "Ninja Ball", "circle", (23, 23), "#2D2A3E", 1.60, 300, 0.60, 0.55,
+         "rookie", "smirking", "pizzicato", Behaviour(0.5, 0.6, 0.5, 0.85)),
+    Hero("comet", "Comet", "☄", "Space Rock", "hexagon", (27, 27), "#8D6E63", 3.60, 240, 0.70, 0.30,
+         "rookie", "furrowed", "horn", Behaviour(0.7, 0.25, 0.3, 0.5)),
+)
+ALL_HEROES: tuple[Hero, ...] = HEROES + ROOKIES
+HERO_BY_KEY.update({h.key: h for h in ROOKIES})
+
+
+def rookies_for_season(season: int) -> list[str]:
+    """The two rookies debuting in `season` (none in Season 1). Cycles the pool deterministically."""
+    s = int(season or 1)
+    if s < 2:
+        return []
+    i = ((s - 2) * 2) % len(ROOKIES)
+    return [ROOKIES[i].key, ROOKIES[(i + 1) % len(ROOKIES)].key]
+
 # Crash Dummies (v3.0): 3-5 light-grey crash-test balls with a black/yellow quadrant decal. Comedic bumper pins: weaker
 # propulsion (0.72x heroes), no name pills, never allowed to win (Best-of-N penalty). Class name kept as Extra.
 EXTRA_COLOURS = ("#D5D9DE",)

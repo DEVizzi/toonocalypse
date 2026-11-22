@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from src.characters.roster import HERO_BY_KEY, HEROES, Extra, Hero, make_extras
+from src.characters.roster import HERO_BY_KEY, HEROES, Extra, Hero, make_extras, rookies_for_season
 from src.config import STATE_DIR
 from src.games.themes import for_season
 from src.physics.trace import Trace
@@ -51,21 +51,60 @@ def load_json(path: Path, default: Any) -> Any:
         return copy.deepcopy(default)
 
 
-def fresh_stats() -> dict[str, dict[str, Any]]:
+def fresh_stats(keys: list[str] | None = None) -> dict[str, dict[str, Any]]:
     return {
-        h.key: {"points": 0, "wins": 0, "kos": 0, "races": 0, "rank_sum": 0}
-        for h in HEROES
+        k: {"points": 0, "wins": 0, "kos": 0, "races": 0, "rank_sum": 0}
+        for k in (keys or [h.key for h in HEROES])
     }
 
 
-def fresh_season_state(season_number: int = 1, reigning_champion: str | None = None, total_day: int = 1) -> dict[str, Any]:
-    return {
+BASE_ROSTER = [h.key for h in HEROES]
+RELEGATED_PER_SEASON = 2
+
+
+def next_season_roster(season_number: int, prev_roster: list[str] | None = None,
+                       prev_table: list[str] | None = None) -> list[str]:
+    """v5.1 roster rotation. Season 1 = the founding ten. Season 2 = ten + 2 rookies (12). Season 3+ = the previous
+    roster minus its bottom two (relegated) plus that season's 2 rookies (stays at 12). Deterministic."""
+    s = int(season_number or 1)
+    if s <= 1:
+        return list(BASE_ROSTER)
+    roster = [k for k in (prev_roster or BASE_ROSTER) if k in HERO_BY_KEY]
+    if s >= 3 and prev_table:
+        table = [k for k in prev_table if k in roster]
+        for k in table[-RELEGATED_PER_SEASON:]:
+            roster.remove(k)
+    for k in rookies_for_season(s):
+        if k not in roster:
+            roster.append(k)
+    for k in BASE_ROSTER:                      # never drop below 10 balls
+        if len(roster) >= 10:
+            break
+        if k not in roster:
+            roster.append(k)
+    return roster
+
+
+def season_roster(state: dict[str, Any] | None) -> list[str]:
+    roster = list((state or {}).get("roster") or [])
+    roster = [k for k in roster if k in HERO_BY_KEY]
+    return roster or list(BASE_ROSTER)
+
+
+def season_rookies(state: dict[str, Any] | None) -> list[str]:
+    return [k for k in ((state or {}).get("rookies") or []) if k in HERO_BY_KEY]
+
+
+def fresh_season_state(season_number: int = 1, reigning_champion: str | None = None, total_day: int = 1,
+                       roster: list[str] | None = None) -> dict[str, Any]:
+    roster = list(roster or next_season_roster(season_number))
+    st = {
         "season_number": season_number,
         "race_number": 1,
         "total_day": total_day,
         "theme": for_season(season_number).key,
         "reigning_champion": reigning_champion,
-        "stats": fresh_stats(),
+        "stats": fresh_stats(roster),
         "playoff": {
             "seeds": [],            # [#1, #2, #3] locked after Race 26
             "wildcard_winner": None,
@@ -76,14 +115,18 @@ def fresh_season_state(season_number: int = 1, reigning_champion: str | None = N
             "champion": None,
         },
     }
+    if roster != BASE_ROSTER:              # Season 1 state stays byte-identical to v5.0
+        st["roster"] = roster
+        st["rookies"] = [k for k in roster if k not in BASE_ROSTER and k in rookies_for_season(season_number)]
+    return st
 
 
 def load_season_state(state_dir: Path = STATE_DIR) -> dict[str, Any]:
     st = load_json(state_dir / "season_state.json", None)
     if not isinstance(st, dict) or "season_number" not in st or "stats" not in st:
         return fresh_season_state(1, None, 1)
-    for h in HEROES:
-        st["stats"].setdefault(h.key, {"points": 0, "wins": 0, "kos": 0, "races": 0, "rank_sum": 0})
+    for k in season_roster(st):
+        st["stats"].setdefault(k, {"points": 0, "wins": 0, "kos": 0, "races": 0, "rank_sum": 0})
     st.setdefault("playoff", {})
     st["theme"] = for_season(int(st["season_number"])).key
     return st
@@ -174,7 +217,9 @@ def select_cast_for_race(state: dict[str, Any], rng: random.Random) -> tuple[lis
     po = state.setdefault("playoff", {})
 
     if st == "league":
-        return list(HEROES), make_extras(4, rng, golden=False), False
+        heroes = [HERO_BY_KEY[k] for k in season_roster(state)]
+        # keep the field at ~14 bodies: 10 heroes + 4 dummies (S1), 12 heroes + 2 dummies (S2+)
+        return heroes, make_extras(max(2, 14 - len(heroes)), rng, golden=False), False
 
     if st == "play_in":
         # Ranks #4-#10 (7 Heroes) + 4 Dummies
@@ -397,6 +442,7 @@ def evaluate_and_advance(state: dict[str, Any], trace: Trace, hall_of_fame: dict
                 season_number=snum + 1,
                 reigning_champion=winner_key,
                 total_day=st["total_day"],
+                roster=next_season_roster(snum + 1, season_roster(st), [k for k, _ in new_standings]),
             )
         else:
             st["race_number"] = rnum + 1
@@ -413,7 +459,7 @@ def mock_season_state(season_number: int, race_number: int, seed: int = 101) -> 
     st["race_number"] = race_number
 
     n_prior_league = min(LEAGUE_RACES, max(0, race_number - 1))
-    keys = [h.key for h in HEROES]
+    keys = season_roster(st)
     # Give each hero a slight seasonal form bias so realistic title races emerge
     weights = {k: rng.uniform(0.75, 1.45) for k in keys}
     for _ in range(n_prior_league):
