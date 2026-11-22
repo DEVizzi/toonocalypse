@@ -37,7 +37,7 @@ class TestV50PipelineUpgrade(unittest.TestCase):
     def test_part1_instant_finish_camera_clamp_and_monotonic_survivors(self) -> None:
         # Find a deterministic flat_track seed that crosses the finish line
         tr = None
-        for seed in range(100, 130):
+        for seed in range(100, 220):
             rec, _ = recipe_generator.generate([], 10, seed, arena="flat_track", goal="reach_finish", season_theme="royal_classic")
             cand = Sim(rec, list(HEROES), make_extras(4, random.Random(seed)), seed).run()
             if cand.meta.get("finish_won"):

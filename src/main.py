@@ -253,8 +253,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"cast ({len(heroes)}H+{len(extras)}D): {[h.key for h in heroes]} + {'GOLDEN' if is_grand_final else 'std'} dummies")
 
-    min_len = float(settings()["scorer"].get("min_final_s", 0)) if day >= recipe_generator.v6_from_day() else 0.0
-    extra = int(settings()["scorer"].get("remake_seeds", 24))
+    sc_cfg = settings()["scorer"]
+    min_len = 0.0
+    if day >= recipe_generator.v6_from_day() and sc_cfg.get("min_video_s"):
+        # gameplay needed so the finished Short (cold open + race + replay + card) is >= min_video_s
+        min_len = float(sc_cfg["min_video_s"]) - float(sc_cfg.get("video_overhead_s", 6.8))
+    extra = int(sc_cfg.get("remake_seeds", 60))
+    if arena_req is None:
+        extra = min(extra, 16)   # daily: stay inside the job watchdog - a different arena is cheaper than 60 remakes
     trace, best, report = simulate_best(recipe, heroes, extras, seed, history=sim_hist, min_len=min_len, extra_seeds=extra)
     tries = 0
     while min_len and float(trace.meta.get("resolved_at") or 0) < min_len and arena_req is None and tries < 3:
