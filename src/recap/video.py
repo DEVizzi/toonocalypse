@@ -523,6 +523,9 @@ class RecapVideo:
                                        wr.awards_intro(), "awards_intro", chapter="The Tunos (Awards)", trophy=True))
             for a in self.awards:
                 segs.append(self._seg_award(a))
+        pr = self._seg_power_roundup()
+        if pr is not None:
+            segs.append(pr)
         if r.champion:
             segs.append(self._seg_champion())
         segs.append(self._seg_chart())
@@ -1322,6 +1325,45 @@ class RecapVideo:
                 effects.draw_confetti(fr, t, 11, pygame.Rect(0, 0, 1240, HH), n=70)
 
         return Segment(f"award_{a.key}", max(4.8, end + 0.8), draw, voice=voice, sfx=sfx_, caption_mode="none")
+
+    def _seg_power_roundup(self) -> Segment | None:
+        """Grid of the cast with each ball's power and how often it fired on screen this part (teaches the cast)."""
+        from src.physics.powers import power_of
+        counts: dict[str, int] = {}
+        for c in self.clips.values():
+            for e in c.get("events") or []:
+                if e.get("kind") == "trait" and (e.get("data") or {}).get("power") and e.get("actors"):
+                    k = str(e["actors"][0])
+                    counts[k] = counts.get(k, 0) + 1
+        if sum(counts.values()) < 4:
+            return None
+        line = self.writer.power_roundup(counts)
+        voice, end = self._voice_seq([line], start=0.4)
+        keys = [k for k in self._roster_keys() if power_of(k) is not None]
+        cols = 5 if len(keys) <= 10 else 6
+        cw = 1240 // cols
+
+        def draw(fr: pygame.Surface, t: float, ctx: Ctx) -> None:
+            blit_c(fr, txt("POWER ROUNDUP", 96, fill=GOLD, width=7), (660, 96))
+            for i, k in enumerate(keys):
+                kk = ease((t - 0.15 - i * 0.07) / 0.25)
+                if kk <= 0:
+                    continue
+                cx = 40 + cw // 2 + (i % cols) * cw
+                cy = 330 + (i // cols) * 330 + int((1 - kk) * 30)
+                card = pygame.Rect(0, 0, cw - 20, 300)
+                card.center = (cx, cy)
+                n = counts.get(k, 0)
+                panel(fr, card, fill=NAVY, border=GOLD if n else (100, 116, 139), radius=22, bw=3)
+                blit_c(fr, ball(k, 104, "happy" if n else "neutral"), (cx, card.y + 82))
+                blit_c(fr, fit(txt(name(k).upper(), 34, width=3), card.w - 16), (cx, card.y + 160))
+                blit_c(fr, fit(chip(power_of(k).name, (147, 51, 234), 19), card.w - 14), (cx, card.y + 206))
+                blit_c(fr, txt(f"x{n}", 44, fill=GOLD if n else (148, 163, 184), width=4), (cx, card.y + 258))
+            tuno_booth(fr, pygame.Rect(1330, 330, 520, 560), ctx.line.mood if ctx.line else "LAUGHING_TEARS", t,
+                       ctx.rms, 1.9)
+
+        return Segment("power_roundup", max(6.5, end + 1.0), draw, voice=voice, sfx=[(0.1, "riser", -9.0)],
+                       chapter="Power Roundup", caption_mode="none")
 
     def _seg_champion(self) -> Segment:
         lines = self.writer.champion()

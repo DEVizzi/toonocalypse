@@ -720,6 +720,22 @@ class Writer:
                     "expr": "celebrating",
                     "line": f"That's win number {NUM.get(len(rs), str(len(rs))).lower()} for {name(k)}. "
                             "The rest of the league is playing for second."}))
+        # 3b) the rivalry: the same two balls finishing 1-2 again and again
+        pairs: dict[tuple[str, str], list[int]] = {}
+        for ri in races:
+            if len(ri.hero_ranking) > 1:
+                pr = tuple(sorted(ri.hero_ranking[:2]))
+                pairs.setdefault(pr, []).append(ri.race)  # type: ignore[arg-type]
+        if pairs:
+            (a, b), rs = max(pairs.items(), key=lambda kv: (len(kv[1]), kv[0]))
+            if len(rs) >= 2:
+                cands.append((2.8 + len(rs) * 0.3, {
+                    "after_race": rs[1], "title": "THE RIVALRY", "hero": a, "stat": f"1-2 FINISH x{len(rs)}",
+                    "expr": "angry",
+                    "line": self._pick("story.rival", (
+                        f"We have a rivalry. {name(a)} and {name(b)} keep finishing one-two. They hate it. I love it.",
+                        f"{name(a)} versus {name(b)}, again. That's {len(rs)} one-two finishes. Get a room.",
+                    ))}))
         # 4) the slump: a contender (top 3 entering the part) with zero wins after 5+ races
         entering = self.recap.stats_entering(self.recap.start_race)
         from src.state import league
@@ -904,6 +920,13 @@ class Writer:
         return None
 
     # ------------------------------------------------------------------ closing
+    def power_roundup(self, counts: dict[str, int]) -> Line:
+        from src.physics.powers import power_of
+        top = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:2]
+        bits = [f"{name(k)} fired {power_of(k).name.title()} {times(n)}" for k, n in top if power_of(k)]
+        return Line(f"Power roundup. {' and '.join(bits)}. Abilities were used. Responsibly? No.", "normal",
+                    "LAUGHING_TEARS", "powers")
+
     def title_race(self) -> Line:
         if self.recap.end_race >= 30:
             return Line("Here's the whole season's title race. Thirty races of pain.", "normal", "HYPED_TALKING", "chart")

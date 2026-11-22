@@ -32,7 +32,7 @@ REACTION_S = 0.20
 FORMATS = {
     "FEATURE": {"min_s": 38.0, "max_s": 46.0, "chaos": 2, "replay": True, "power": True},
     "STANDARD": {"min_s": 32.0, "max_s": 40.0, "chaos": 0, "replay": True, "power": True},
-    "QUICK": {"min_s": 20.0, "max_s": 30.0, "chaos": 0, "replay": False, "power": False},
+    "QUICK": {"min_s": 24.0, "max_s": 30.0, "chaos": 0, "replay": False, "power": False},
 }
 # Replay looks rotate per race so slow motion never looks like the same shot twice in a row.
 REPLAY_STYLES = (
@@ -270,7 +270,7 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot, fmt: str = "FEATU
         rate = tail_window / (tail_window + min(need_extra_s, tail_window * 0.8))
         rate = max(0.56, min(1.0, rate))
         if fmt == "QUICK":
-            rate = max(0.85, rate)
+            rate = max(0.78, rate)
         _append_range(0.0, end_t + REACTION_S, "play", slow_tail_s=tail_window if rate < 0.999 else 0.0,
                       tail_rate=rate)
     else:
