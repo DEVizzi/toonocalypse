@@ -266,8 +266,9 @@ class RedLight(_SideA):
     hazards=("wind_gusts",), twists=("heavy_gravity", "giant_ball", "speed_boost_zones"),
 )
 class BigBubble(_SideA):
-    chase_scale = 0.9
-    rules = {"first_blood_s": 4.2}
+    chase_scale = 0.55
+    lag_scale = 1.7      # a gentler wall: stragglers get more room before LEFT BEHIND
+    rules = {"first_blood_s": 5.0}
 
     def __init__(self, sim) -> None:
         super().__init__(sim)
@@ -277,10 +278,10 @@ class BigBubble(_SideA):
         r = self.sim.rng
         self.start()
         self.seg(r.uniform(160, 220), 24)
-        groups = self.p.setdefault("bubble_groups", r.randint(6, 7))
+        groups = self.p.setdefault("bubble_groups", r.randint(7, 8))
         for g_i in range(groups):
             self.seg(r.uniform(130, 200), r.uniform(14, 30))
-            self.seg(r.uniform(95, 120), 8, material="bouncy")             # launcher pad
+            self.seg(r.uniform(95, 120), 8)                                # run-up
             n = 2 if g_i < 2 else r.randint(2, 3)
             deck = self.y
             water = deck + 26 + 12 * (n - 1) + r.uniform(62, 74)
@@ -293,18 +294,18 @@ class BigBubble(_SideA):
                 cap = water - top
                 hc = math.sqrt(max(1.0, R * R - (R - cap) ** 2))
                 if cx is None:
-                    cx = x_start + r.uniform(85, 110) + hc
+                    cx = x_start + r.uniform(15, 30) + hc
                 else:
-                    cx += prev_hc + r.uniform(100, 130) + hc
+                    cx += prev_hc + r.uniform(5, 20) + hc
                 cy = top + R
                 pr = kin_circle(self.sim, (cx, cy), R, "sa_dome", material="bouncy")
                 for sh in pr.body.shapes:
-                    sh.friction, sh.elasticity = 0.22, 0.78
+                    sh.friction, sh.elasticity = 0.75, 0.42
                 self.domes.append({"prop": pr, "cx": cx, "cy": cy, "R": R, "ph": r.uniform(0, 6.28),
-                                   "w": r.uniform(1.5, 2.3), "amp": r.uniform(7, 12), "rock": r.uniform(0.35, 0.6),
+                                   "w": r.uniform(1.2, 1.8), "amp": r.uniform(5, 8), "rock": r.uniform(0.08, 0.18),
                                    "load": 0})
                 prev_hc = hc
-            end_x = cx + prev_hc + r.uniform(80, 105)
+            end_x = cx + prev_hc + r.uniform(10, 25)
             land_y = deck + 26 + 12 * (n - 1) + r.uniform(30, 45)
             self.add_water(x_start, end_x, water)
             self.span(x_start, water, end_x, water)
@@ -538,7 +539,8 @@ class LilyPads(_SideA):
     hazards=(), twists=("heavy_gravity", "giant_ball"),
 )
 class RaftRapids(_SideA):
-    chase_scale = 0.72
+    chase_scale = 0.55
+    lag_scale = 1.7      # a gentler wall: stragglers get more room before LEFT BEHIND
     rules = {"first_blood_s": 4.2}
     CAPACITY, K_SINK, SUNK = 6.0, 4.0, 95.0
 

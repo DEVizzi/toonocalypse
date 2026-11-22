@@ -45,7 +45,7 @@ def pick_cast(kind: str, rng: random.Random) -> tuple[list, list]:
 
 
 def simulate_best(recipe: Recipe, heroes: list, extras: list, seed: int, history: dict | None = None,
-                  log=print) -> tuple[Trace, scorer.Score, list[dict]]:
+                  log=print, min_len: float = 0.0, extra_seeds: int = 0) -> tuple[Trace, scorer.Score, list[dict]]:
     """Best-of-N (§12): 8 seeds, 8 more if none reaches min_score (max 16). Outcomes are 100% real physics."""
     sc = settings()["scorer"]
     results: list[tuple[float, int, Trace, scorer.Score]] = []
@@ -82,6 +82,28 @@ def simulate_best(recipe: Recipe, heroes: list, extras: list, seed: int, history
         reverse=True,
     )
     best = results[0]
+    if min_len > 0 and float(best[2].meta.get("resolved_at") or 0) < min_len:
+        # v6: never publish a short race - re-simulate fresh seeds until one is long enough (and not rejected)
+        n0 = len(results)
+        for i in range(n0, n0 + max(0, extra_seeds)):
+            s = seed * 1000 + i
+            t0 = time.time()
+            tr = Sim(recipe, heroes, extras, s).run()
+            res = scorer.score(tr, history)
+            ln = float(tr.meta.get("resolved_at") or 0)
+            report.append({"seed": s, "score": res.total, "rejected": scorer.rejected(res), "winner": tr.meta["winner"],
+                           "resolved_at": tr.meta["resolved_at"], "sim_s": round(time.time() - t0, 2), "remake": True})
+            log(f"  remake seed {s}: score={res.total:+.0f} rej={scorer.rejected(res)} t={ln:.1f}s")
+            results.append((res.total, s, tr, res))
+            if ln >= min_len and not scorer.rejected(res) and not str(tr.meta.get("winner") or "").startswith("extra"):
+                return tr, res, report
+        long_ok = [r for r in results if float(r[2].meta.get("resolved_at") or 0) >= min_len]
+        if long_ok:
+            long_ok.sort(key=lambda r: (not scorer.rejected(r[3]),
+                                        not str(r[2].meta.get("winner") or "").startswith("extra"), r[0]), reverse=True)
+            best = long_ok[0]
+        else:
+            best = max(results, key=lambda r: float(r[2].meta.get("resolved_at") or 0))
     return best[2], best[3], report
 
 
@@ -231,7 +253,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"cast ({len(heroes)}H+{len(extras)}D): {[h.key for h in heroes]} + {'GOLDEN' if is_grand_final else 'std'} dummies")
 
-    trace, best, report = simulate_best(recipe, heroes, extras, seed, history=sim_hist)
+    min_len = float(settings()["scorer"].get("min_final_s", 0)) if day >= recipe_generator.v6_from_day() else 0.0
+    extra = int(settings()["scorer"].get("remake_seeds", 24))
+    trace, best, report = simulate_best(recipe, heroes, extras, seed, history=sim_hist, min_len=min_len, extra_seeds=extra)
+    tries = 0
+    while min_len and float(trace.meta.get("resolved_at") or 0) < min_len and arena_req is None and tries < 3:
+        tries += 1
+        print(f"remake: {recipe.arena} best run {trace.meta.get('resolved_at')}s < {min_len}s -> drawing another arena")
+        hist2 = entries + [{"day": day - 1, "arena": recipe.arena, "goal": recipe.goal, "twist": recipe.twist}]
+        recipe2, relaxed = recipe_generator.generate(hist2, day, seed + 7919 * tries, mode=a.mode, goal=a.goal,
+                                                     season_theme=for_season(season_num).key)
+        recipe2.finale, recipe2.episode_kind = recipe.finale, recipe.episode_kind
+        if a.theme:
+            recipe2.theme = a.theme
+        if a.flash_forward != "auto":
+            recipe2.flash_forward = a.flash_forward == "on"
+        recipe = recipe2
+        print(f"recipe: {recipe.mode} {recipe.arena} / {recipe.goal} / {recipe.hazards} / twist={recipe.twist}")
+        trace, best, report = simulate_best(recipe, heroes, extras, seed + 7919 * tries, history=sim_hist,
+                                            min_len=min_len, extra_seeds=extra)
     outcome, next_state, next_hof = league.evaluate_and_advance(
         season_state, trace, hall_of_fame=hof, mutate=not a.dry_run
     )

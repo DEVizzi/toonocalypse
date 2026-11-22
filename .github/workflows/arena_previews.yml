@@ -43,7 +43,7 @@ jobs:
   render:
     needs: list
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -52,6 +52,7 @@ jobs:
     env:
       SDL_VIDEODRIVER: dummy
       SDL_AUDIODRIVER: dummy
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -65,21 +66,21 @@ jobs:
           APT_OPTS="-o Acquire::ForceIPv4=true -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15"
           for i in 1 2 3; do sudo apt-get $APT_OPTS update -q && sudo apt-get $APT_OPTS install -y -q --no-install-recommends ffmpeg && break; sleep 5; done
       - run: pip install -r requirements.txt
-      - name: Render silent preview Short + stills
+      - name: Render final Short (audio, >=22 s remake rule) + stills
         env:
           ARENA: ${{ matrix.arena }}
         run: |
           mkdir -p output
           RACE=5
           case "$ARENA" in duel_dome) RACE=28;; triangle_throne) RACE=30;; esac
-          python -m src.main --dry-run --season 1 --race $RACE --arena "$ARENA" --no-audio --stills 6 \
+          python -m src.main --dry-run --season 1 --race $RACE --arena "$ARENA" --stills 6 \
             --out "output/${ARENA}.mp4" 2>&1 | tail -25
           python tests/arena_lab.py "$ARENA" -n 8 | tee "output/${ARENA}_lab.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: arena-${{ matrix.arena }}
           path: output/*
-          retention-days: 3
+          retention-days: 7
 
   sheet:
     needs: render

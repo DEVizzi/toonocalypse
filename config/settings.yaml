@@ -145,6 +145,8 @@ v6_from_day: 2            # first season day that draws from the 21 v6 league ar
 
 scorer:
   seeds_per_batch: 8
+  min_final_s: 22        # v6+: a race shorter than this is re-simulated (then another arena) before publishing
+  remake_seeds: 24
   max_seeds: 16
   min_score: 30
   dummy_win_penalty: -1000

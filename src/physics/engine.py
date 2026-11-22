@@ -769,7 +769,7 @@ class Sim:
                     self.chase_x = max(self.chase_x, self.chase_x + (target_w - self.chase_x) * min(1.0, dt * 1.6))
             n_heroes = sum(1 for c in alive if c.is_hero)
             lag_mult = 1.65 if len(self.contestants) <= 10 else (1.35 if n_heroes <= 4 else 1.0)
-            lag = float(self.cfg["wall_lag_px"]) * lag_mult
+            lag = float(self.cfg["wall_lag_px"]) * lag_mult * float(getattr(self.arena, "lag_scale", 1.0))
             lag_floor = self.cam_x - lag
             if self.t > 6.0 and self.chase_x < lag_floor:
                 self.chase_x += (lag_floor - self.chase_x) * min(1.0, dt * 1.2)
