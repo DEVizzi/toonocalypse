@@ -40,7 +40,9 @@ class TestV40LeagueAndOverhaul(unittest.TestCase):
             stage = league.stage_for_race(r_before)
 
             if stage == "league":
-                self.assertEqual((len(heroes), len(extras), is_final), (10, 4, False))
+                # v5.1: Season 1 = 10 heroes + 4 dummies; Season 2+ = 12 (two rookies) + 2 dummies
+                exp = (10, 4, False) if s_before == 1 else (12, 2, False)
+                self.assertEqual((len(heroes), len(extras), is_final), exp)
             elif stage == "play_in":
                 self.assertEqual((len(heroes), len(extras), is_final), (7, 4, False))
             elif stage == "qualifier_1":

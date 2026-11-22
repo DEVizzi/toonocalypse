@@ -21,7 +21,7 @@ class TestZeroRepeat(unittest.TestCase):
         from src.recap.comedy import Writer
         w = Writer.__new__(Writer)
         w.rng, w.used, w.said = random.Random(1), {}, set()
-        opts = ("A one.", "A two.", "A three.")
+        opts = ("Alpha line.", "Bravo line.", "Charlie line.")
         got = [w._fresh("f", opts) for _ in range(4)]
         self.assertEqual(sorted(g for g in got if g), sorted(opts))
         self.assertIsNone(got[-1])
@@ -30,12 +30,12 @@ class TestZeroRepeat(unittest.TestCase):
         from src.recap.comedy import Line, Writer
         w = Writer.__new__(Writer)
         w.rng, w.used, w.said = random.Random(2), {}, set()
-        a = w._peek("x", ("Line one.", "Line two."))
-        b = w._peek("x", ("Line one.", "Line two."))
+        a = w._peek("x", ("Alpha call.", "Bravo call."))
+        b = w._peek("x", ("Alpha call.", "Bravo call."))
         self.assertEqual(a, b)
         self.assertTrue(w.claim(Line(a[0])))
         self.assertFalse(w.claim(Line(a[0])))
-        self.assertNotEqual(w._peek("x", ("Line one.", "Line two."))[0], a[0])
+        self.assertNotEqual(w._peek("x", ("Alpha call.", "Bravo call."))[0], a[0])
 
 
 class TestRaceFormats(unittest.TestCase):

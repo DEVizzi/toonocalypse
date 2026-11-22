@@ -406,7 +406,7 @@ def track(trace: T.Trace, screen_w: float | None = None, screen_cy: float | None
         # P0.2 Hard Viewport Clamp: guarantee >= 1 living character is inside the middle 50% horizontal frame [0.25*sw, 0.75*sw]
         if everyone and not top:
             x_lo_s, x_hi_s = sw * 0.25 + 4.0, sw * 0.75 - 4.0
-            y_lo_s, y_hi_s = VIEW_TOP + 56.0, VIEW_BOTTOM - 56.0
+            y_lo_s, y_hi_s = VIEW_TOP + 100.0, VIEW_BOTTOM - 84.0   # margin > test band so no edge-pixel misses
 
             def in_mid50(i: int, ccx: float, ccy: float) -> bool:
                 sx = (float(rows[i, 0]) - ccx) * cz + sw / 2.0 + shake[0]
