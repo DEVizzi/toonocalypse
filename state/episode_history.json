@@ -33,6 +33,289 @@
       "published": true,
       "youtube_id": "21UG6Vz6Oz4",
       "instagram_id": "18181230226449454"
+    },
+    {
+      "day": 2,
+      "mode": "SIDE_VIEW",
+      "arena": "wall_rush",
+      "goal": "last_one_standing",
+      "hazards": [],
+      "twist": "slippery_floor",
+      "theme": "royal_classic",
+      "fingerprint": "350262d10a5873be8d3be2c6bdbb31f1141725763d735ba9d0ba41054d1d4ca8",
+      "season": 1,
+      "race": 2,
+      "stage": "league",
+      "winner": "magneto",
+      "line_ids": [
+        "winner_carnage:0",
+        "outro:1",
+        "overtime:1",
+        "kill.magneto:0",
+        "kill.sly:0",
+        "multi:0",
+        "blink:1",
+        "trait:0"
+      ],
+      "cliches": [],
+      "recap": {
+        "v": 1,
+        "code_sha": "1a2881259a5469373efaffd17099a679e125489c",
+        "seed": 17287,
+        "sim_seed": 17287002,
+        "recipe": {
+          "seed": 17287,
+          "mode": "SIDE_VIEW",
+          "arena": "wall_rush",
+          "goal": "last_one_standing",
+          "hazards": [],
+          "twist": "slippery_floor",
+          "theme": "royal_classic",
+          "params": {
+            "layout_seed": 632155452,
+            "single_winner": true,
+            "twist_at": 9.3
+          },
+          "two_stage": false,
+          "flash_forward": false,
+          "episode_kind": "spotlight",
+          "finale": false,
+          "favour": "grumble"
+        },
+        "heroes": [
+          "bonk",
+          "pip",
+          "boing",
+          "sly",
+          "grumble",
+          "dash",
+          "magneto",
+          "floater",
+          "juggernaut",
+          "glitch"
+        ],
+        "extras": [
+          {
+            "number": 1,
+            "colour": "#D5D9DE",
+            "radius": 20,
+            "mass": 0.95,
+            "max_speed": 234.53495694219512,
+            "friction": 0.45,
+            "elasticity": 0.6,
+            "behaviour": [
+              0.1354197835064877,
+              0.29912556513042576,
+              0.2434951747315742,
+              0.18630462899319258
+            ],
+            "cult": false,
+            "golden": false
+          },
+          {
+            "number": 2,
+            "colour": "#D5D9DE",
+            "radius": 20,
+            "mass": 0.95,
+            "max_speed": 233.25225059884957,
+            "friction": 0.45,
+            "elasticity": 0.6,
+            "behaviour": [
+              0.23597723589741515,
+              0.1312498166716632,
+              0.18715241012964545,
+              0.02702367467610406
+            ],
+            "cult": false,
+            "golden": false
+          },
+          {
+            "number": 3,
+            "colour": "#D5D9DE",
+            "radius": 20,
+            "mass": 0.95,
+            "max_speed": 204.67638888631942,
+            "friction": 0.45,
+            "elasticity": 0.6,
+            "behaviour": [
+              0.10185072952236111,
+              0.046231250888998716,
+              0.1534153701752056,
+              0.11294446917042325
+            ],
+            "cult": false,
+            "golden": false
+          },
+          {
+            "number": 4,
+            "colour": "#D5D9DE",
+            "radius": 20,
+            "mass": 0.95,
+            "max_speed": 201.90819410559612,
+            "friction": 0.45,
+            "elasticity": 0.6,
+            "behaviour": [
+              0.06617067997100277,
+              0.13397561143557024,
+              0.13543878336480678,
+              0.14715018966719023
+            ],
+            "cult": false,
+            "golden": false
+          }
+        ],
+        "ranking": [
+          "magneto",
+          "grumble",
+          "glitch",
+          "sly",
+          "floater",
+          "bonk",
+          "pip",
+          "juggernaut",
+          "extra2",
+          "extra3",
+          "extra4",
+          "dash",
+          "extra1",
+          "boing"
+        ],
+        "winner": "magneto",
+        "resolved_at": 15.633,
+        "elims": [
+          {
+            "t": 3.467,
+            "actors": [
+              "boing",
+              "floater"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 4.1,
+            "actors": [
+              "extra1",
+              "extra3"
+            ],
+            "cause": "wall",
+            "hero": false,
+            "by_hero": false
+          },
+          {
+            "t": 4.9,
+            "actors": [
+              "dash",
+              "magneto"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 7.2,
+            "actors": [
+              "extra4",
+              "extra3"
+            ],
+            "cause": "wall",
+            "hero": false,
+            "by_hero": false
+          },
+          {
+            "t": 7.3,
+            "actors": [
+              "extra3",
+              "extra2"
+            ],
+            "cause": "wall",
+            "hero": false,
+            "by_hero": false
+          },
+          {
+            "t": 7.4,
+            "actors": [
+              "extra2",
+              "pip"
+            ],
+            "cause": "wall",
+            "hero": false,
+            "by_hero": true
+          },
+          {
+            "t": 7.467,
+            "actors": [
+              "juggernaut",
+              "pip"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 7.5,
+            "actors": [
+              "pip",
+              "juggernaut"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 10.167,
+            "actors": [
+              "bonk",
+              "sly"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 10.3,
+            "actors": [
+              "floater"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": false
+          },
+          {
+            "t": 13.533,
+            "actors": [
+              "sly"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": false
+          },
+          {
+            "t": 15.567,
+            "actors": [
+              "glitch",
+              "magneto"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 15.633,
+            "actors": [
+              "grumble"
+            ],
+            "cause": "wall",
+            "hero": true,
+            "by_hero": false
+          }
+        ]
+      },
+      "utc_date": "2026-11-22",
+      "published": true,
+      "youtube_id": "V3etlbPIms4",
+      "instagram_id": "18122925926080011"
     }
   ]
 }
