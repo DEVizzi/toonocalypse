@@ -953,6 +953,12 @@ class RecapVideo:
             ln = wr.ko_call(victim, killer)
             if ln is not None and wr.claim(ln):
                 out.append((lt, ln, 3 if killer else 2))
+        pw = clip.get("power") or {}
+        ps = next((i / FPS for i, (_, s) in enumerate(timeline) if s == "power"), None)
+        if ps is not None and pw.get("hero") in HERO_BY_KEY:
+            ln = wr.power_call(pw["hero"])
+            if ln is not None and wr.claim(ln):
+                out.append((ps + 0.1, ln, 3))
         fs = next((i / FPS for i, (_, s) in enumerate(timeline) if s == "final"), None)
         if fs is not None and fs < decisive - 3.0 and fmt != "QUICK":
             ln = wr.final_call()
@@ -1035,7 +1041,8 @@ class RecapVideo:
         voice += v2
         results_t = max(decisive_t, vt - 0.2)
         if has:
-            dur = min(46.0, max(clip_s + (2.4 if fmt != "QUICK" else 1.6), end_v + 0.7))
+            # results hold: the podium card + table/next-race lines get room to breathe (narrated, not silent)
+            dur = min(50.0, max(clip_s + (4.2 if fmt != "QUICK" else 2.6), end_v + 0.7))
             # replay / results tail: fill with facts so it never goes quiet (each line used once per video)
             t_cur = end_v
             for ln in post:
@@ -1087,6 +1094,7 @@ class RecapVideo:
             "opening": ("GATE DROP", (37, 99, 235)),
             "chaos": ("CHAOS CAM", (217, 119, 6)),
             "final": ("FINAL STRETCH", (220, 38, 38)),
+            "power": ("POWER CAM", (147, 51, 234)),
             "replay": ({"rewind": "REWIND!", "wide": "WIDE REPLAY"}.get(rstyle, "INSTANT REPLAY"), (190, 30, 60)),
         }
 

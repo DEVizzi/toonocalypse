@@ -262,6 +262,9 @@ EVENT_CALLS: dict[str, tuple[str, ...]] = {
     "grav": ("Gravity just changed its mind!", "Gravity's gone weird!"),
     "any": ("Here comes a twist!", "Oh, the castle has a surprise!", "Plot twist incoming!"),
 }
+POWER_CALLS: tuple[str, ...] = (
+    "Power cam! That's {X}'s {P}. Look at it!", "Run it back. {X} just used {P}.", "Watch this. {P}, courtesy of {X}.",
+    "That, my friends, is {X}'s {P}. Illegal in four countries.", "Power cam! {X} with the {P}!")
 FINAL_CALLS: tuple[str, ...] = (
     "Final stretch! Here we go!", "Into the endgame now!", "It all comes down to this!", "Endgame! Don't blink!",
     "Last few seconds! Hold your breath!", "Here's your finish!", "Business end of the race!",
@@ -577,6 +580,17 @@ class Writer:
         opts = [t.format(V=V) for t in KO_SOLO_FLAVOUR.get(victim, ())] + [t.format(V=V) for t in KO_SOLO_GENERIC]
         got = self._peek(f"ko.solo.{victim}", opts)
         return Line(got[0], "hype", "LAUGHING_TEARS", "ko") if got else None
+
+    def power_call(self, hero: str) -> Line | None:
+        """POWER CAM: teaches the cast's powers by name, one hero at a time (never repeated)."""
+        from src.physics.powers import power_of
+        pw = power_of(hero)
+        if pw is None:
+            return None
+        X, P = name(hero), pw.name.title()
+        opts = [t.format(X=X, P=P) for t in POWER_CALLS]
+        got = self._peek(f"power.{hero}", opts)
+        return Line(got[0], "hype", "SHOCKED_JAWDROP", "power") if got else None
 
     def event_call(self, banner: str, overtime: bool = False) -> Line | None:
         b = (banner or "").upper()

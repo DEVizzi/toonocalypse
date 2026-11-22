@@ -30,15 +30,15 @@ REACTION_S = 0.20
 #   STANDARD = full race + one replay (no Chaos Cam)
 #   QUICK    = fast-cut: race at (near) real speed straight into the result (no replay, no slow-mo)
 FORMATS = {
-    "FEATURE": {"min_s": 38.0, "max_s": 43.0, "chaos": 1, "replay": True},
-    "STANDARD": {"min_s": 30.0, "max_s": 37.0, "chaos": 0, "replay": True},
-    "QUICK": {"min_s": 18.0, "max_s": 28.0, "chaos": 0, "replay": False},
+    "FEATURE": {"min_s": 38.0, "max_s": 46.0, "chaos": 2, "replay": True, "power": True},
+    "STANDARD": {"min_s": 32.0, "max_s": 40.0, "chaos": 0, "replay": True, "power": True},
+    "QUICK": {"min_s": 20.0, "max_s": 30.0, "chaos": 0, "replay": False, "power": False},
 }
 # Replay looks rotate per race so slow motion never looks like the same shot twice in a row.
 REPLAY_STYLES = (
-    {"name": "tight", "zoom": 1.30, "rate": 0.50, "span_s": 1.5, "rewind": False},
-    {"name": "wide", "zoom": 0.92, "rate": 0.62, "span_s": 2.0, "rewind": False},
-    {"name": "rewind", "zoom": 1.12, "rate": 0.50, "span_s": 1.4, "rewind": True},
+    {"name": "tight", "zoom": 1.30, "rate": 0.50, "span_s": 2.0, "rewind": False},
+    {"name": "wide", "zoom": 0.92, "rate": 0.62, "span_s": 2.6, "rewind": False},
+    {"name": "rewind", "zoom": 1.12, "rate": 0.50, "span_s": 1.8, "rewind": True},
 )
 
 
@@ -172,17 +172,30 @@ def _render_crop(r, shot, idx: int, w: int, h: int, Shot, pygame, scy: float = 9
     return pygame.transform.smoothscale(sub, (w, h)) if (fw, crop_h) != (w, h) else sub.copy()
 
 
-def _pick_feature_ko(trace, end_t: float) -> list:
-    """The single best hero-on-hero knockout (else the best action beat) for a FEATURE race's Chaos Cam."""
-    lim = max(2.2, end_t - 2.8)
-    cands = [e for e in trace.events if 1.4 <= e.t <= lim and _event_rank(e) > 0]
+def _pick_feature_ko(trace, end_t: float, n: int = 1) -> list:
+    """The best hero-on-hero knockouts (else the best action beats) for a FEATURE race's Chaos Cam, >= 4 s apart."""
+    return _pick_chaos_events(trace, end_t, max_picks=n)
+
+
+POWER_ORDER = ("sly", "magneto", "bonk", "dash", "pip", "grumble", "boing", "juggernaut", "floater", "zap", "goo",
+               "frosty", "blaze", "shadow", "comet")
+
+
+def _pick_power_event(trace, end_t: float, rotate: int, avoid: list) -> list:
+    """One visible hero-power moment for the POWER CAM (real-speed zoomed rewind). The preferred hero rotates with
+    the race number so a 10-race recap spotlights different powers; never within 4 s of a Chaos Cam beat."""
+    lim = max(2.2, end_t - 2.5)
+    cands = [e for e in trace.events if e.kind == "trait" and (e.data or {}).get("power") and 1.5 <= e.t <= lim
+             and all(abs(e.t - a.t) >= 4.0 for a in avoid)]
     if not cands:
         return []
-    return [max(cands, key=lambda e: (_event_rank(e), -e.t))]
+    order = list(POWER_ORDER[rotate % len(POWER_ORDER):]) + list(POWER_ORDER[:rotate % len(POWER_ORDER)])
+    rank = {k: i for i, k in enumerate(order)}
+    return [min(cands, key=lambda e: (rank.get(str(e.actors[0]), 99), e.t))]
 
 
 def _build_highlight_plan(trace, pre: int, end_t: float, Shot, fmt: str = "FEATURE",
-                          style: int = 0) -> tuple[list[tuple[object, str, float]], list]:
+                          style: int = 0, rotate: int = 0) -> tuple[list[tuple[object, str, float]], list]:
     """Builds a format-dependent widescreen highlight sequence:
     Gate drop -> race (FEATURE: one 0.4x Chaos Cam) -> eased Final-3 -> rotating-style replay (not in QUICK)."""
     spec = FORMATS.get(fmt, FORMATS["FEATURE"])
@@ -191,14 +204,15 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot, fmt: str = "FEATU
     n = trace.n_frames
     side_view = trace.mode == "SIDE_VIEW"
     end_f = min(n - 1, pre + int(round((end_t + REACTION_S) * FPS)))
-    chaos_list = _pick_feature_ko(trace, end_t) if spec["chaos"] else []
+    chaos_list = _pick_feature_ko(trace, end_t, int(spec["chaos"])) if spec["chaos"] else []
+    power_list = _pick_power_event(trace, end_t, rotate, chaos_list) if spec.get("power") else []
     rep_frames = int(round(rstyle["span_s"] / rstyle["rate"] * FPS)) if spec["replay"] else 0
     if rstyle["rewind"] and spec["replay"]:
         rep_frames += int(round(0.5 * FPS))
 
     plan: list[tuple[object, str, float]] = []
-    # 1. Opening starting-gate beat (0.8s)
-    gate_f0 = max(0, pre - int(round(0.8 * FPS)))
+    # 1. Opening starting-gate beat (up to 1.5 s of the grid)
+    gate_f0 = max(0, pre - int(round(1.5 * FPS)))
     for f in range(gate_f0, pre):
         plan.append((Shot(float(f), "cold", (f - gate_f0) / FPS), "opening", (f - pre) / FPS))
 
@@ -212,32 +226,49 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot, fmt: str = "FEATU
             tf = s0 + (s1 - s0) * k / max(1, n_sl)
             plan.append((Shot(tf, "chaos_slomo", k / FPS, 1.15, focus), "chaos", (tf - pre) / FPS))
 
+    def _add_power_cam(ev) -> None:
+        # real-speed (1x) zoomed rewind of a hero power: shows WHAT the power does, no slow-mo
+        cf = min(end_f, max(pre, pre + int(round(ev.t * FPS))))
+        s0 = max(float(pre), cf - 0.5 * FPS)
+        s1 = min(float(end_f), cf + 1.7 * FPS)
+        for k, f in enumerate(range(int(s0), int(s1))):
+            plan.append((Shot(float(f), "chaos_slomo", k / FPS, 1.32, None), "power", (f - pre) / FPS))
+
     def _append_range(t_start: float, t_stop: float, seg_name: str, slow_tail_s: float = 0.0, tail_rate: float = 0.72) -> None:
         f_start = max(pre, min(end_f, pre + int(round(t_start * FPS))))
         f_stop = max(f_start, min(end_f, pre + int(round(t_stop * FPS))))
         f_slow = max(f_start, f_stop - int(round(slow_tail_s * FPS)))
         chaos_by_f = {min(end_f, max(pre, pre + int(round(e.t * FPS)) + 6)): e for e in chaos_list}
+        for e in power_list:
+            chaos_by_f[min(end_f, max(pre, pre + int(round(e.t * FPS)) + 40))] = ("power", e)
+
+        def _insert(item) -> None:
+            if isinstance(item, tuple):
+                _add_power_cam(item[1])
+            else:
+                _add_chaos_slomo(item)
+
         for f in range(f_start, f_slow):
             plan.append((Shot(float(f), "play", (f - pre) / FPS), seg_name, (f - pre) / FPS))
             if f in chaos_by_f:
-                _add_chaos_slomo(chaos_by_f.pop(f))
+                _insert(chaos_by_f.pop(f))
         tf = float(f_slow)
         while tf <= float(f_stop) + 1e-6:
             fi_chk = int(round(tf))
             plan.append((Shot(tf, "play", (tf - pre) / FPS), "final" if tf >= end_f - 6 * FPS else seg_name, (tf - pre) / FPS))
             for cf_k in list(chaos_by_f.keys()):
                 if fi_chk >= cf_k:
-                    _add_chaos_slomo(chaos_by_f.pop(cf_k))
+                    _insert(chaos_by_f.pop(cf_k))
             tf += tail_rate
 
     # 2. Main race highlight body (format-adaptive length; no padding replays)
     if end_t <= 26.0:
-        est_play = end_t + 0.8 + 2.0 * len(chaos_list) + rep_frames / FPS
+        est_play = end_t + 1.5 + 2.0 * len(chaos_list) + 2.2 * len(power_list) + rep_frames / FPS
         need_extra_s = max(0.0, min_frames / FPS + 0.3 - est_play)
         # Ease the final seconds (0.62x-1.0x) only as much as the format needs; QUICK stays near real speed
         tail_window = min(max(4.5, end_t * 0.45), 9.0)
-        rate = tail_window / (tail_window + min(need_extra_s, tail_window * 0.6))
-        rate = max(0.62, min(1.0, rate))
+        rate = tail_window / (tail_window + min(need_extra_s, tail_window * 0.8))
+        rate = max(0.56, min(1.0, rate))
         if fmt == "QUICK":
             rate = max(0.85, rate)
         _append_range(0.0, end_t + REACTION_S, "play", slow_tail_s=tail_window if rate < 0.999 else 0.0,
@@ -278,6 +309,7 @@ def _build_highlight_plan(trace, pre: int, end_t: float, Shot, fmt: str = "FEATU
         head_cut = max(int(3.0 * FPS), len(plan) - keep_tail - excess)
         plan = plan[:head_cut] + plan[head_cut + excess:]
 
+    _build_highlight_plan.power = power_list  # type: ignore[attr-defined]
     return plan, chaos_list
 
 
@@ -399,7 +431,9 @@ def run(root: Path, job: dict) -> dict:
     Shot = pipeline.Shot
 
     plan, chaos_list = _build_highlight_plan(trace, pre, end_t, Shot, fmt=str(job.get("format") or "FEATURE"),
-                                             style=int(job.get("replay_style") or 0))
+                                             style=int(job.get("replay_style") or 0),
+                                             rotate=int(job.get("rotate") or 0))
+    pw = getattr(_build_highlight_plan, "power", []) or []
     chaos0 = chaos_list[0] if chaos_list else None
     smooth_cams = _SmoothSeq(r.cams, "cam")
     smooth_props = _SmoothSeq(trace.props, "props")
@@ -415,6 +449,9 @@ def run(root: Path, job: dict) -> dict:
     smooth_cams.tf = smooth_props.tf = None
     enc.close()
     side["format"] = str(job.get("format") or "FEATURE")
+    if pw:
+        side["power"] = {"hero": str(pw[0].actors[0]), "name": str((pw[0].data or {}).get("name") or ""),
+                         "popup": str((pw[0].data or {}).get("popup") or "")}
     side["replay_style"] = REPLAY_STYLES[int(job.get("replay_style") or 0) % len(REPLAY_STYLES)]["name"]
     side["clip"] = {"path": str(out_dir / f"{tag}_clip.mp4"), "frames": enc.n, "width": w, "height": h,
                     "timeline": timeline,

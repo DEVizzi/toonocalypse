@@ -297,7 +297,7 @@ def run(mode: str, season: int | None, dry_run: bool, privacy: str, end_race: in
         side = timemachine.render_race_clip(ri.record, label, ri.stage, clip_dir, ri.tag, freeze=freeze, log=log,
                                             fmt=formats.get(ri.race, "STANDARD"),
                                             replay_style=style_of.get(ri.race, 0),
-                                            biome=biomes.biome_for(ri.season, ri.race))
+                                            biome=biomes.biome_for(ri.season, ri.race), rotate=ri.race)
         return ri.race, freeze is not None, side
 
     clips: dict[int, dict] = {}

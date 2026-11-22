@@ -85,11 +85,12 @@ CLIP_W, CLIP_H = 1240, 930
 
 def render_race_clip(record: dict, label: str, stage: str, out_dir: Path, tag: str,
                      freeze: dict | None = None, width: int = CLIP_W, height: int = CLIP_H,
-                     log=print, fmt: str = "FEATURE", replay_style: int = 0, biome: str = "") -> dict[str, Any]:
+                     log=print, fmt: str = "FEATURE", replay_style: int = 0, biome: str = "", rotate: int = 0) -> dict[str, Any]:
     """Pinned tree first, then the current tree. Returns the worker sidecar (+ `source`)."""
     job = {"record": record, "label": label, "stage": stage, "out_dir": str(out_dir), "tag": tag,
            "width": int(width), "height": int(height), "freeze": freeze, "format": str(fmt),
-           "replay_style": int(replay_style), "biome": str(biome)}
+           "replay_style": int(replay_style), "biome": str(biome),
+           "rotate": int(rotate)}
     tried = []
     pinned = ensure_tree(record.get("code_sha"), log=log)
     for src_name, root in (("pinned", pinned), ("current", ROOT)):

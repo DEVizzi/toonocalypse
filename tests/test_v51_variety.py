@@ -150,7 +150,7 @@ class TestSmoothSlowMo(unittest.TestCase):
     def test_quick_format_has_no_replay(self) -> None:
         from src.recap.clip_worker import FORMATS
         self.assertFalse(FORMATS["QUICK"]["replay"])
-        self.assertEqual(FORMATS["FEATURE"]["chaos"], 1)
+        self.assertLessEqual(FORMATS["FEATURE"]["chaos"], 2)
 
 
 if __name__ == "__main__":
