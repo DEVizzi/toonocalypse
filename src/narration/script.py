@@ -18,6 +18,7 @@ import re
 from dataclasses import dataclass, field
 
 from src.characters.roster import HERO_BY_KEY
+from src.narration import hooks
 
 WORDS_PER_S = 3.2
 FPS_ = 30.0
@@ -377,7 +378,24 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
         fin = (fin + [_name(k) for k in tr.meta.get("heroes", []) if _name(k) not in fin])[:3]
         if len(fin) == 3:
             intro_ctx.update(a=fin[0], b=fin[1], c=fin[2])
-    add(0.04, "intro", 10, intro_fams, intro_ctx, 0.04, mw=10 if stage == "grand_final" else 8)
+    rcp = tr.meta.get("recipe") or {}
+    arena_k, goal_k = str(rcp.get("arena") or ""), str(rcp.get("goal") or "")
+    hook_rng = random.Random(int(tr.meta.get("seed", 0)) * 31 + 7)
+    if stage == "league":
+        # v6: scroll-stopping HOOK first (fixed text, never LLM-rewritten so it always matches the arena)
+        hk = hooks.hook_line(arena_k, hook_rng)
+        beats.append(Beat(0.04, "intro", 10, intro_ctx, 9, hk, 0.04, [], family="hook", line_id="hook:" + arena_k,
+                          style="hype"))
+        hook_words = len(hk.split())
+    else:
+        add(0.04, "intro", 10, intro_fams, intro_ctx, 0.04, mw=10 if stage == "grand_final" else 8)
+        hook_words = 10 if stage == "grand_final" else 8
+    rl = hooks.rules_line(arena_k, goal_k)
+    if rl:
+        # ...then the RULES in one breath, so a first-time viewer gets the objective before the first knockout
+        t_rules = round(0.04 + hook_words / WORDS_PER_S + 0.12, 2)
+        beats.append(Beat(t_rules, "intro_rules", 10, {}, 14, rl, t_rules, [], family="rules",
+                          line_id="rules:" + arena_k + ":" + goal_k, style="normal"))
 
     react_cutoff = card_t - 1.45
     LEAD_IN = 0.15
@@ -516,6 +534,9 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
                           recent_cliches=set(league_ctx.get("recent_cliches") or ()))
     out: list[Beat] = []
     for b in sorted(kept, key=lambda b: (-b.prio, b.t)):
+        if b.text and b.family in FIXED_FAMILIES:          # hook / rules: fixed text, already filled in
+            out.append(b)
+            continue
         got = pk.pick(b.families, b.ctx, b.max_words)
         if got is None:
             continue
@@ -526,6 +547,8 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
     r._picker = pk
     return out
 
+
+FIXED_FAMILIES = ("hook", "rules")
 
 _SAFE = re.compile(r"^[A-Za-z0-9 ,.!?'\-:—]+$")
 
@@ -678,6 +701,7 @@ def _parse_lines(raw: str) -> list | None:
 
 def punch_up(beats: list[Beat], league_ctx: dict | None = None, log=print) -> int:
     """Live LLM punch-up. Logs status LOUDLY: `[LLM LIVE]` on success, `[LLM WARNING]` on any fallback."""
+    beats = [b for b in beats if b.family not in FIXED_FAMILIES]   # hook + rules lines are never rewritten
     if not beats:
         return 0
     prompt = _prompt(beats, league_ctx)

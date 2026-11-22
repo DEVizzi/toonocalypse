@@ -132,7 +132,11 @@ def build_soundtrack(r, ep, wav_path: Path, log=print) -> dict:
             d = pcm.size / SR
             ok_t: float | None = None
 
-            if b.kind.startswith("intro"):
+            if b.kind == "intro_rules":
+                # v6: the rules line follows the hook immediately (anchors are placed first, hook before rules)
+                t0 = max(b.t, max((p1 for p0, p1 in placed if p0 < 0.5), default=0.0) + 0.10)
+                ok_t = t0 if all(t0 + d + 0.06 <= p0 or t0 >= p1 + 0.06 for p0, p1 in placed) else None
+            elif b.kind.startswith("intro"):
                 t0 = 0.04
                 ok_t = t0 if all(t0 + d + 0.06 <= p0 or t0 >= p1 + 0.06 for p0, p1 in placed) else None
             elif b.kind.startswith(("winner", "multi_ko")):
