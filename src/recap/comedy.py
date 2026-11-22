@@ -672,9 +672,12 @@ class Writer:
         cands: list[tuple[float, dict[str, Any]]] = []
         # 1) title fight: leader changes inside this part
         flips = [ri for ri in races if ri.lead_changed and ri.stage == "league"]
-        if len(flips) >= 2:
-            ri = flips[1]
-            a, b = name(flips[0].leader_after), name(ri.leader_after)
+        last_race = races[-1].race
+        flips_ok = [f for f in flips if f.race < last_race]
+        if len(flips_ok) >= 2:
+            ri = flips_ok[-1]
+            flips = flips_ok                      # stat = lead changes up to the moment the desk airs
+            a, b = name(flips[-2].leader_after), name(ri.leader_after)
             cands.append((3.0 + len(flips), {
                 "after_race": ri.race, "title": "THE TITLE FIGHT", "hero": ri.leader_after,
                 "stat": f"{len(flips)} LEAD CHANGES", "expr": "angry",
@@ -688,10 +691,12 @@ class Writer:
             for k in ri.behind_dummy:
                 dummy.setdefault(k, []).append(ri.race)
         if dummy:
-            k, rs = max(dummy.items(), key=lambda kv: (len(kv[1]), kv[0]))
+            # same tie-break as the "Beaten by a Dummy" award (count, points, key) so desk and award agree
+            k, rs = max(dummy.items(), key=lambda kv: (len(kv[1]), self.stats.get(kv[0], {}).get("points", 0), kv[0]))
+            rs = [x for x in rs if x < last_race]
             if len(rs) >= 2:
                 cands.append((2.5 + len(rs), {
-                    "after_race": rs[1], "title": "THE DUMMY CURSE", "hero": k, "stat": f"LOST TO DUMMIES x{len(rs)}",
+                    "after_race": rs[-1], "title": "THE DUMMY CURSE", "hero": k, "stat": f"LOST TO DUMMIES x{len(rs)}",
                     "expr": "dizzy",
                     "line": self._pick("story.dummy", (
                         f"Running gag alert. {name(k)} has now lost to a crash test dummy {times(len(rs))}. "
@@ -750,13 +755,18 @@ class Writer:
         # 5) the menace: knockouts in the part
         kos: dict[str, int] = {}
         ko_at: dict[str, int] = {}
+        ko_upto: dict[str, int] = {}
         for ri in races:
+            if ri.race >= last_race:
+                break
             for k2, n in ri.ko_counts.items():
                 kos[k2] = kos.get(k2, 0) + int(n)
-                if kos[k2] >= 3 and k2 not in ko_at:
-                    ko_at[k2] = ri.race
+                if kos[k2] >= 3:
+                    ko_at[k2] = ri.race              # latest race before the end: stat == count so far
+                    ko_upto[k2] = kos[k2]
         if ko_at:
-            k = max(ko_at, key=lambda x: (kos[x], x))
+            k = max(ko_at, key=lambda x: (ko_upto[x], x))
+            kos = ko_upto
             cands.append((2.0 + kos[k] * 0.4, {
                 "after_race": ko_at[k], "title": "PUBLIC MENACE", "hero": k, "stat": f"{kos[k]} KOs",
                 "expr": "angry",
