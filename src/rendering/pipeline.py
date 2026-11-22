@@ -23,7 +23,7 @@ from src.config import FPS, H, LAYOUT, TIMELINE, VIDEO, W, settings  # noqa: E40
 from src.games.themes import THEME_BY_KEY, Theme  # noqa: E402
 from src.physics import trace as T  # noqa: E402
 from src.physics.camera import Cam, track  # noqa: E402
-from src.rendering import balls, effects, hud, scenery  # noqa: E402
+from src.rendering import arena_art, balls, effects, hud, scenery  # noqa: E402
 
 BLACK = (17, 17, 17)
 WHITE_ = (255, 255, 255)
@@ -577,6 +577,9 @@ class Renderer:
         fr.set_clip(self.world_rect)
         self._particles(cam, t_anim)
         z = cam.zoom
+        _ak = self.meta["recipe"].get("arena")
+        if _ak in arena_art.UNDER:
+            arena_art.UNDER[_ak](self, cam, fi, zone, t_anim, play_t)
         if self.tr.mode == "TOP_DOWN":
             self._falling_bumpers(cam, fi, z)
             self.draw_contestants(cam, fi, t_anim, falling_only=True)
@@ -680,8 +683,12 @@ class Renderer:
                 c = cam.to_screen(*s["c"])
                 pygame.draw.circle(fr, BLACK, c, 13 * z)
                 pygame.draw.circle(fr, (140, 148, 165), c, 9 * z)
+            elif s["type"] in arena_art.STATIC:
+                arena_art.STATIC[s["type"]](self, cam, s, zone, t_anim, play_t)
         self._zones(cam, zone, t_anim)
         self._props(cam, fi)
+        if _ak in arena_art.OVER:
+            arena_art.OVER[_ak](self, cam, fi, zone, t_anim, play_t)
         for sb in self.meta["statics"]:
             if sb["type"] == "ceiling_beam":
                 self._draw_ceiling_beam(cam, sb)
@@ -1130,6 +1137,9 @@ class Renderer:
             if not cam.visible(x, y, 420):
                 continue
             st = styles[i]
+            if st["style"] in arena_art.PROP:
+                arena_art.PROP[st["style"]](self, cam, st, i, x, y, ang, fi)
+                continue
             ca, sa = math.cos(ang), math.sin(ang)
             for sh in st["shapes"]:
                 if sh["type"] == "circle" and st["style"] == "disc_marks":

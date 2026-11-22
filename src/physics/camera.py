@@ -231,6 +231,15 @@ def track(trace: T.Trace, screen_w: float | None = None, screen_cy: float | None
     cand_since = 0
     tower_ty: float | None = None
     track.rescues = 0                           # type: ignore[attr-defined]
+    fixed = meta.get("fixed_rect")
+    if fixed:
+        # v6 single-screen arenas: the whole world rect fills the gameplay viewport, camera never moves
+        fx0, fy0, fx1, fy1 = (float(v) for v in fixed)
+        zz = min(sw / max(1.0, fx1 - fx0), (VIEW_BOTTOM - VIEW_TOP) / max(1.0, fy1 - fy0))
+        vc = (VIEW_TOP + VIEW_BOTTOM) / 2.0
+        fx, fy = (fx0 + fx1) / 2.0, (fy0 + fy1) / 2.0 - (vc - scy) / zz
+        return [Cam(fx, fy, zz) for _ in range(trace.n_frames)]
+    ascent = bool(meta.get("ascent", False))
     for f in range(trace.n_frames):
         rows, flags = trace.frames[f], trace.flags[f]
         everyone = [i for i in range(len(rows)) if flags[i] & T.ALIVE]
@@ -279,7 +288,10 @@ def track(trace: T.Trace, screen_w: float | None = None, screen_cy: float | None
                 half_w = sw / 2 / max(zmin, 0.86) - 90.0
                 tx = max(float(mx.max()) - half_w, min(float(mx.min()) + half_w, tx))
                 ty_raw = float(np.mean(my))
-                tower_ty = ty_raw if tower_ty is None else max(ty_raw, tower_ty - 70.0 * dt)
+                if ascent:          # v6 climbs: follow the pack UP at once, sink back only slowly
+                    tower_ty = ty_raw if tower_ty is None else min(ty_raw, tower_ty + 70.0 * dt)
+                else:
+                    tower_ty = ty_raw if tower_ty is None else max(ty_raw, tower_ty - 70.0 * dt)
                 ty = tower_ty
                 span_y = float(my.max() - my.min()) + 480.0
                 tz = max(zmin, min(1.05, ((VIEW_BOTTOM - VIEW_TOP) * 0.82) / span_y, 0.88 if len(alive) > 4 else 1.15))

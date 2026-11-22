@@ -59,9 +59,12 @@ def score(trace: Trace, history: dict | None = None) -> Score:
     hero_elims = [e.t for e in elims if e.data.get("hero")]
     p["all_heroes_early"] = -40 if heroes and len(hero_elims) >= len(heroes) and max(hero_elims) < 10 else 0
     lo, hi = TIMELINE.gameplay_target_min_s, TIMELINE.hard_stop_s
-    true_ko = trace.meta.get("recipe", {}).get("arena") in ("rotating_disc", "sumo_pool_pit")
+    rules = trace.meta.get("arena_rules") or {}
+    true_ko = trace.meta.get("recipe", {}).get("arena") in ("rotating_disc", "sumo_pool_pit") or bool(rules.get("true_ko"))
     if true_ko:
         hi = 30.0                      # v3.3/v4.0: plays to genuine ALIVE: 1/X finish (natural 19-26 s)
+    if rules.get("max_s"):
+        hi = float(rules["max_s"])
     p["duration"] = -50 if not (lo <= end <= hi) else 0
     how = next((e.data.get("how") for e in ev if e.kind == "win"), None)
     p["forced_finish"] = settings()["scorer"]["reject_penalty"] if (true_ko and how != "last_standing") else 0
@@ -79,6 +82,8 @@ def score(trace: Trace, history: dict | None = None) -> Score:
     p["dummy_win"] = sc["dummy_win_penalty"] if winner and winner.startswith("extra") else 0
     first = min((e.t for e in elims), default=99.0)
     fb_limit = sc["first_blood_s"] * (1.35 if len(trace.keys) <= 10 else 1.0)
+    if rules.get("first_blood_s"):
+        fb_limit = max(fb_limit, float(rules["first_blood_s"]))
     crushes = [e.t for e in ev if e.kind == "crush_hit"]
     if trace.meta.get("recipe", {}).get("arena") == "crusher_gauntlet":
         # v4.3: the opening run-in deliberately keeps Golden Dummies alive into the first crushers -> the first

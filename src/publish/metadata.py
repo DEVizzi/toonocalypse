@@ -132,7 +132,10 @@ STAGE_LABELS: dict[str, str] = {
 
 
 def arena_display_name(arena_key: str) -> str:
-    return ARENA_NAMES.get(arena_key) or str(arena_key).replace("_", " ").title()
+    if arena_key in ARENA_NAMES:
+        return ARENA_NAMES[arena_key]
+    from src.games.arena_kit import v6_info
+    return v6_info(str(arena_key)).get("name") or str(arena_key).replace("_", " ").title()
 
 
 def _join_and(items: Sequence[str]) -> str:
@@ -197,6 +200,9 @@ def build_tags(arena_key: str, goal: str, stage: str) -> list[str]:
 def _features(arena_key: str, hazards: Sequence[str] | None, twist: str | None) -> str:
     parts: list[str] = []
     feat = ARENA_FEATURES.get(arena_key)
+    if feat is None:
+        from src.games.arena_kit import v6_info
+        feat = v6_info(str(arena_key)).get("feature")
     if feat:
         parts.append(feat)
     for hz in hazards or []:

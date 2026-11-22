@@ -141,6 +141,7 @@ render:
   top_zoom_max: 2.05      # v3.3 TOP: zoom = initial_radius / current_radius, capped 2.05x
 
 mode_mix: {SIDE_VIEW: 0.65, TOP_DOWN: 0.35}
+v6_from_day: 2            # first season day that draws from the 21 v6 league arenas (earlier days replay the legacy pool)
 
 scorer:
   seeds_per_batch: 8

@@ -141,11 +141,11 @@ class TestSmoothSlowMo(unittest.TestCase):
         self.assertAlmostEqual(c.zoom, 1.25)
         cams.tf = None
         self.assertEqual(cams[1].x, 10)
-        props = _SmoothSeq([np.array([[0, 0, 3.1]], np.float32), np.array([[10, 0, -3.1]], np.float32)], "props")
+        props = _SmoothSeq([np.array([[0, 0, 179.0]], np.float32), np.array([[10, 0, -179.0]], np.float32)], "props")
         props.tf = 0.5
         row = props[0] if round(0.5) == 0 else props[1]
         self.assertAlmostEqual(float(row[0, 0]), 5.0, places=3)
-        self.assertGreater(abs(float(row[0, 2])), 3.0)       # shortest-arc blend across the +-pi seam
+        self.assertGreater(abs(float(row[0, 2])), 178.0)     # shortest-arc blend across the +-180 deg seam
 
     def test_quick_format_has_no_replay(self) -> None:
         from src.recap.clip_worker import FORMATS

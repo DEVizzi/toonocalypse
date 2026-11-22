@@ -163,6 +163,9 @@ class Sim:
             finish_x=self.finish_x,
             kill_y=self.kill_y,
             vertical_tower=bool(getattr(self.arena, "vertical_tower", False)),
+            fixed_rect=list(getattr(self.arena, "fixed_rect", None) or []) or None,
+            ascent=bool(getattr(self.arena, "ascent", False)),
+            arena_rules=dict(getattr(self.arena, "rules", {}) or {}),
             heroes=[c.key for c in self.contestants if c.is_hero],
             extras={
                 c.key: {"number": c.extra.number, "colour": c.extra.colour, "cult": c.extra.cult, "golden": c.extra.golden}
@@ -640,7 +643,8 @@ class Sim:
 
     def _escalate(self) -> None:
         q = self.cfg.get("top_quake")
-        if self.mode == TOP and q and not getattr(self, "_quaked", False) and self.t >= q["t"]:
+        if (self.mode == TOP and q and not getattr(self, "_quaked", False) and self.t >= q["t"]
+                and not getattr(self.arena, "no_quake", False)):
             # Lord Tuno's opening lever: the floor bucks outward so the first wipeouts happen within seconds
             self._quaked = True
             self.event("escalation", [], None, mult=self.speed_mult, banner="TUNO QUAKE!")
@@ -771,7 +775,7 @@ class Sim:
                 self.chase_x += (lag_floor - self.chase_x) * min(1.0, dt * 1.2)
             self.zones["chase_x"] = self.chase_x
         pc = self.cfg["pacing"]
-        if self.mode != SIDE and self.t >= pc["shrink_start_s"]:
+        if self.mode != SIDE and self.t >= pc["shrink_start_s"] and not getattr(self.arena, "no_shrink", False):
             if not self._shrink_announced:
                 self._shrink_announced = True
                 self.event("escalation", [], None, mult=self.speed_mult, banner="SHRINKING ARENA!", shrink_trigger=True)

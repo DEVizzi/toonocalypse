@@ -40,7 +40,15 @@ class Brain:
             if c.hero is not None:
                 self._traits(sim, c)
                 self.powers.update(sim, c)
-            if c.stun > 0 or c.finished or sim.t < c.panic_until:
+            if c.stun > 0 or c.finished or sim.t < c.panic_until or getattr(sim.arena, "no_drive", False):
+                continue
+            brake = getattr(sim.arena, "brake", None)
+            if brake is not None and brake(c):
+                # v6 Red Light: no propulsion + friction-limited braking (Dash's ice puck barely slows)
+                v = c.body.velocity
+                k = 7.0 * min(1.0, c.traction)
+                sim.push(c, -v.x * c.body.mass * k, (-v.y * c.body.mass * k) if sim.mode != SIDE else 0.0)
+                c.drive_torque = -c.body.angular_velocity * c.body.moment * 6.0 * min(1.0, c.traction)
                 continue
             if sim.mode == SIDE:
                 self._side(sim, c)
@@ -118,7 +126,12 @@ class Brain:
                 # v3.2: Floater catches a gentle forward breeze while gliding high in 0.24x gravity
                 sim.push(c, dirx * PUSH_ACCEL * sim.cfg.get("floater_air_control", 0.55) * c.body.mass, 0.0)
             return                                   # airborne: pure ballistic / glide flight
-        if ground_ahead is None or wall_ahead or danger:
+        hint = sim.arena.jump_hint(c) if hasattr(sim.arena, "jump_hint") else None
+        if hint is True:
+            self._jump(c, vx_boost=80 * dirx, k=1.0)
+        elif hint is False:
+            pass                                     # v6: e.g. a high sweeper arm overhead -> stay low
+        elif ground_ahead is None or wall_ahead or danger:
             self._panic(sim, c)
             p = (0.45 + 0.5 * bh.jumpiness) if c.is_hero else (0.1 + 0.3 * bh.jumpiness)
             if sim.rng.random() < p and sim.t >= c.panic_until:

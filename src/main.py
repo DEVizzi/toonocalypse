@@ -194,12 +194,16 @@ def main(argv: list[str] | None = None) -> int:
     recent_cliches: set[str] = set()
     for e in [x for x in entries if isinstance(x, dict)][-7:]:      # v4.3: each cliché max once every 7 episodes
         recent_cliches.update(e.get("cliches") or [])
+    arena_req = a.arena
+    if arena_req is None and a.mode is None and day >= recipe_generator.v6_from_day():
+        # v6 playoff specials: a 2-ball Duel Dome for Qualifier 1, the 3-pocket Triangle Throne for the Grand Final
+        arena_req = {"qualifier_1": "duel_dome", "grand_final": "triangle_throne"}.get(league.stage_for_race(race_num))
     recipe, relaxed = recipe_generator.generate(
         entries,
         day,
         seed,
         mode=a.mode,
-        arena=a.arena,
+        arena=arena_req,
         goal=a.goal,
         season_theme=for_season(season_num).key,
     )

@@ -31,6 +31,53 @@ from src.games.themes import THEMES
 MAX_ATTEMPTS = 500
 
 
+# ---------------------------------------------------------------------------------------------- v6 arena pool
+def _v6_info() -> dict:
+    from src.games import arenas_v6  # noqa: F401  (registers the v6 arenas)
+    from src.games.arena_kit import INFO
+    return INFO
+
+
+def v6_from_day() -> int:
+    return int(settings().get("v6_from_day", 10 ** 9))
+
+
+def arena_pool(day: int) -> dict[str, str]:
+    """Arenas the generator may draw on `day`. Days before `v6_from_day` keep the exact legacy pool so every published
+    race (and its seed backfill) regenerates identically; from that day the 21 league v6 arenas join."""
+    pool = dict(ARENAS)
+    if day >= v6_from_day():
+        pool.update({k: v["mode"] for k, v in _v6_info().items() if not v.get("playoff")})
+    return pool
+
+
+def all_arena_modes() -> dict[str, str]:
+    return {**ARENAS, **{k: v["mode"] for k, v in _v6_info().items()}}
+
+
+def goals_for(arena: str, mode: str) -> list[str]:
+    if arena in ARENAS:
+        return [g for g, m in GOALS.items() if fits(m, mode) and arena not in GOAL_ARENA_EXCLUDE.get(g, set())]
+    info = _v6_info().get(arena, {})
+    return [g for g in info.get("goals", ()) if g in GOALS and fits(GOALS[g], mode)]
+
+
+def hazards_allowed(arena: str, mode: str) -> list[str]:
+    if arena in ARENAS:
+        excl = ARENA_HAZARD_EXCLUDE.get(arena, set())
+        return [h for h, m in HAZARDS.items() if fits(m, mode) and h not in excl]
+    info = _v6_info().get(arena, {})
+    return [h for h in info.get("hazards", ()) if h in HAZARDS and fits(HAZARDS[h], mode)]
+
+
+def twists_for(arena: str, mode: str) -> list[str]:
+    if arena in ARENAS:
+        return [t for t in TWISTS if twist_fits(t, mode, arena)]
+    info = _v6_info().get(arena, {})
+    allowed = info.get("twists")
+    return [t for t in TWISTS if fits(TWISTS[t], mode) and (allowed is None or t in allowed)]
+
+
 def generate_widescreen_finale_rounds(season: int, seed: int, season_theme: str | None = None) -> list[Recipe]:
     """Part 6: Generates the 3 stage Recipes for the 16:9-native Season Finale mega-event (Race 30)."""
     rng = random.Random(seed)
@@ -67,7 +114,8 @@ class History:
     entries: list[dict] = field(default_factory=list)
 
 
-def _violations(r: Recipe, hist: list[dict], day: int, lock_theme: bool = False) -> set[int]:
+def _violations(r: Recipe, hist: list[dict], day: int, lock_theme: bool = False,
+                pool: dict[str, str] | None = None) -> set[int]:
     v: set[int] = set()
     same_mode = [h for h in hist if h["mode"] == r.mode]
     # 1. Never repeat (arena, goal, twist) within 365 episodes (12 months daily) OR full recipe within 365 days
@@ -85,7 +133,7 @@ def _violations(r: Recipe, hist: list[dict], day: int, lock_theme: bool = False)
     # 2. Arena never repeated within 5 days AND not within last ceil(P_arena / 2) same-mode episodes
     if any(h["day"] > day - 5 and h["arena"] == r.arena for h in hist) or r.arena in [h["arena"] for h in hist[-4:]]:
         v.add(2)
-    p_arena = sum(1 for m in ARENAS.values() if m == r.mode)
+    p_arena = sum(1 for m in (pool or ARENAS).values() if m == r.mode)
     if r.arena in [h["arena"] for h in same_mode[-min(4, math.ceil(p_arena / 2)):]]:
         v.add(2)
     # 3. Goal never consecutive; <= 2 times in the last 6 episodes
@@ -109,11 +157,12 @@ def _violations(r: Recipe, hist: list[dict], day: int, lock_theme: bool = False)
 
 
 def _sample(rng: random.Random, mode: str, weights: dict | None, seed: int, season_theme: str | None = None,
-            hist: list[dict] | None = None, day: int = 0, smart: bool = False) -> Recipe:
+            hist: list[dict] | None = None, day: int = 0, smart: bool = False,
+            pool: dict[str, str] | None = None) -> Recipe:
     w = weights or {}
     hist = hist or []
     incomp = {tuple(sorted(p)) for p in INCOMPATIBLE}
-    arenas = [a for a, m in ARENAS.items() if m == mode]
+    arenas = [a for a, m in (pool or ARENAS).items() if m == mode]
 
     if smart:
         same_mode = [h for h in hist if h["mode"] == mode]
@@ -130,10 +179,10 @@ def _sample(rng: random.Random, mode: str, weights: dict | None, seed: int, seas
         for a in arenas:
             if a in recent_a:
                 continue
-            for g, gm in GOALS.items():
-                if not fits(gm, mode) or a in GOAL_ARENA_EXCLUDE.get(g, set()) or g == last_g or freq_g.get(g, 0) >= 2:
+            for g in goals_for(a, mode):
+                if g == last_g or freq_g.get(g, 0) >= 2:
                     continue
-                t_opts: list[str | None] = [None] + [t for t in TWISTS if twist_fits(t, mode, a)]
+                t_opts: list[str | None] = [None] + twists_for(a, mode)
                 for tw in t_opts:
                     if (a, g, tw) not in used_triples:
                         valid_triples.append((a, g, tw))
@@ -141,24 +190,24 @@ def _sample(rng: random.Random, mode: str, weights: dict | None, seed: int, seas
             arena, goal, twist = rng.choice(valid_triples)
         else:
             arena = rng.choice(arenas)
-            goals = [g for g, m in GOALS.items() if fits(m, mode) and arena not in GOAL_ARENA_EXCLUDE.get(g, set())]
-            goal = rng.choice(goals)
+            goal = rng.choice(goals_for(arena, mode))
             twist = None
     else:
-        a_weights = [w.get("arena", {}).get(a, 1.8 if a in SHOWCASE_ARENAS else 1.0) for a in arenas]
+        v6 = _v6_info() if any(a not in ARENAS for a in arenas) else {}
+        a_weights = [w.get("arena", {}).get(a, 1.8 if a in SHOWCASE_ARENAS else (v6[a]["weight"] if a in v6 else 1.0))
+                     for a in arenas]
         arena = rng.choices(arenas, a_weights)[0]
-        goals = [g for g, m in GOALS.items() if fits(m, mode) and arena not in GOAL_ARENA_EXCLUDE.get(g, set())]
+        goals = goals_for(arena, mode)
         goal = rng.choices(goals, [w.get("goal", {}).get(g, 1.0) for g in goals])[0]
-        twists = [t for t in TWISTS if twist_fits(t, mode, arena)]
+        twists = twists_for(arena, mode)
         twist = rng.choice([None] + twists)
 
-    excl_hz = ARENA_HAZARD_EXCLUDE.get(arena, set())
-    hz_pool = [
-        h for h, m in HAZARDS.items()
-        if fits(m, mode) and h not in excl_hz and (twist is None or tuple(sorted((twist, h))) not in incomp)
-    ]
+    hz_pool = [h for h in hazards_allowed(arena, mode) if twist is None or tuple(sorted((twist, h))) not in incomp]
     hazards: list[str] = []
-    for _ in range(rng.choice([1, 2, 2, 3])):
+    n_hz = rng.choice([1, 2, 2, 3])
+    if arena not in ARENAS:
+        n_hz = min(n_hz, 2)                 # v6 arenas carry their own signature mechanic: 0-2 extra hazards
+    for _ in range(n_hz):
         cands = [h for h in hz_pool if h not in hazards and not any(tuple(sorted((h, o))) in incomp for o in hazards)]
         if cands:
             hazards.append(rng.choice(cands))
@@ -206,8 +255,9 @@ def generate(history: list[dict], day: int, seed: int, weights: dict | None = No
     rng = random.Random(seed)
     mix = settings()["mode_mix"]
     explicit_mode = mode is not None or arena is not None
+    pool = arena_pool(day)
     if arena:
-        chosen_mode = ARENAS[arena]
+        chosen_mode = all_arena_modes()[arena]
     elif mode:
         chosen_mode = mode
     else:
@@ -225,27 +275,28 @@ def generate(history: list[dict], day: int, seed: int, weights: dict | None = No
             cur_mode = chosen_mode if explicit_mode else (
                 chosen_mode if attempt < 120 else (SIDE if attempt % 2 == 0 else TOP)
             )
-            r = _sample(rng, cur_mode, weights, seed, season_theme=season_theme, hist=history, day=day, smart=smart)
+            r = _sample(rng, cur_mode, weights, seed, season_theme=season_theme, hist=history, day=day, smart=smart,
+                        pool=pool)
             if arena:
                 r.arena = arena
-                r.mode = ARENAS[arena]
-                valid_goals = [g for g, m in GOALS.items() if fits(m, r.mode) and arena not in GOAL_ARENA_EXCLUDE.get(g, set())]
+                r.mode = all_arena_modes()[arena]
+                valid_goals = goals_for(arena, r.mode)
                 if r.goal not in valid_goals and valid_goals:
                     r.goal = rng.choice(valid_goals)
-                excl_hz = ARENA_HAZARD_EXCLUDE.get(arena, set())
-                r.hazards = [h for h in r.hazards if h not in excl_hz]
-                if r.twist and not twist_fits(r.twist, r.mode, arena):
+                ok_hz = set(hazards_allowed(arena, r.mode))
+                r.hazards = [h for h in r.hazards if h in ok_hz]
+                if r.twist and r.twist not in twists_for(arena, r.mode):
                     r.twist = None
-            if goal:
+            if goal and (goal in goals_for(r.arena, r.mode) or r.arena in ARENAS):
                 r.goal = goal
             if r.arena == "rotating_disc" and not ({"slippery_ice", "sticky_mud"} & set(r.hazards)):
                 # v4.2: always show peeling outer-ring ice/mud patches on the Rotating Disc
                 r.hazards = sorted(set(r.hazards) | {"slippery_ice"})
-            v = _violations(r, history, day, lock_theme=(season_theme is not None)) - ignore
+            v = _violations(r, history, day, lock_theme=(season_theme is not None), pool=pool) - ignore
             if arena or goal:
                 v -= {1, 2, 3}
             if not v:
-                if not explicit_mode and goal is None:
+                if not explicit_mode and goal is None and day >= v6_from_day():
                     _apply_favour(r, history, day, season_theme)
                 return r, sorted(ignore)
         relaxed = sorted(ignore)
@@ -270,13 +321,13 @@ def _apply_favour(r: Recipe, history: list[dict], day: int, season_theme: str | 
         return
     if frng.random() >= FAVOUR_RATE:
         return
-    opts = [t for t in FAVOUR_TWISTS if twist_fits(t, r.mode, r.arena)]
+    opts = [t for t in FAVOUR_TWISTS if t in twists_for(r.arena, r.mode)]
     if not opts:
         return
     tw = frng.choice(opts)
     old = r.twist
     r.twist = tw
-    if _violations(r, history, day, lock_theme=(season_theme is not None)):
+    if _violations(r, history, day, lock_theme=(season_theme is not None), pool=arena_pool(day)):
         r.twist = old
         return
     r.favour = frng.choice(FAVOUR_TWISTS[tw][:2])

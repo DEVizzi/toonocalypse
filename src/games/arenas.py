@@ -1400,7 +1400,15 @@ ARENA_CLASSES = {
 }
 
 
+def arena_class(key: str):
+    if key in ARENA_CLASSES:
+        return ARENA_CLASSES[key]
+    from src.games import arenas_v6  # noqa: F401  (registers the v6 arenas)
+    from src.games.arena_kit import REGISTRY
+    return REGISTRY[key]
+
+
 def build(sim: "Sim") -> Arena:
-    a = ARENA_CLASSES[sim.recipe.arena](sim)
+    a = arena_class(sim.recipe.arena)(sim)
     a.build()
     return a

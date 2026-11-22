@@ -75,9 +75,11 @@ class _SmoothSeq(list):
             if getattr(p, "shape", None) != getattr(q, "shape", None) or len(p) == 0:
                 return base
             out = p + (q - p) * a
-            if p.ndim == 2 and p.shape[-1] >= 3:   # shortest-arc angle blend (kinematic spinners wrap around)
-                d = (q[:, 2] - p[:, 2] + math.pi) % (2 * math.pi) - math.pi
+            if p.ndim == 2 and p.shape[-1] >= 3:   # prop angle is in DEGREES (-9999 = removed prop): shortest arc
+                d = (q[:, 2] - p[:, 2] + 180.0) % 360.0 - 180.0
                 out[:, 2] = p[:, 2] + d * a
+                dead = (p[:, 2] <= -9000) | (q[:, 2] <= -9000)
+                out[dead] = p[dead]
             return out.astype(p.dtype)
         except Exception:  # noqa: BLE001 - never break a render over a cosmetic blend
             return base

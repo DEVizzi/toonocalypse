@@ -401,7 +401,8 @@ class Writer:
         if quip is None and biome != "day" and r.race % 2 == 0:
             quip = self._fresh(f"biome.{biome}", BIOME_QUIPS.get(biome, ()))
         if quip is None:
-            quip = self._fresh(f"arena.{r.arena}", ARENA_QUIPS.get(r.arena, ()))
+            from src.games.arena_kit import v6_info
+            quip = self._fresh(f"arena.{r.arena}", ARENA_QUIPS.get(r.arena) or v6_info(r.arena).get("quips", ()))
         if quip is None:
             quip = self._fresh(f"biome.{biome}", BIOME_QUIPS.get(biome, ()))
         if quip is None:
