@@ -31,7 +31,8 @@ from src.games.themes import THEMES
 MAX_ATTEMPTS = 500
 # v6 arenas whose races still run short in the lab (0/6 accepted): drawn rarely until tuned.
 V6_LOW_WEIGHT = {"big_bubble": 0.3, "lily_pads": 0.3, "swing_canyon": 0.3, "inferno_ascent": 0.3,
-                 "clockwork_cogs": 0.3, "glass_bridge": 0.5}
+                 "clockwork_cogs": 0.3, "glass_bridge": 0.5, "red_light": 0.5,
+                 "spinning_logs": 0.4, "wall_rush": 0.3}
 
 
 # ---------------------------------------------------------------------------------------------- v6 arena pool
