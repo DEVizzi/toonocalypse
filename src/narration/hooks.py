@@ -88,6 +88,13 @@ GOAL_LINES: dict[str, str] = {
     "hot_potato_bomb": "Don't be holding the bomb!",
 }
 
+# arena-specific win wording for reach_finish (where "the flag" isn't a flag)
+FINISH_LINES: dict[str, str] = {
+    "plinko_cashout": "Land in the gold bin to win!",
+    "pinball_pit": "Hit the jackpot lane to win!",
+    "inferno_ascent": "First to the top wins!",
+}
+
 GENERIC_HOOKS = ("Only one ball survives this!", "Pick your ball before it's too late!")
 
 
@@ -96,7 +103,11 @@ def hook_line(arena: str, rng: random.Random) -> str:
     return rng.choice(list(hooks))
 
 
-def rules_line(arena: str, goal: str | None) -> str:
+def rules_line(arena: str, goal: str | None, single_winner: bool = False) -> str:
     mech = ARENA_LINES.get(arena, ((), ""))[1]
-    win = GOAL_LINES.get(goal or "", "")
+    g = goal or ""
+    if single_winner and g in ("survive_timer", "collect_items", "hold_a_zone"):
+        g = "last_one_standing"          # single-winner races play on to ALIVE: 1, so say exactly that
+    win = FINISH_LINES.get(arena, "") if g == "reach_finish" else ""
+    win = win or GOAL_LINES.get(g, "")
     return " ".join(p for p in (mech, win) if p).strip()

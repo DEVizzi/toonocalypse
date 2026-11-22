@@ -390,7 +390,7 @@ def build_beats(r, to_out, video_len: float, replay_t: float, card_t: float, pro
     else:
         add(0.04, "intro", 10, intro_fams, intro_ctx, 0.04, mw=10 if stage == "grand_final" else 8)
         hook_words = 10 if stage == "grand_final" else 8
-    rl = hooks.rules_line(arena_k, goal_k)
+    rl = hooks.rules_line(arena_k, goal_k, bool((rcp.get("params") or {}).get("single_winner")))
     if rl:
         # ...then the RULES in one breath, so a first-time viewer gets the objective before the first knockout
         t_rules = round(0.04 + hook_words / WORDS_PER_S + 0.12, 2)
