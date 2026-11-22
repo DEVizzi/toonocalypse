@@ -780,7 +780,7 @@ class Writer:
         for _, c in cands:
             if c["after_race"] >= last:
                 continue
-            if any(abs(c["after_race"] - o["after_race"]) < 2 for o in chosen):
+            if any(c["after_race"] == o["after_race"] for o in chosen):
                 continue
             chosen.append(c)
             if len(chosen) >= max_n:

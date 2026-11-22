@@ -541,7 +541,7 @@ class RecapVideo:
             if total < 510.0 and race_segs:
                 # last resort only: up to 2 s of results-card hold per race so a 10-race part clears the 8:00
                 # mid-roll line (493 s target) without long silent tails
-                pad_each = min(2.0, max(0.0, (493.0 - total) / len(race_segs)))
+                pad_each = min(2.5, max(0.0, (495.0 - total) / len(race_segs)))
                 for s in race_segs:
                     s.duration = round(s.duration + pad_each, 2)
                 self.log(f"  [RECAP] runtime {total:.1f}s < 510s target -> padded {pad_each:.2f}s/race")
