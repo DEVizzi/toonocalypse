@@ -1,12 +1,12 @@
 name: Daily Episode (ToonToonCastle)
 
 # v4.5 Strict 1x/Day Transactional Production Pipeline (`run_daily_episode.py`):
-# - Single daily cron `17 14 * * *` (14:17 UTC -> live ~8:00 PM IST).
+# - Single daily cron `30 13 * * *` (13:30 UTC -> 7:00 PM IST).
 # - Same-Day Duplicate Guard (`episode_history.json` `utc_date` + `published: true`).
 # - Hard 10-minute (`600s`) per-attempt watchdog, full local/remote/state rollback, and 1 automatic recreation (`MAX_ATTEMPTS = 2`).
 on:
   schedule:
-    - cron: "17 14 * * *"
+    - cron: "30 13 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
