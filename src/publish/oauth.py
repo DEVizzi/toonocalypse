@@ -126,6 +126,10 @@ def main() -> int:
         print(f"[OAUTH FAIL] {exc}", file=sys.stderr)
         return 1
     print(f"[OAUTH OK] bound channel: {title or '?'} ({cid or 'none'})")
+    try:   # the Google Cloud project NUMBER of the OAuth client (not a secret) - shows which consent screen applies
+        print(f"[OAUTH OK] OAuth client project: {_creds()['YOUTUBE_CLIENT_ID'].split('-', 1)[0]}")
+    except Exception:  # noqa: BLE001
+        pass
     if expected and cid != expected:
         print(f"[OAUTH FAIL] token is bound to the wrong channel (expected {expected}); re-run "
               "scripts/youtube_reauth.py and pick the ToonToonCastle channel", file=sys.stderr)

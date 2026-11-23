@@ -1,10 +1,11 @@
 name: YouTube OAuth Keep-Alive
 
-# Exercises YOUTUBE_REFRESH_TOKEN weekly so it never ages out from inactivity, and opens a GitHub Issue
+# Exercises YOUTUBE_REFRESH_TOKEN twice a day so it never ages out from inactivity, and opens a GitHub Issue
 # immediately if Google revokes it — days before a daily upload would fail.
 on:
   schedule:
-    - cron: "17 6 * * 1"        # every Monday 06:17 UTC
+    - cron: "17 6 * * *"        # daily 06:17 UTC (~8 h before the 14:17 UTC daily Short)
+    - cron: "47 12 * * *"       # daily 12:47 UTC (~1.5 h before the daily Short)
   workflow_dispatch:
 
 permissions:
