@@ -907,6 +907,297 @@
       "published": true,
       "youtube_id": "SEm18Wmg0bY",
       "instagram_id": "18351408580248309"
+    },
+    {
+      "day": 5,
+      "mode": "SIDE_VIEW",
+      "arena": "collapse_tower",
+      "goal": "survive_timer",
+      "hazards": [
+        "cannon_balls",
+        "slippery_ice"
+      ],
+      "twist": "heavy_gravity",
+      "theme": "royal_classic",
+      "fingerprint": "7400ea0e967d94725f190dff072dc85a187264b4614249ec95b081ff190a9f96",
+      "season": 1,
+      "race": 5,
+      "stage": "league",
+      "winner": "pip",
+      "line_ids": [
+        "winner:0",
+        "outro:0",
+        "overtime:0",
+        "kill.floater:0",
+        "multi:1",
+        "torched:1",
+        "trait:0",
+        "filler_lead:1",
+        "filler_hero:1",
+        "filler_ot:0"
+      ],
+      "cliches": [],
+      "recap": {
+        "v": 1,
+        "code_sha": "a1ffb5d60717853a06cfcc028ff6801e6fb62d9d",
+        "seed": 72568,
+        "sim_seed": 72568006,
+        "recipe": {
+          "seed": 72568,
+          "mode": "SIDE_VIEW",
+          "arena": "collapse_tower",
+          "goal": "survive_timer",
+          "hazards": [
+            "cannon_balls",
+            "slippery_ice"
+          ],
+          "twist": "heavy_gravity",
+          "theme": "royal_classic",
+          "params": {
+            "layout_seed": 759745935,
+            "single_winner": true,
+            "timer": 21.8,
+            "twist_at": 8.7
+          },
+          "two_stage": false,
+          "flash_forward": false,
+          "episode_kind": "spotlight",
+          "finale": false,
+          "favour": "juggernaut"
+        },
+        "heroes": [
+          "bonk",
+          "pip",
+          "boing",
+          "sly",
+          "grumble",
+          "dash",
+          "magneto",
+          "floater",
+          "juggernaut",
+          "glitch"
+        ],
+        "extras": [
+          {
+            "number": 1,
+            "colour": "#D5D9DE",
+            "radius": 20,
+            "mass": 0.95,
+            "max_speed": 214.70718146375168,
+            "friction": 0.45,
+            "elasticity": 0.6,
+            "behaviour": [
+              0.21556695934382808,
+              0.07901624934192188,
+              0.26025586046771265,
+              0.24949003942799716
+            ],
+            "cult": false,
+            "golden": false
+          },
+          {
+            "number": 2,
+            "colour": "#D5D9DE",
+            "radius": 20,
+            "mass": 0.95,
+            "max_speed": 234.80259302285558,
+            "friction": 0.45,
+            "elasticity": 0.6,
+            "behaviour": [
+              0.19858154309290832,
+              0.053067639531024634,
+              0.22884848157033513,
+              0.002653575262942909
+            ],
+            "cult": false,
+            "golden": false
+          },
+          {
+            "number": 3,
+            "colour": "#D5D9DE",
+            "radius": 20,
+            "mass": 0.95,
+            "max_speed": 205.71854927812188,
+            "friction": 0.45,
+            "elasticity": 0.6,
+            "behaviour": [
+              0.2119871627463209,
+              0.2692630064359411,
+              0.13567374788190317,
+              0.29686419707744227
+            ],
+            "cult": false,
+            "golden": false
+          },
+          {
+            "number": 4,
+            "colour": "#D5D9DE",
+            "radius": 20,
+            "mass": 0.95,
+            "max_speed": 231.7780355961209,
+            "friction": 0.45,
+            "elasticity": 0.6,
+            "behaviour": [
+              0.09214339788917057,
+              0.0016296621353370066,
+              0.12445989624181752,
+              0.28585996142221426
+            ],
+            "cult": false,
+            "golden": false
+          }
+        ],
+        "ranking": [
+          "pip",
+          "magneto",
+          "extra1",
+          "extra4",
+          "extra3",
+          "sly",
+          "juggernaut",
+          "extra2",
+          "dash",
+          "glitch",
+          "floater",
+          "bonk",
+          "grumble",
+          "boing"
+        ],
+        "winner": "pip",
+        "resolved_at": 23.006,
+        "elims": [
+          {
+            "t": 2.4,
+            "actors": [
+              "boing",
+              "juggernaut"
+            ],
+            "cause": "fell",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 3.933,
+            "actors": [
+              "grumble",
+              "extra4"
+            ],
+            "cause": "fell",
+            "hero": true,
+            "by_hero": false
+          },
+          {
+            "t": 9.433,
+            "actors": [
+              "bonk",
+              "floater"
+            ],
+            "cause": "left_behind",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 9.933,
+            "actors": [
+              "floater",
+              "bonk"
+            ],
+            "cause": "left_behind",
+            "hero": true,
+            "by_hero": true
+          },
+          {
+            "t": 10.567,
+            "actors": [
+              "glitch"
+            ],
+            "cause": "left_behind",
+            "hero": true,
+            "by_hero": false
+          },
+          {
+            "t": 11.0,
+            "actors": [
+              "extra2"
+            ],
+            "cause": "left_behind",
+            "hero": false,
+            "by_hero": false
+          },
+          {
+            "t": 11.0,
+            "actors": [
+              "dash"
+            ],
+            "cause": "left_behind",
+            "hero": true,
+            "by_hero": false
+          },
+          {
+            "t": 15.133,
+            "actors": [
+              "juggernaut",
+              "extra3"
+            ],
+            "cause": "left_behind",
+            "hero": true,
+            "by_hero": false
+          },
+          {
+            "t": 15.167,
+            "actors": [
+              "sly",
+              "extra1"
+            ],
+            "cause": "lava",
+            "hero": true,
+            "by_hero": false
+          },
+          {
+            "t": 15.367,
+            "actors": [
+              "extra3",
+              "juggernaut"
+            ],
+            "cause": "left_behind",
+            "hero": false,
+            "by_hero": true
+          },
+          {
+            "t": 16.033,
+            "actors": [
+              "extra4",
+              "extra1"
+            ],
+            "cause": "lava",
+            "hero": false,
+            "by_hero": false
+          },
+          {
+            "t": 17.2,
+            "actors": [
+              "extra1"
+            ],
+            "cause": "left_behind",
+            "hero": false,
+            "by_hero": false
+          },
+          {
+            "t": 23.0,
+            "actors": [
+              "magneto",
+              "pip"
+            ],
+            "cause": "left_behind",
+            "hero": true,
+            "by_hero": true
+          }
+        ]
+      },
+      "utc_date": "2026-11-25",
+      "published": true,
+      "youtube_id": "V-3YfHteiJg",
+      "instagram_id": "18118485734145037"
     }
   ]
 }
