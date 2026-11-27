@@ -1,79 +1,79 @@
 {
   "season_number": 1,
-  "race_number": 7,
-  "total_day": 7,
+  "race_number": 8,
+  "total_day": 8,
   "theme": "royal_classic",
   "reigning_champion": null,
   "stats": {
     "bonk": {
-      "points": 22,
+      "points": 27,
       "wins": 1,
-      "kos": 5,
-      "races": 6,
-      "rank_sum": 24
+      "kos": 6,
+      "races": 7,
+      "rank_sum": 26
     },
     "pip": {
-      "points": 10,
+      "points": 13,
       "wins": 1,
       "kos": 4,
-      "races": 6,
-      "rank_sum": 41
+      "races": 7,
+      "rank_sum": 44
     },
     "boing": {
       "points": 5,
       "wins": 0,
       "kos": 4,
-      "races": 6,
-      "rank_sum": 44
+      "races": 7,
+      "rank_sum": 52
     },
     "sly": {
       "points": 3,
       "wins": 0,
       "kos": 2,
-      "races": 6,
-      "rank_sum": 38
+      "races": 7,
+      "rank_sum": 42
     },
     "grumble": {
       "points": 10,
       "wins": 0,
       "kos": 4,
-      "races": 6,
-      "rank_sum": 34
+      "races": 7,
+      "rank_sum": 43
     },
     "dash": {
-      "points": 0,
-      "wins": 0,
-      "kos": 1,
-      "races": 6,
-      "rank_sum": 46
+      "points": 12,
+      "wins": 1,
+      "kos": 4,
+      "races": 7,
+      "rank_sum": 47
     },
     "magneto": {
       "points": 30,
       "wins": 2,
-      "kos": 5,
-      "races": 6,
-      "rank_sum": 17
+      "kos": 6,
+      "races": 7,
+      "rank_sum": 24
     },
     "floater": {
       "points": 6,
       "wins": 0,
       "kos": 3,
-      "races": 6,
-      "rank_sum": 30
+      "races": 7,
+      "rank_sum": 36
     },
     "juggernaut": {
       "points": 21,
       "wins": 1,
       "kos": 11,
-      "races": 6,
-      "rank_sum": 27
+      "races": 7,
+      "rank_sum": 37
     },
     "glitch": {
       "points": 13,
       "wins": 1,
-      "kos": 0,
-      "races": 6,
-      "rank_sum": 29
+      "kos": 1,
+      "races": 7,
+      "rank_sum": 34
     }
   },
   "playoff": {
